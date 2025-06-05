@@ -43,7 +43,10 @@ export default function Home() {
       if (!json) return;
       const u = JSON.parse(json);
       setUsuario(u);
-      setPontos(u.pontos || 0);
+
+  const usuarioAtualizado = await api.obterUsuarioPorCPF(u.cpf);
+      setPontos(usuarioAtualizado?.pontos || 0);
+
 
       const historico = await api.obterHistoricoPegada(u.cpf || u.cnpj);
       if (historico.length > 0) {

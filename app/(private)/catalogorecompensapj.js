@@ -1,28 +1,29 @@
 
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  Modal,
-  ScrollView,
-  Dimensions,
-  TextInput,
-  KeyboardAvoidingView, Platform,
-} from 'react-native';  
 import { Ionicons } from '@expo/vector-icons';
-import SelectField from '../../components/SelectField';
-import InputField from '../../components/InputField';
-import ModalSucesso from '../../components/ModalSucesso';
-import { useAuth } from '../../context/AuthContext';
-import apiMock from '../../services/apiMock';
+import { useEffect, useState } from 'react';
+import {
+  Dimensions,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import BotaoVerde from '../../components/BotaoVerde';
 import BotaoVerdePequeno from '../../components/BotaoVerdePequeno';
+import InputField from '../../components/InputField';
+import ModalSucesso from '../../components/ModalSucesso';
+import SelectField from '../../components/SelectField';
+import { useAuth } from '../../context/AuthContext';
+import apiMock from '../../services/apiMock';
 import { colors } from '../../theme/colors';
-import { spacing } from '../../theme/spacing';
 import { fonts } from '../../theme/fonts';
+import { spacing } from '../../theme/spacing';
 import { validarCamposObrigatorios } from '../../utils/validarCamposObrigatorios';
 
 const { width, height } = Dimensions.get('window');
@@ -96,7 +97,7 @@ export default function CatalogoRecompensaPJ() {
         <View style={styles.boxResumo}>
         <Text style={styles.titulo}>Histórico de Vouchers Emitidos</Text>
         <Text style={styles.subtitulo}>
-          🧾 Lotes: {totalLotes} · ✅ Ativos: {totalVouchers - totalUtilizados} · 🔁 Utilizados: {totalUtilizados}
+          🧾 Lotes: {totalLotes} · ✅ Ativos: {totalVouchers - totalUtilizados} · 🔁 Adquiridos: {totalUtilizados}
         </Text>
 
         <View style={styles.filtrosLinha}>
@@ -162,7 +163,7 @@ export default function CatalogoRecompensaPJ() {
                 </Text>
                 <Text style={styles.cardInfo}>🏢 Empresa: {item.empresa}</Text>
                 <Text style={styles.cardInfo}>📍 Endereço: {item.endereco}</Text>
-                <Text style={styles.cardInfo}>🔁 Utilizados: {usados} de {total}</Text>
+                <Text style={styles.cardInfo}>🔁 Adquiridos: {usados} de {total}</Text>
                 <Text style={styles.cardInfo}>🔑 Último código: {item.codigos[item.codigos.length - 1] || '---'}</Text>
               </View>
             );
@@ -319,10 +320,12 @@ export default function CatalogoRecompensaPJ() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
     paddingBottom: spacing.xl,
+    minHeight: height,
   },
   contentBox: {
+    width: width > 700 ? '60%' : '100%',
+  entBox: {
     width: width > 700 ? '60%' : '100%',
   },
   boxResumo: {
@@ -453,8 +456,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.branco,
   },
   produtoSelecionado: {
-    backgroundColor: '#c8f0d4',
+    backgroundColor: colors.verdeClaro,
     borderColor: colors.verde,
+  
   },
   erroTexto: {
     color: colors.erro,

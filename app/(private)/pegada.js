@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingBottom: spacing.xxl,
     alignItems: 'center',
-    backgroundColor: colors.fundo,
+
   },
   contentBox: {
     width: '100%',
@@ -259,7 +259,9 @@ const styles = StyleSheet.create({
   },
   resultadoTitulo: {
     fontSize: fonts.size.md,
-    fontWeight: fonts
-  
-  }
+    fontWeight: fonts.weight.bold,
+    color: colors.preto,
+    marginBottom: spacing.xs,
+  },
+
 });

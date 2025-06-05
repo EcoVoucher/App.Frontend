@@ -19,6 +19,20 @@ export default function RodapeNavegacao() {
   const router = useRouter();
   const pathname = usePathname();
   const { usuario, logout } = useAuth();
+  const menuItems = usuario?.tipo === 'pj' ? [
+  { texto: 'Histórico Pegada', icone: 'history', rota: '/(private)/historicopegada' },
+  { texto: 'Conheça o Eco Voucher', icone: 'recycle', rota:'/(private)/ecoempresa' },
+  { texto: 'Seu Perfil', icone: 'account', rota:'/(private)/perfil' },
+
+] : [
+  { texto: 'Conheça o Eco Voucher', icone: 'recycle', rota:'/(private)/ecoempresa' },
+  { texto: 'Fale pelo WhatsApp', icone: 'whatsapp', link: 'https://wa.me/5599999999999?text=Olá!%20Gostaria%20de%20saber%20mais%20sobre%20o%20projeto%20EcoVoucher.' },
+  { texto: 'Histórico Pegada', icone: 'history', rota: '/(private)/historicopegada' },
+  { texto: 'Depósito', icone: 'handshake', rota: '/(public)/depositomaterial' },
+  { texto: 'Seu Perfil', icone: 'account', rota:'/(private)/perfil' },
+  
+];
+
   const { width } = Dimensions.get('window');
   const [menuAberto, setMenuAberto] = useState(false);
 
@@ -123,21 +137,6 @@ const cores = {
   cinza: colors.cinza,
   branco: colors.branco,
 };
-
-const menuItems = [
-  { texto: 'Histórico Pegada', icone: 'history', rota: '/(private)/historicopegada' },
-  { texto: 'Histórico de Pontos', icone: 'receipt', rota: '/(private)/historicopontos' },
-  {
-    texto: 'Fale pelo WhatsApp',
-    icone: 'whatsapp',
-    link: 'https://wa.me/5599999999999?text=Ol%C3%A1!%20Gostaria%20de%20saber%20mais%20sobre%20o%20projeto%20EcoVoucher.',
-  },
-  { texto: 'Seu Perfil', icone: 'account', rota:'/(private)/perfil'},
-  { texto: 'Vouchers Gerados', icone: 'handshake', rota: '/(private)/catalogorecompensapj' },
-  { texto: 'Vouchers Disponíveis', icone: 'handshake', rota: '/(private)/catalogovoucherspf' },
-  { texto: 'Validar Voucher', icone: 'handshake', rota: '/(private)/validarvoucherpj' },
-  { texto: 'Deposito', icone: 'handshake', rota: '/(public)/depositomaterial' },
-];
 
 const styles = StyleSheet.create({
  container: {

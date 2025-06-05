@@ -50,13 +50,12 @@ export default function PrivateLayout() {
             <Slot />
           </ScrollView>
         </View>
-
-        {/* Rodapé fixo */}
-        {!(pathname === '/(private)/pegada' && usuario?.primeiroAcesso) && (
+        {!(pathname.includes('/pegada') && usuario?.primeiroAcesso === true) && (
           <View style={styles.rodape}>
             <RodapeNavegacao ativo="menu" />
           </View>
         )}
+
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
