@@ -268,7 +268,7 @@ export default function ValidarVoucherPJ() {
       <ModalSucesso
         visivel={modalVisivel}
         mensagem="Voucher marcado como utilizado com sucesso!"
-        onClose={() => setModalVisivel(false)}
+        onFechar={() => setModalVisivel(false)}
       />
       <ModalErro
         visivel={erroVisivel}
@@ -332,7 +332,7 @@ logo: {
   pickerContainer: {
     backgroundColor: colors.branco,
     borderRadius: 6,
-    marginVertical: spacing.md,
+    marginVertical: spacing.sm,
     paddingHorizontal: spacing.sm,
     borderWidth: 1,
     borderColor: colors.cinzaClaro,
@@ -340,7 +340,7 @@ logo: {
     maxWidth: 500,
   },
   picker: {
-    height: 45,
+    height: 55,
     color: colors.preto,
   },
   statusBadge: {

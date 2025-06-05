@@ -315,8 +315,6 @@ export default function CatalogoRecompensaPJ() {
      />
   </>
 );} 
-
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -324,8 +322,6 @@ const styles = StyleSheet.create({
     minHeight: height,
   },
   contentBox: {
-    width: width > 700 ? '60%' : '100%',
-  entBox: {
     width: width > 700 ? '60%' : '100%',
   },
   boxResumo: {

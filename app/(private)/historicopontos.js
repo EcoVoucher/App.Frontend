@@ -18,7 +18,7 @@ export default function HistoricoPontos() {
   const { usuario } = useAuth();
   const [historico, setHistorico] = useState([]);
   const [pontos, setPontos] = useState(0);
-  const [filtro, setFiltro] = useState('entrada');
+  const [filtro, setFiltro] = useState('todos');
   const [busca, setBusca] = useState('');
   const [carregando, setCarregando] = useState(true);
   const [mostrarTodos, setMostrarTodos] = useState(false);
@@ -28,6 +28,7 @@ export default function HistoricoPontos() {
   const verMenos = () => setMostrarTodos(false);
 
   const opcoesFiltro = [
+    'todos',
     'entrada',
     'vouchers adquiridos',
     'vouchers utilizados',
@@ -70,6 +71,8 @@ export default function HistoricoPontos() {
     if (!atendeBusca) return false;
 
     switch (filtro) {
+      case 'todos':
+      return true; 
       case 'entrada': return item.tipo === 'entrada';
       case 'vouchers adquiridos': return item.tipo === 'saida' && item.status === 'valido';
       case 'vouchers utilizados': return item.tipo === 'saida' && item.status === 'utilizado';

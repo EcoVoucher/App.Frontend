@@ -71,7 +71,6 @@ const styles = StyleSheet.create({
   backgroundColor: colors.fundo,
   paddingHorizontal: spacing.md,
   paddingTop: spacing.lg,
-  paddingBottom: spacing.xl,
 },
 
   conteudoWrapper: {
