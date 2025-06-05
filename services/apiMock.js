@@ -1,0 +1,508 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const simularAtraso = (ms = 1000) => new Promise(res => setTimeout(res, ms));
+
+const CHAVE_USUARIOS = '@usuarios_mock';
+
+const apenasNumeros = (str) => (str || '').replace(/\D/g, '');
+const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const regexSenha = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{6,}$/;
+
+const obterUsuarios = async () => {
+  const json = await AsyncStorage.getItem(CHAVE_USUARIOS);
+  if (!json) return [];
+  try {
+    const parsed = JSON.parse(json);
+    if (Array.isArray(parsed)) return parsed;
+    if (typeof parsed === 'object' && parsed !== null) return Object.values(parsed);
+    return [];
+  } catch {
+    return [];
+  }
+};
+
+const salvarUsuarios = async (usuarios) => {
+  await AsyncStorage.setItem(CHAVE_USUARIOS, JSON.stringify(usuarios));
+};
+
+const encontrarUsuario = (identificador) => {
+  const id = apenasNumeros(identificador);
+  return (usuarios) => usuarios.find((u) => apenasNumeros(u.cpf || u.cnpj) === id);
+};
+
+function validarCPF(cpf) {
+  cpf = apenasNumeros(cpf);
+  if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
+  let soma = 0;
+  for (let i = 0; i < 9; i++) soma += parseInt(cpf[i]) * (10 - i);
+  let resto = (soma * 10) % 11;
+  if (resto >= 10) resto = 0;
+  if (resto !== parseInt(cpf[9])) return false;
+  soma = 0;
+  for (let i = 0; i < 10; i++) soma += parseInt(cpf[i]) * (11 - i);
+  resto = (soma * 10) % 11;
+  if (resto >= 10) resto = 0;
+  return resto === parseInt(cpf[10]);
+}
+
+function validarCNPJ(cnpj) {
+  cnpj = apenasNumeros(cnpj);
+  if (cnpj.length !== 14 || /^(\d)\1+$/.test(cnpj)) return false;
+  const pesos1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  const pesos2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  let soma = 0;
+  for (let i = 0; i < 12; i++) soma += parseInt(cnpj[i]) * pesos1[i];
+  let resto = soma % 11;
+  let dig1 = resto < 2 ? 0 : 11 - resto;
+  if (dig1 !== parseInt(cnpj[12])) return false;
+  soma = 0;
+  for (let i = 0; i < 13; i++) soma += parseInt(cnpj[i]) * pesos2[i];
+  resto = soma % 11;
+  let dig2 = resto < 2 ? 0 : 11 - resto;
+  return dig2 === parseInt(cnpj[13]);
+}
+const login = async (identificador, senha, tipo) => {
+  await simularAtraso();
+  const usuarios = await obterUsuarios();
+  const id = apenasNumeros(identificador);
+  const usuarioIndex = usuarios.findIndex(u => apenasNumeros(u.cpf || u.cnpj) === id);
+
+  if (usuarioIndex === -1) throw new Error('Usuário não encontrado.');
+  const usuario = usuarios[usuarioIndex];
+
+  if (usuario.tipo !== tipo) throw new Error('Tipo de usuário incorreto.');
+  if (usuario.senha !== senha) throw new Error('Senha incorreta.');
+
+  const primeiroAcesso = !!(usuario.primeiroAcesso ?? true); // força booleano real
+  usuarios[usuarioIndex].primeiroAcesso = false;
+  await salvarUsuarios(usuarios);
+
+  const token = 'mock-token-' + Math.random().toString(36).substring(2, 10);
+  await AsyncStorage.setItem('token', token);
+
+  return { token, usuario: { ...usuario, primeiroAcesso } };
+};
+
+
+const cadastroPF = async (dados) => {
+  await simularAtraso();
+  const usuarios = await obterUsuarios();
+
+  const cpfLimpo = apenasNumeros(dados.cpf);
+  if (!cpfLimpo) throw new Error('CPF não informado.');
+
+  const existe = usuarios.find(u => apenasNumeros(u.cpf) === cpfLimpo);
+  if (existe) throw new Error('Usuário já cadastrado com esse CPF.');
+  if (!regexEmail.test(dados.email)) throw new Error('Email inválido.');
+  if (!regexSenha.test(dados.senha)) throw new Error('Senha fraca.');
+  if (dados.senha !== dados.confirmarSenha) throw new Error('Senhas não coincidem.');
+
+  usuarios.push({
+    tipo: 'pf',
+    nome: dados.nome,
+    cpf: dados.cpf,
+    email: dados.email,
+    senha: dados.senha,
+    telefone: dados.telefone,
+    cep: dados.cep,
+    endereco: dados.endereco,
+    bairro: dados.bairro,
+    cidade: dados.cidade,
+    estado: dados.estado,
+    numero: dados.numero,
+    complemento: dados.complemento,
+    dataNascimento: dados.dataNascimento,
+    primeiroAcesso: true
+  });
+
+  await salvarUsuarios(usuarios);
+  return { status: 'ok', message: 'Cadastro PF realizado.' };
+};
+
+const cadastroPJ = async (dados) => {
+  await simularAtraso();
+  const usuarios = await obterUsuarios();
+
+  const cnpjLimpo = apenasNumeros(dados.cnpj);
+  if (!cnpjLimpo) throw new Error('CNPJ não informado.');
+
+  const existe = usuarios.find(u => apenasNumeros(u.cnpj) === cnpjLimpo);
+  if (existe) throw new Error('Usuário já cadastrado com esse CNPJ.');
+  if (!regexEmail.test(dados.email)) throw new Error('Email inválido.');
+  if (!regexSenha.test(dados.senha)) throw new Error('Senha fraca.');
+  if (dados.senha !== dados.confirmarSenha) throw new Error('Senhas não coincidem.');
+
+  usuarios.push({
+    tipo: 'pj',
+    nomeEmpresa: dados.nomeEmpresa,
+    cnpj: dados.cnpj,
+    email: dados.email,
+    senha: dados.senha,
+    telefone: dados.telefone,
+    cep: dados.cep,
+    endereco: dados.endereco,
+    bairro: dados.bairro,
+    cidade: dados.cidade,
+    estado: dados.estado,
+    numero: dados.numero,
+    complemento: dados.complemento,
+    primeiroAcesso: true
+  });
+
+
+  await salvarUsuarios(usuarios);
+  return { status: 'ok', message: 'Cadastro PJ realizado.' };
+};
+
+const recuperarSenha = async (dados) => {
+  await simularAtraso();
+  const usuarios = await obterUsuarios();
+  const id = apenasNumeros(dados.cpf || dados.cnpj);
+  const usuario = usuarios.find(u => apenasNumeros(u.cpf || u.cnpj) === id);
+
+  if (!usuario) throw new Error('Usuário não encontrado.');
+  if (usuario.email !== dados.email) throw new Error('E-mail não confere.');
+
+  return { status: 'ok' };
+};
+
+const redefinirSenha = async (dados) => {
+  await simularAtraso();
+  const usuarios = await obterUsuarios();
+  const id = apenasNumeros(dados.cpf || dados.cnpj);
+  const usuarioIndex = usuarios.findIndex(u => apenasNumeros(u.cpf || u.cnpj) === id);
+
+  if (usuarioIndex === -1) throw new Error('Usuário não encontrado.');
+  if (!regexSenha.test(dados.novaSenha)) {
+    throw new Error('A nova senha deve conter letra, número e caractere especial.');
+  }
+
+  usuarios[usuarioIndex].senha = dados.novaSenha;
+  await salvarUsuarios(usuarios);
+
+  return { status: 'ok' };
+};
+
+const logout = async () => {
+  await AsyncStorage.removeItem('token');
+};
+
+const getToken = async () => {
+  return await AsyncStorage.getItem('token');
+};
+///tela pegada - questionario
+const salvarPegada = async (cpfOuCnpj, pontuacao) => {
+  await simularAtraso();
+  const usuarios = await obterUsuarios();
+  const id = apenasNumeros(cpfOuCnpj);
+  const index = usuarios.findIndex((u) => apenasNumeros(u.cpf || u.cnpj) === id);
+
+  if (index === -1) throw new Error('Usuário não encontrado.');
+
+  const data = new Date().toISOString();
+  if (!usuarios[index].historicoPegada) {
+    usuarios[index].historicoPegada = [];
+  }
+
+  usuarios[index].historicoPegada.push({ data, pontuacao });
+  await salvarUsuarios(usuarios);
+
+  return { status: 'ok', message: 'Pontuação salva com sucesso.' };
+};
+///historico pegada
+const obterHistoricoPegada = async (cpfOuCnpj) => {
+  const usuarios = await obterUsuarios();
+  const id = apenasNumeros(cpfOuCnpj);
+  const usuario = usuarios.find((u) => apenasNumeros(u.cpf || u.cnpj) === id);
+  if (!usuario) throw new Error('Usuário não encontrado.');
+  return usuario.historicoPegada || [];
+};
+
+
+//api simulação deposito
+const obterUsuarioPorCPF = async (cpf) => {
+  const usuarios = await obterUsuarios();
+  const id = apenasNumeros(cpf);
+  return usuarios.find((u) => apenasNumeros(u.cpf) === id);
+};
+
+///simulação deposito
+const registrarDeposito = async (cpf, materiais, totalPontos,codigo) => {
+  await simularAtraso();
+
+  const usuarios = await obterUsuarios();
+  const id = apenasNumeros(cpf);
+  const index = usuarios.findIndex((u) => apenasNumeros(u.cpf || u.cnpj) === id);
+
+  if (index === -1) throw new Error('Usuário não encontrado.');
+
+  const data = new Date().toISOString();
+
+  // Adiciona o registro de depósito
+  if (!usuarios[index].depositos) {
+    usuarios[index].depositos = [];
+  }
+  usuarios[index].depositos.push({ data, materiais, totalPontos, codigo});
+
+  // Atualiza os pontos totais
+  usuarios[index].pontos = (usuarios[index].pontos || 0) + totalPontos;
+
+  // Adiciona a movimentação do tipo 'entrada'
+  if (!usuarios[index].movimentacoes) {
+    usuarios[index].movimentacoes = [];
+  }
+  usuarios[index].movimentacoes.push({
+    tipo: 'entrada',
+    descricao: 'Depósito de materiais',
+    pontos: totalPontos,
+    data: new Date().toLocaleString('pt-BR'),
+    timestamp: new Date().toISOString(),
+    codigo
+  });
+
+  await salvarUsuarios(usuarios);
+
+  return { status: 'ok', message: 'Depósito registrado com sucesso.' };
+};
+
+
+
+
+
+//movimentação de pontos-cnpj e cpf
+
+const registrarMovimentacao = async (cpf, tipo, pontos, descricao, codigo = null) => 
+ {
+  const usuarios = await obterUsuarios();
+  const id = cpf.replace(/\D/g, '');
+  const index = usuarios.findIndex((u) => u.cpf && u.cpf.replace(/\D/g, '') === id);
+
+  if (index === -1) throw new Error('Usuário não encontrado.');
+
+  if (!usuarios[index].movimentacoes) {
+    usuarios[index].movimentacoes = [];
+  }
+
+  const agora = new Date();
+
+  const novaMovimentacao = {
+    tipo, // 'entrada' ou 'saida'
+    descricao,
+    pontos,
+    data: agora.toLocaleString('pt-BR'),
+    timestamp: agora.toISOString(), // <-- adicionado
+    ...(codigo && { codigo })
+  };
+
+  usuarios[index].movimentacoes.push(novaMovimentacao);
+
+  if (tipo === 'entrada') {
+    usuarios[index].pontos = (usuarios[index].pontos || 0) + pontos;
+  } else if (tipo === 'saida') {
+    usuarios[index].pontos = (usuarios[index].pontos || 0) - pontos;
+  }
+
+  await salvarUsuarios(usuarios);
+};
+
+// Gerador de códigos únicos para vouchers
+const gerarCodigosVoucher = async (quantidade) => {
+  const contadorChave = 'contador_vouchers_gerados';
+  const valorAtual = await AsyncStorage.getItem(contadorChave);
+  let contador = valorAtual ? parseInt(valorAtual) : 0;
+
+  const ano = new Date().getFullYear();
+  const codigos = [];
+
+  for (let i = 0; i < quantidade; i++) {
+    contador++;
+    codigos.push(`VOUC-${ano}-${String(contador).padStart(3, '0')}`);
+  }
+
+  await AsyncStorage.setItem(contadorChave, contador.toString());
+  return codigos;
+};
+
+// Geração de vouchers por PJ
+const gerarVouchersPJ = async (cnpj, dados) => {
+  await simularAtraso();
+
+  const usuarios = await obterUsuarios();
+  const id = apenasNumeros(cnpj);
+  const usuario = usuarios.find(u => apenasNumeros(u.cnpj) === id);
+
+  if (!usuario) throw new Error('Usuário PJ não encontrado.');
+
+  const codigos = await gerarCodigosVoucher(dados.quantidade);
+
+  const e = usuario;
+  const enderecoCompleto = `${e.bairro}-${e.numero}, ${e.cidade}, ${e.cep}`;
+
+  const lote = {
+    idLote: codigos[0], // identificação do lote pelo 1º código
+    tipo: dados.tipo,
+    produtos: dados.produtos,
+    quantidade: dados.quantidade,
+    dataValidade: dados.dataValidade,
+    codigos, // ainda disponíveis
+    empresa: usuario.nomeEmpresa || 'Empresa não encontrada',
+    endereco: enderecoCompleto,
+    cnpj: id
+  };
+
+  const chave = '@vouchersGerados';
+  const json = await AsyncStorage.getItem(chave);
+  const todos = json ? JSON.parse(json) : [];
+
+  todos.push(lote);
+  await AsyncStorage.setItem(chave, JSON.stringify(todos));
+
+  return lote;
+};
+
+
+// Obter todos os vouchers gerados por um CNPJ
+const obterVouchersPorCNPJ = async (cnpj) => {
+  const chave = '@vouchersGerados';
+  const json = await AsyncStorage.getItem(chave);
+  const todos = json ? JSON.parse(json) : [];
+
+  const id = apenasNumeros(cnpj);
+  return todos.filter((v) => apenasNumeros(v.cnpj) === id);
+};
+
+const obterVouchersDisponiveisPF = async () => {
+  const json = await AsyncStorage.getItem('@vouchersGerados');
+  const todos = json ? JSON.parse(json) : [];
+  const hoje = new Date();
+
+  return todos
+    .filter((lote) => new Date(lote.dataValidade) >= hoje && lote.quantidade > 0)
+    .map((lote) => ({
+      tipo: lote.tipo,
+      produtos: lote.produtos,
+      pontos: lote.tipo === 'Alimentacao' ? 150 : lote.tipo === 'Higiene' ? 100 : 50,
+      empresa: lote.empresa,
+      endereco: lote.endereco,
+      validade: lote.dataValidade,
+      quantidade: lote.quantidade,
+      codigos: lote.codigos.slice(0, lote.quantidade) // apenas os ainda disponíveis
+    }));
+};
+
+const comprarVouchersPF = async (cpf, listaVouchers) => {
+  const usuarios = await obterUsuarios();
+  const id = apenasNumeros(cpf);
+  const index = usuarios.findIndex((u) => apenasNumeros(u.cpf) === id);
+  if (index === -1) throw new Error('Usuário não encontrado.');
+
+  const usuario = usuarios[index];
+  const totalPontos = listaVouchers.reduce((acc, v) => acc + v.pontos, 0);
+  if ((usuario.pontos || 0) < totalPontos) throw new Error('Pontos insuficientes.');
+
+  const agora = new Date();
+  const dataFormatada = agora.toLocaleString('pt-BR');
+  const timestamp = agora.toISOString();
+
+  const json = await AsyncStorage.getItem('@vouchersGerados');
+  const todos = json ? JSON.parse(json) : [];
+
+  let vouchersConsumidos = [];
+
+  for (const desejado of listaVouchers) {
+    const lote = todos.find(
+      (l) =>
+        l.tipo === desejado.tipo &&
+        l.empresa === desejado.empresa &&
+        l.endereco === desejado.endereco &&
+        l.produtos?.join(',') === desejado.produtos?.join(',') &&
+        l.dataValidade === desejado.validade &&
+        l.quantidade > 0
+    );
+
+    if (!lote || !lote.codigos?.length) {
+      throw new Error(`Sem códigos disponíveis para: ${desejado.tipo}`);
+    }
+
+    // Pega um código único do lote
+    const codigoUsado = lote.codigos.shift();
+    
+
+    // Adiciona movimentação com esse código
+    usuario.movimentacoes = usuario.movimentacoes || [];
+    usuario.movimentacoes.push({
+      tipo: 'saida',
+      descricao: `Troca por voucher de ${desejado.tipo}`,
+      tipoVoucher: desejado.tipo,
+      pontos: desejado.pontos,
+      data: dataFormatada,
+      timestamp: timestamp,
+      codigo: codigoUsado,
+      produtos: desejado.produtos,
+      empresa: desejado.empresa,
+      endereco: desejado.endereco,
+      validade: desejado.validade,
+      status: 'valido'
+    });
+
+    usuario.pontos = (usuario.pontos || 0) - desejado.pontos;
+    vouchersConsumidos.push(codigoUsado);
+  }
+
+  await salvarUsuarios(usuarios);
+  await AsyncStorage.setItem('@vouchersGerados', JSON.stringify(todos));
+
+  return { status: 'ok', message: 'Compra realizada com sucesso.', codigos: vouchersConsumidos };
+};
+
+async function marcarVoucherComoUtilizado(codigoAlvo) {
+  const usuarios = await obterUsuarios();
+  let atualizado = false;
+
+  for (const usuario of usuarios) {
+    const movimentacoes = usuario.movimentacoes || [];
+
+    const mov = movimentacoes.find((m) => m.codigo === codigoAlvo);
+
+    if (mov) {
+      if (mov.status === 'utilizado') {
+        throw new Error('Voucher já foi utilizado.');
+      }
+
+      mov.status = 'utilizado';
+      atualizado = true;
+      break;
+    }
+  }
+
+  if (!atualizado) {
+    throw new Error('Voucher não encontrado.');
+  }
+
+  await salvarUsuarios(usuarios);
+}
+
+
+
+export default {
+  login,
+  cadastroPF,
+  cadastroPJ,
+  recuperarSenha,
+  redefinirSenha,
+  logout,
+  getToken,
+  salvarPegada,
+  obterHistoricoPegada,
+  obterUsuarioPorCPF,
+  registrarDeposito,
+  registrarMovimentacao,
+  registrarMovimentacao,
+  gerarVouchersPJ,
+  obterVouchersPorCNPJ,
+  obterVouchersDisponiveisPF,
+  comprarVouchersPF,
+  obterUsuarios,
+  salvarUsuarios,
+  marcarVoucherComoUtilizado
+};
