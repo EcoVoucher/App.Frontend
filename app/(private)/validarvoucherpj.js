@@ -173,7 +173,10 @@ export default function ValidarVoucherPJ() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Image source={logoEcoApp} style={styles.logo} resizeMode="contain" />
+      <View style={styles.logoContainer}>
+        <Image source={logoEcoApp} style={styles.logo} resizeMode="contain" />
+      </View>
+
       <Text style={styles.titulo}>Validação de Voucher</Text>
 
       <View style={styles.switchContainer}>
@@ -278,17 +281,19 @@ export default function ValidarVoucherPJ() {
 
 const styles = StyleSheet.create({
   container: {
-    padding: spacing.lg,
-    backgroundColor: colors.fundo,
-    alignItems: 'center',
-    maxWidth: 600,
-    alignSelf: 'center',
-  },
-  logo: {
-    width: 180,
-    height: 100,
-    marginBottom: spacing.lg,
-  },
+  flex: 1,
+  paddingTop: spacing.lg,
+  paddingBottom: spacing.xl,
+},
+
+ logoContainer: {
+  alignItems: 'center',
+  marginBottom: spacing.lg,
+},
+logo: {
+  width: 160,
+  height: 160,
+},
   titulo: {
     fontSize: fonts.size.xl,
     fontWeight: fonts.weight.bold,

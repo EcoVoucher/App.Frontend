@@ -169,9 +169,11 @@ export default function HistoricoPontos() {
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
-    alignItems: 'center',
-  },
+  flex: 1,
+  paddingTop: spacing.lg,
+  paddingBottom: spacing.xl,
+},
+
   contentBox: {
     width: '100%',
     maxWidth: 700,
@@ -179,7 +181,6 @@ const styles = StyleSheet.create({
   topoInfo: {
     backgroundColor: colors.branco,
     borderRadius: 12,
-    marginTop:spacing.xl,
     marginBottom: spacing.sm,
     paddingTop:spacing.sm,
     shadowColor: '#000',

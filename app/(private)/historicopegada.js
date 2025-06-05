@@ -89,7 +89,7 @@ export default function HistoricoPegada() {
   return (
     <ScrollView contentContainerStyle={[styles.scrollContainer, { minHeight: height }]}
       showsVerticalScrollIndicator={false}>
-      <View style={[styles.contentBox, { width: width > 600 ? '60%' : '90%' }]}>
+      <View style={[styles.contentBox, { width: width > 700 ? '60%' : '110%'}]}>
         <View style={styles.headerBox}>
           <Text style={styles.titulo}>Histórico de Pegadas</Text>
           {historico.length > 0 && (
@@ -136,9 +136,10 @@ export default function HistoricoPegada() {
 }
 
 const styles = StyleSheet.create({
-  scrollContainer: {
+    scrollContainer: {
+    paddingTop: spacing.lg,
+    paddingHorizontal: spacing.md, // <- ADICIONAR
     paddingBottom: spacing.xl,
-    paddingTop: spacing.md,
   },
   contentBox: {
     alignSelf: 'center',
