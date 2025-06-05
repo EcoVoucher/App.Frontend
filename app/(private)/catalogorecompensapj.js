@@ -101,17 +101,17 @@ export default function CatalogoRecompensaPJ() {
         </Text>
 
         <View style={styles.filtrosLinha}>
-        <View style={styles.filtrosBotoes}>
           {['todos', 'válidos', 'expirados'].map((value) => (
-            <BotaoVerdePequeno
-              key={value}
-              texto={value.charAt(0).toUpperCase() + value.slice(1)}
-              onPress={() => setFiltroStatus(value)}
-              ativo={filtroStatus === value}
-            />
+            <View key={value} style={styles.botaoFiltroBox}>
+              <BotaoVerdePequeno
+                texto={value.charAt(0).toUpperCase() + value.slice(1)}
+                onPress={() => setFiltroStatus(value)}
+                ativo={filtroStatus === value}
+              />
+            </View>
           ))}
         </View>
-      </View>
+
 
         <View style={styles.linhaAcao}>
           <View style={styles.ordenarBox}>
@@ -346,23 +346,17 @@ const styles = StyleSheet.create({
     color: colors.verdeEscuro,
     marginBottom: spacing.lg,
   },
-  filtrosLinha: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  campoBusca: {
-    backgroundColor: colors.branco,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-    borderRadius: 6,
-    fontSize: fonts.size.sm,
-    flex: 1,
-    borderWidth: 1,
-    borderColor: colors.cinzaClaro,
-  },
+ filtrosLinha: {
+  flexDirection: 'row',
+  flexWrap: 'wrap',       // permite quebra de linha
+  justifyContent: 'center',
+  gap: spacing.sm,        // espaçamento entre botões
+  marginBottom: spacing.sm,
+},
+
+botaoFiltroBox: {
+  marginBottom: spacing.xs,
+},
   linhaAcao: {
     flexDirection: 'row',
     justifyContent: 'space-between',
