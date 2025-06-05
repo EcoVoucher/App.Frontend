@@ -12,6 +12,8 @@ import RodapeNavegacao from '../components/RodapeNavegacao';
 import { useAuth } from '../context/AuthContext';
 import { useRouter, Slot, usePathname } from 'expo-router';
 import { colors } from '../theme/colors';
+import { spacing } from '../theme/spacing';
+
 
 export default function PrivateLayout() {
   const { usuario } = useAuth();
@@ -66,21 +68,21 @@ const styles = StyleSheet.create({
     backgroundColor: colors.fundo,
   },
   container: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
+  flex: 1,
+  backgroundColor: colors.fundo,
+  paddingHorizontal: spacing.md,
+  paddingTop: spacing.lg,
+  paddingBottom: spacing.xl,
+},
+
   conteudoWrapper: {
     flex: 1,
   },
   conteudo: {
-    flexGrow: 1,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 32, // espaço para não colar com o rodapé
-  },
-  rodape: {
-    backgroundColor: colors.fundo,
-    paddingVertical: 12,
-    paddingBottom: Platform.OS === 'android' ? 16 : 24,
-  },
+  flexGrow: 1,
+  paddingHorizontal: 16,
+  paddingTop: 16,
+  paddingBottom: 48,
+},
+
 });

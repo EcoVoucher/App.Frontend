@@ -256,18 +256,18 @@ export default function CatalogoVouchersPF() {
 }
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    paddingBottom: spacing.xl,
-    minHeight: height,
-  },
+  flex: 1,
+  paddingTop: spacing.lg,
+  paddingBottom: spacing.xl,
+},
+
   contentBox: {
     width: width > 700 ? '70%' : '100%',
     alignSelf: 'center',
   },
   boxResumo: {
-    marginTop:30,
     backgroundColor: colors.branco,
-    padding: spacing.md,
+    paddingTop:10,
     borderRadius: 12,
     marginBottom: spacing.lg,
   },

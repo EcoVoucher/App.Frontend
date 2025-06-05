@@ -140,24 +140,26 @@ const menuItems = [
 ];
 
 const styles = StyleSheet.create({
-  container: {
+ container: {
   flexDirection: 'row',
   justifyContent: 'space-around',
-  alignItems: 'center', // garante alinhamento vertical dos botões
+  alignItems: 'flex-start',
   backgroundColor: cores.branco,
-  minHeight: 60, // altura mínima clara para o rodapé
-  paddingVertical: Platform.OS === 'android' ? 8 : 10,
-  paddingBottom: Platform.OS === 'android' ? 16 : 24,
+  minHeight: 80, 
+  paddingTop: 12,
+  paddingBottom: Platform.OS === 'android' ? 24 : 32, 
   borderTopWidth: 1,
   borderColor: '#ccc',
-  zIndex: 10, // garante sobreposição visual
-  elevation: 10, // para sombra no Android
+  zIndex: 10,
+  elevation: 10,
 },
-  botao: {
-    alignItems: 'center',
-    flex: 1,
-    paddingVertical: 4,
-  },
+ botao: {
+  alignItems: 'center',
+  flex: 1,
+  paddingVertical: 4,
+  justifyContent: 'flex-start',
+},
+
   botaoPress: {
     backgroundColor: '#f2f2f2',
     borderRadius: 10,

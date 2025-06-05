@@ -323,13 +323,12 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
   },
   contentBox: {
-    width: width > 600 ? '60%' : '90%',
+    width: width > 700 ? '60%' : '100%',
   },
   boxResumo: {
   backgroundColor: colors.branco,
   borderRadius: 16,
   padding: spacing.sm,
-  marginTop:'30',
   marginBottom: spacing.md,
   shadowColor: '#000',
   shadowOpacity: 0.05,
