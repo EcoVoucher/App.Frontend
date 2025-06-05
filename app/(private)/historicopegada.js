@@ -51,23 +51,23 @@ export default function HistoricoPegada() {
     carregarHistorico();
   }, []);
 
-  const obterComparativo = (ponto) => {
-    if (ponto <= 160) return 'Sustentável: até 1.6 gha';
-    if (ponto <= 270) return 'Abaixo da média mundial (~2.7 gha)';
-    if (ponto <= 400) return 'Acima da média sustentável, similar ao Brasil (~3.0 gha)';
-    if (ponto <= 600) return 'Alta, similar à França ou Suécia (~4.6 a 6.0 gha)';
-    if (ponto <= 800) return 'Muito alta (~6.0 gha)';
-    return 'Extremamente alta, como os EUA (~8.0 gha)';
-  };
+ const obterComparativo = (ponto) => {
+  if (ponto <= 160) return 'Sustentável: até 1.6 gha';
+  if (ponto <= 270) return 'Abaixo da média mundial (~2.7 gha)';
+  if (ponto <= 300) return 'Similar ao Brasil (~3.0 gha)';
+  if (ponto <= 460) return 'Alta, como a França (~4.6 gha)';
+  if (ponto <= 600) return 'Muito alta, como a Suécia (~6.0 gha)';
+  return 'Extremamente alta, como os EUA (~8.0 gha)';
+};
 
-  const obterIcone = (ponto) => {
-    if (ponto <= 160) return '✅';
-    if (ponto <= 270) return '🟢';
-    if (ponto <= 400) return '🟠';
-    if (ponto <= 600) return '🟡';
-    if (ponto <= 800) return '🔵';
-    return '🔴';
-  };
+const obterIcone = (ponto) => {
+  if (ponto <= 160) return '✅';
+  if (ponto <= 270) return '🟢';
+  if (ponto <= 300) return '🟠';
+  if (ponto <= 460) return '🟡';
+  if (ponto <= 600) return '🔵';
+  return '🔴';
+};
 
   const historicoVisivel = mostrarTodos
     ? historico

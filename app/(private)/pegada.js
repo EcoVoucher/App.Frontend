@@ -103,13 +103,21 @@ export default function Pegada() {
       return;
     }
 
-    let comparativo = '';
-    if (soma <= 160) comparativo = '✅ Sustentável: até 1.6 gha, dentro da capacidade do planeta.';
-    else if (soma <= 270) comparativo = '🟢 Abaixo da média mundial (~2.7 gha).';
-    else if (soma <= 400) comparativo = '🟠 Acima da média sustentável, similar ao Brasil (~3.0 gha).';
-    else if (soma <= 600) comparativo = '🟡 Alta, similar à França ou Suécia (~4.6 a 6.0 gha).';
-    else if (soma <= 800) comparativo = '🔵 Muito alta, como a Suécia (~6.0 gha).';
-    else comparativo = '🔴 Extremamente alta, como os EUA (~8.0 gha).';
+          let comparativo = '';
+          if (soma <= 160) {
+        comparativo = '✅ Sustentável: até 1.6 gha, dentro da capacidade do planeta.';
+      } else if (soma <= 270) {
+        comparativo = '🟢 Abaixo da média mundial (~2.7 gha).';
+      } else if (soma <= 300) {
+        comparativo = '🟠 Similar ao Brasil (~3.0 gha).';
+      } else if (soma <= 460) {
+        comparativo = '🟡 Alta, como a França (~4.6 gha).';
+      } else if (soma <= 600) {
+        comparativo = '🔵 Muito alta, como a Suécia (~6.0 gha).';
+      } else {
+        comparativo = '🔴 Extremamente alta, como os EUA (~8.0 gha).';
+      }
+
 
     setCarregando(true);
     try {

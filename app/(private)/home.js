@@ -87,14 +87,15 @@ export default function Home() {
     return () => clearInterval(intervalo);
   }, []);
 
-  const gerarTextoPegada = (valor) => {
+const gerarTextoPegada = (valor) => {
   if (valor <= 160) return '✅ Sustentável: até 1.6 gha, limite do planeta 🌍';
   if (valor <= 270) return '🟢 Abaixo da média mundial (~2.7 gha)';
-  if (valor <= 400) return '🟠 Acima da média sustentável, como o Brasil (~3.0 gha)';
-  if (valor <= 600) return '🟡 Alta, como a França (~4.6 gha)';
-  if (valor <= 800) return '🔵 Muito alta, como a Suécia (~6.0 gha)';
+  if (valor <= 300) return '🟠 Similar ao Brasil (~3.0 gha)';
+  if (valor <= 460) return '🟡 Alta, como a França (~4.6 gha)';
+  if (valor <= 600) return '🔵 Muito alta, como a Suécia (~6.0 gha)';
   return '🔴 Extremamente alta, como os EUA (~8.0 gha)';
 };
+
 
 
   if (carregando) {

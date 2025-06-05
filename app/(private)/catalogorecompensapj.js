@@ -101,20 +101,24 @@ export default function CatalogoRecompensaPJ() {
         </Text>
 
         <View style={styles.filtrosLinha}>
-          {['todos', 'válidos', 'expirados'].map((value) => (
-            <BotaoVerdePequeno
-              key={value}
-              texto={value.charAt(0).toUpperCase() + value.slice(1)}
-              onPress={() => setFiltroStatus(value)}
-              ativo={filtroStatus === value}
+          <View style={styles.filtrosBotoes}>
+            {['todos', 'válidos', 'expirados'].map((value) => (
+              <BotaoVerdePequeno
+                key={value}
+                texto={value.charAt(0).toUpperCase() + value.slice(1)}
+                onPress={() => setFiltroStatus(value)}
+                ativo={filtroStatus === value}
+              />
+            ))}
+          </View>
+          <View style={styles.filtroBuscaBox}>
+            <TextInput
+              placeholder="Buscar..."
+              value={busca}
+              onChangeText={setBusca}
+              style={styles.campoBusca}
             />
-          ))}
-          <TextInput
-            placeholder="Buscar..."
-            value={busca}
-            onChangeText={setBusca}
-            style={styles.campoBusca}
-          />
+          </View>
         </View>
 
         <View style={styles.linhaAcao}>
@@ -357,6 +361,16 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginBottom: spacing.sm,
   },
+  filtrosBotoes: {
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+  gap: spacing.sm,
+  marginBottom: spacing.sm,
+},
+
+filtroBuscaBox: {
+  width: '100%',
+},
   campoBusca: {
     backgroundColor: colors.branco,
     paddingHorizontal: spacing.sm,
