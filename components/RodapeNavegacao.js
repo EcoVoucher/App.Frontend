@@ -108,7 +108,7 @@ export default function RodapeNavegacao() {
       </Modal>
 
       {/* Rodapé fixo */}
-      <View style={[styles.container, { width }]}>
+     <View style={styles.container}>
         {rodapeBotoes.map((btn, i) => (
           <Pressable
             key={i}
@@ -150,6 +150,7 @@ const styles = StyleSheet.create({
   borderColor: '#ccc',
   zIndex: 10,
   elevation: 10,
+  width:'100%'
 },
  botao: {
   alignItems: 'center',

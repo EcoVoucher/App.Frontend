@@ -1,24 +1,24 @@
 // CatalogoVouchersPF.js com fundo branco e sem ScrollView duplicado (ajustado para PrivateLayout)
 
-import React, { useEffect, useState } from 'react';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  FlatList,
-  StyleSheet,
-  TouchableOpacity,
-  Modal,
   Dimensions,
+  FlatList,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import api from '../../services/apiMock';
-import { useAuth } from '../../context/AuthContext';
 import BotaoVerde from '../../components/BotaoVerde';
 import BotaoVerdePequeno from '../../components/BotaoVerdePequeno';
 import ModalSucesso from '../../components/ModalSucesso';
+import { useAuth } from '../../context/AuthContext';
+import api from '../../services/apiMock';
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
@@ -288,6 +288,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   titulo: {
+    marginTop:spacing.md,
     fontSize: fonts.size.xl,
     fontWeight: fonts.weight.bold,
     color: colors.verde,
@@ -312,12 +313,12 @@ const styles = StyleSheet.create({
   filtrosLinha: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.md,
+    gap: spacing.sm,
     justifyContent: 'center',
     marginBottom: spacing.sm,
   },
   card: {
-    padding: spacing.md,
+    padding: spacing.sm,
     borderRadius: 12,
     marginBottom: spacing.sm,
     borderLeftWidth: 6,

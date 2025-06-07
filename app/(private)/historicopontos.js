@@ -121,7 +121,10 @@ export default function HistoricoPontos() {
           <Text style={styles.titulo}>Histórico Pontos e Vouchers</Text>
           <Text style={styles.subtitulo}>Total de pontos disponíveis: {pontos}</Text>
           <Text style={styles.resumo}>
-            Entradas: {totalEntradas} · Vouchers: {totalSaidas} · Utilizados: {totalUtilizados} · Expirados: {totalExpirados}
+            ➕ Entradas: {totalEntradas}  ·  
+            🎁 Vouchers: {totalSaidas}                                                       ·  
+            ✅ Utilizados: {totalUtilizados}  ·  
+            ⏰ Expirados: {totalExpirados}
           </Text>
           <ScrollView
             horizontal
@@ -197,7 +200,7 @@ const styles = StyleSheet.create({
     fontWeight: fonts.weight.bold,
     color: colors.verde,
     textAlign: 'center',
-    marginBottom: spacing.xxl,
+    marginBottom: spacing.md,
   },
   subtitulo: {
     fontSize: fonts.size.md,
