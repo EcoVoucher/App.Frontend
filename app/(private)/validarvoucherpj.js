@@ -282,7 +282,6 @@ export default function ValidarVoucherPJ() {
 const styles = StyleSheet.create({
   container: {
   flex: 1,
-  paddingTop: spacing.lg,
   paddingBottom: spacing.xl,
 },
 

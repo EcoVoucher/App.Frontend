@@ -18,6 +18,7 @@ import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
 import PegadaTermometro from '../../components/PegadaTermometro';
 import BotaoVerde from '../../components/BotaoVerde';
+import { formatarDataBR, obterComparativoPegada, obterIconePegada } from '../../utils/formatadores';
 
 const { height } = Dimensions.get('window');
 
@@ -51,24 +52,6 @@ export default function HistoricoPegada() {
     carregarHistorico();
   }, []);
 
- const obterComparativo = (ponto) => {
-  if (ponto <= 160) return 'Sustentável: até 1.6 gha';
-  if (ponto <= 270) return 'Abaixo da média mundial (~2.7 gha)';
-  if (ponto <= 300) return 'Similar ao Brasil (~3.0 gha)';
-  if (ponto <= 460) return 'Alta, como a França (~4.6 gha)';
-  if (ponto <= 600) return 'Muito alta, como a Suécia (~6.0 gha)';
-  return 'Extremamente alta, como os EUA (~8.0 gha)';
-};
-
-const obterIcone = (ponto) => {
-  if (ponto <= 160) return '✅';
-  if (ponto <= 270) return '🟢';
-  if (ponto <= 300) return '🟠';
-  if (ponto <= 460) return '🟡';
-  if (ponto <= 600) return '🔵';
-  return '🔴';
-};
-
   const historicoVisivel = mostrarTodos
     ? historico
     : historico.slice(0, pagina * itensPorPagina);
@@ -87,9 +70,8 @@ const obterIcone = (ponto) => {
   };
 
   return (
-    <ScrollView contentContainerStyle={[styles.scrollContainer, { minHeight: height }]}
-      showsVerticalScrollIndicator={false}>
-      <View style={[styles.contentBox, { width: width > 700 ? '60%' : '110%'}]}>
+    <ScrollView contentContainerStyle={[styles.scrollContainer, { minHeight: height }]} showsVerticalScrollIndicator={false}>
+      <View style={[styles.contentBox, { width: width > 700 ? '60%' : '110%' }]}>
         <View style={styles.headerBox}>
           <Text style={styles.titulo}>Histórico de Pegadas</Text>
           {historico.length > 0 && (
@@ -103,19 +85,10 @@ const obterIcone = (ponto) => {
           <Text style={styles.vazio}>Nenhuma pegada registrada ainda.</Text>
         ) : (
           historicoVisivel.map((item, index) => (
-            <View
-              key={index}
-              style={[styles.card, item.data === historico[0].data && styles.cardUltimo]}
-            >
-              <Text style={styles.data}>
-                {new Date(item.data).toLocaleDateString()}
-              </Text>
-              <Text style={styles.pontos}>
-                {obterIcone(item.pontuacao)} {item.pontuacao} pontos
-              </Text>
-              <Text style={styles.comparativo}>
-                {obterComparativo(item.pontuacao)}
-              </Text>
+            <View key={index} style={[styles.card, item.data === historico[0].data && styles.cardUltimo]}>
+              <Text style={styles.data}>📅 {formatarDataBR(item.data)}</Text>
+              <Text style={styles.pontos}> {item.pontuacao} pontos</Text>
+              <Text style={styles.comparativo}>{obterComparativoPegada(item.pontuacao)}</Text>
             </View>
           ))
         )}
@@ -136,9 +109,8 @@ const obterIcone = (ponto) => {
 }
 
 const styles = StyleSheet.create({
-    scrollContainer: {
-    paddingTop: spacing.lg,
-    paddingHorizontal: spacing.md, // <- ADICIONAR
+  scrollContainer: {
+    paddingHorizontal: spacing.sm,
     paddingBottom: spacing.xl,
   },
   contentBox: {
@@ -169,20 +141,20 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: spacing.sm,
     elevation: 2,
+    borderWidth: 1.5,
+    borderColor: colors.verde,
   },
   cardUltimo: {
-    borderWidth: 2,
-    borderColor: colors.verde,
     backgroundColor: '#f0fff0',
   },
   data: {
-    fontSize: fonts.size.sm,
+    fontSize: fonts.size.xs,
     color: colors.cinza,
     marginBottom: 4,
   },
   pontos: {
     fontSize: fonts.size.md,
-    fontWeight: fonts.weight.medium,
+    fontWeight: fonts.weight.bold,
     color: colors.preto,
   },
   comparativo: {

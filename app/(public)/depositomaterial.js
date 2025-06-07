@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import {
-  View,
   Text,
   StyleSheet,
   TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView
 } from 'react-native';
 import { Masks } from 'react-native-mask-input';
 import InputField from '../../components/InputField';
@@ -91,7 +93,11 @@ export default function DepositoMaterial() {
 };
 
   return (
-  <>
+  <KeyboardAvoidingView
+    style={{ flex: 1 }}
+    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+  >
+     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <Text style={styles.titulo}>Depósito de Materiais</Text>
       <Text style={styles.subtitulo}>Simule seu depósito e ganhe pontos!</Text>
 
@@ -122,8 +128,9 @@ export default function DepositoMaterial() {
         mensagem={mensagemErro}
         onClose={() => setErroVisivel(false)}
       />
-      </>
-  );
+       </ScrollView>
+ </KeyboardAvoidingView>
+);
 }
 
 const styles = StyleSheet.create({

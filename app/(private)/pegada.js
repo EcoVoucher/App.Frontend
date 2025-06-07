@@ -18,6 +18,8 @@ import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
 import { perguntas } from '../../components/forms/FormPegada';
+import { obterComparativoPegada, obterIconePegada, formatarDataBR } from '../../utils/formatadores';
+
 
 const { width } = Dimensions.get('window');
 
@@ -94,30 +96,36 @@ export default function Pegada() {
   };
 
   const calcularPegada = async () => {
-    if (!respostas[`q${perguntas.length}`]) return;
+    const todasRespondidas = perguntas.every((_, i) => {
+      const chave = `q${i + 1}`;
+      return respostas[chave] !== undefined && respostas[chave] !== '';
+    });
 
-    const soma = Object.values(respostas).reduce((acc, val) => acc + parseInt(val), 0);
+    if (!todasRespondidas) {
+      Alert.alert('Atenção', 'Por favor, responda todas as perguntas.');
+
+      perguntas.forEach((_, i) => {
+        const chave = `q${i + 1}`;
+        if (!respostas[chave]) {
+          setErros((prev) => ({ ...prev, [chave]: 'Campo obrigatório' }));
+        }
+      });
+
+      return;
+    }
+
+    const soma = Object.values(respostas).reduce(
+      (acc, val) => acc + (parseInt(val) || 0),
+      0
+    );
 
     if (soma === ultimaPontuacao) {
       Alert.alert('Pegada já salva', 'Você já salvou essa pegada.');
       return;
     }
 
-          let comparativo = '';
-          if (soma <= 160) {
-        comparativo = '✅ Sustentável: até 1.6 gha, dentro da capacidade do planeta.';
-      } else if (soma <= 270) {
-        comparativo = '🟢 Abaixo da média mundial (~2.7 gha).';
-      } else if (soma <= 300) {
-        comparativo = '🟠 Similar ao Brasil (~3.0 gha).';
-      } else if (soma <= 460) {
-        comparativo = '🟡 Alta, como a França (~4.6 gha).';
-      } else if (soma <= 600) {
-        comparativo = '🔵 Muito alta, como a Suécia (~6.0 gha).';
-      } else {
-        comparativo = '🔴 Extremamente alta, como os EUA (~8.0 gha).';
-      }
-
+    const comparativo = obterComparativoPegada(soma);
+    
 
     setCarregando(true);
     try {
@@ -126,7 +134,10 @@ export default function Pegada() {
       setUltimaPontuacao(soma);
 
       if (usuario?.primeiroAcesso) {
-        login({ token: 'mock-token-pegada', usuario: { ...usuario, primeiroAcesso: false } });
+        login({
+          token: 'mock-token-pegada',
+          usuario: { ...usuario, primeiroAcesso: false },
+        });
       }
 
       setTimeout(() => {
@@ -204,7 +215,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingBottom: spacing.xxl,
     alignItems: 'center',
-
   },
   contentBox: {
     width: '100%',
@@ -271,5 +281,8 @@ const styles = StyleSheet.create({
     color: colors.preto,
     marginBottom: spacing.xs,
   },
-
+  resultadoTexto: {
+    fontSize: fonts.size.sm,
+    color: colors.preto,
+  },
 });

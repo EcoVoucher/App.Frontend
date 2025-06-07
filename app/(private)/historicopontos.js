@@ -22,7 +22,7 @@ export default function HistoricoPontos() {
   const [busca, setBusca] = useState('');
   const [carregando, setCarregando] = useState(true);
   const [mostrarTodos, setMostrarTodos] = useState(false);
-  const [itensPorPagina, setItensPorPagina] = useState(5);
+  const [itensPorPagina] = useState(5);
 
   const carregarMais = () => setMostrarTodos(true);
   const verMenos = () => setMostrarTodos(false);
@@ -71,8 +71,6 @@ export default function HistoricoPontos() {
     if (!atendeBusca) return false;
 
     switch (filtro) {
-      case 'todos':
-      return true; 
       case 'entrada': return item.tipo === 'entrada';
       case 'vouchers adquiridos': return item.tipo === 'saida' && item.status === 'valido';
       case 'vouchers utilizados': return item.tipo === 'saida' && item.status === 'utilizado';
@@ -92,6 +90,11 @@ export default function HistoricoPontos() {
       item.status === 'expirado' ? colors.erro :
       item.status === 'valido' ? colors.sucesso : colors.cinza;
 
+    const iconeStatus =
+      item.status === 'utilizado' ? '❌' :
+      item.status === 'expirado' ? '⏳' :
+      item.status === 'valido' ? '✅' : 'ℹ️';
+
     return (
       <View style={[styles.card, isVoucher ? styles.voucher : styles.ponto]}>
         <Text style={styles.data}>📅 {item.data}</Text>
@@ -106,13 +109,13 @@ export default function HistoricoPontos() {
         {item.empresa && <Text style={styles.info}>🏢 Empresa: {item.empresa}</Text>}
         {item.endereco && <Text style={styles.info}>📍 Endereço: {item.endereco}</Text>}
         {item.validade && <Text style={styles.info}>📅 Validade: {new Date(item.validade).toLocaleDateString('pt-BR')}</Text>}
-        {item.status && <Text style={[styles.info, { color: corStatus }]}>✔️ Status: {item.status}</Text>}
+        {item.status && <Text style={[styles.info, { color: corStatus }]}>{iconeStatus} Status: {item.status}</Text>}
       </View>
     );
   };
 
   return (
-    <View style={styles.container}> 
+    <View style={styles.container}>
       <View style={styles.contentBox}>
         <View style={styles.topoInfo}>
           <Text style={styles.titulo}>Histórico Pontos e Vouchers</Text>
@@ -135,7 +138,6 @@ export default function HistoricoPontos() {
               </View>
             ))}
           </ScrollView>
-
         </View>
 
         <TextInput
@@ -146,7 +148,7 @@ export default function HistoricoPontos() {
         />
 
         {carregando ? (
-          <Text>Carregando...</Text>
+          <Text style={[styles.vazio, { fontStyle: 'italic' }]}>⏳ Carregando histórico...</Text>
         ) : dadosPaginados.length === 0 ? (
           <Text style={styles.vazio}>Nenhuma movimentação encontrada.</Text>
         ) : (
@@ -172,20 +174,18 @@ export default function HistoricoPontos() {
 
 const styles = StyleSheet.create({
   container: {
-  flex: 1,
-  paddingTop: spacing.lg,
-  paddingBottom: spacing.xl,
-},
-
+    flex: 1,
+  },
   contentBox: {
     width: '100%',
     maxWidth: 700,
+    alignSelf: 'center',
   },
   topoInfo: {
     backgroundColor: colors.branco,
     borderRadius: 12,
     marginBottom: spacing.sm,
-    paddingTop:spacing.sm,
+    paddingTop: spacing.sm,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -265,16 +265,15 @@ const styles = StyleSheet.create({
     color: colors.cinzaEscuro,
     marginTop: 2,
   },
- filtrosLinhaHorizontal: {
-  paddingVertical: spacing.sm,
-  paddingHorizontal: spacing.xs,
-  flexDirection: 'row',
-  alignItems: 'center',
-},
-botaoFiltroHorizontal: {
-  marginRight: spacing.sm,
-},
-
+  filtrosLinhaHorizontal: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  botaoFiltroHorizontal: {
+    marginRight: spacing.sm,
+  },
   campoBusca: {
     backgroundColor: colors.branco,
     paddingHorizontal: spacing.sm,
@@ -283,7 +282,7 @@ botaoFiltroHorizontal: {
     fontSize: fonts.size.sm,
     marginTop: spacing.sm,
     marginBottom: spacing.sm,
-    minWidth: '100%',
+    width: '100%',
   },
   botaoContainer: {
     alignItems: 'center',

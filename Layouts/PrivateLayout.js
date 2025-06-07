@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
   container: {
   flex: 1,
   backgroundColor: colors.fundo,
-  paddingHorizontal: spacing.md,
+  paddingHorizontal: spacing.sd,
   paddingTop: spacing.lg,
 },
 

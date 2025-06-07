@@ -47,15 +47,11 @@ export const validarCamposObrigatorios = (dados, campos, tipoPessoa) => {
         }
         break;
 
-      case 'cpf':
+          case 'cpf':
         const numerosCPF = valor.replace(/\D/g, '');
-        if (tipoPessoa === 'pf') {
-          if (!validarCPF(valor)) {
-            erros.cpf = 'CPF inválido';
-          }
-        } else if (numerosCPF.length === 11 && !validarCPF(valor)) {
+        if (tipoPessoa === 'pf' && !validarCPF(valor)) {
           erros.cpf = 'CPF inválido';
-        } else if (numerosCPF.length === 14 && !validarCNPJ(valor)) {
+        } else if (tipoPessoa === 'pj' && !validarCNPJ(valor)) {
           erros.cpf = 'CNPJ inválido';
         } else if (![11, 14].includes(numerosCPF.length)) {
           erros.cpf = 'CPF ou CNPJ incompleto';
@@ -117,13 +113,12 @@ export const validarCamposObrigatorios = (dados, campos, tipoPessoa) => {
         const dataMinima = new Date();
         dataMinima.setDate(hojeValidade.getDate() + 10);
 
-        if (!(validade instanceof Date) || isNaN(validade)) {
+        if (isNaN(new Date(valor).getTime())) {
           erros.dataValidade = 'Data inválida';
         } else if (validade < dataMinima) {
           erros.dataValidade = 'Validade deve ser no mínimo 10 dias à frente';
         }
         break;
-
       default:
         break;
     }

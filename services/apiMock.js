@@ -3,10 +3,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const simularAtraso = (ms = 1000) => new Promise(res => setTimeout(res, ms));
 
 const CHAVE_USUARIOS = '@usuarios_mock';
+const CHAVE_VOUCHERS = '@vouchersGerados';
+const CHAVE_CONTADOR = 'contador_vouchers_gerados';
 
 const apenasNumeros = (str) => (str || '').replace(/\D/g, '');
 const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const regexSenha = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{6,}$/;
+
+const limparUsuarios = async () => await AsyncStorage.removeItem(CHAVE_USUARIOS);
+const limparVouchers = async () => await AsyncStorage.removeItem(CHAVE_VOUCHERS);
 
 const obterUsuarios = async () => {
   const json = await AsyncStorage.getItem(CHAVE_USUARIOS);
@@ -73,7 +78,7 @@ const login = async (identificador, senha, tipo) => {
   if (usuario.tipo !== tipo) throw new Error('Tipo de usuário incorreto.');
   if (usuario.senha !== senha) throw new Error('Senha incorreta.');
 
-  const primeiroAcesso = !!(usuario.primeiroAcesso ?? true); // força booleano real
+  const primeiroAcesso = !!(usuario.primeiroAcesso ?? true);
   usuarios[usuarioIndex].primeiroAcesso = false;
   await salvarUsuarios(usuarios);
 
@@ -83,38 +88,18 @@ const login = async (identificador, senha, tipo) => {
   return { token, usuario: { ...usuario, primeiroAcesso } };
 };
 
-
 const cadastroPF = async (dados) => {
   await simularAtraso();
   const usuarios = await obterUsuarios();
-
   const cpfLimpo = apenasNumeros(dados.cpf);
-  if (!cpfLimpo) throw new Error('CPF não informado.');
 
-  const existe = usuarios.find(u => apenasNumeros(u.cpf) === cpfLimpo);
-  if (existe) throw new Error('Usuário já cadastrado com esse CPF.');
+  if (!cpfLimpo) throw new Error('CPF não informado.');
+  if (usuarios.some(u => apenasNumeros(u.cpf) === cpfLimpo)) throw new Error('Usuário já cadastrado com esse CPF.');
   if (!regexEmail.test(dados.email)) throw new Error('Email inválido.');
   if (!regexSenha.test(dados.senha)) throw new Error('Senha fraca.');
   if (dados.senha !== dados.confirmarSenha) throw new Error('Senhas não coincidem.');
 
-  usuarios.push({
-    tipo: 'pf',
-    nome: dados.nome,
-    cpf: dados.cpf,
-    email: dados.email,
-    senha: dados.senha,
-    telefone: dados.telefone,
-    cep: dados.cep,
-    endereco: dados.endereco,
-    bairro: dados.bairro,
-    cidade: dados.cidade,
-    estado: dados.estado,
-    numero: dados.numero,
-    complemento: dados.complemento,
-    dataNascimento: dados.dataNascimento,
-    primeiroAcesso: true
-  });
-
+  usuarios.push({ tipo: 'pf', ...dados, primeiroAcesso: true });
   await salvarUsuarios(usuarios);
   return { status: 'ok', message: 'Cadastro PF realizado.' };
 };
@@ -122,74 +107,48 @@ const cadastroPF = async (dados) => {
 const cadastroPJ = async (dados) => {
   await simularAtraso();
   const usuarios = await obterUsuarios();
-
   const cnpjLimpo = apenasNumeros(dados.cnpj);
-  if (!cnpjLimpo) throw new Error('CNPJ não informado.');
 
-  const existe = usuarios.find(u => apenasNumeros(u.cnpj) === cnpjLimpo);
-  if (existe) throw new Error('Usuário já cadastrado com esse CNPJ.');
+  if (!cnpjLimpo) throw new Error('CNPJ não informado.');
+  if (usuarios.some(u => apenasNumeros(u.cnpj) === cnpjLimpo)) throw new Error('Usuário já cadastrado com esse CNPJ.');
   if (!regexEmail.test(dados.email)) throw new Error('Email inválido.');
   if (!regexSenha.test(dados.senha)) throw new Error('Senha fraca.');
   if (dados.senha !== dados.confirmarSenha) throw new Error('Senhas não coincidem.');
 
-  usuarios.push({
-    tipo: 'pj',
-    nomeEmpresa: dados.nomeEmpresa,
-    cnpj: dados.cnpj,
-    email: dados.email,
-    senha: dados.senha,
-    telefone: dados.telefone,
-    cep: dados.cep,
-    endereco: dados.endereco,
-    bairro: dados.bairro,
-    cidade: dados.cidade,
-    estado: dados.estado,
-    numero: dados.numero,
-    complemento: dados.complemento,
-    primeiroAcesso: true
-  });
-
-
+  usuarios.push({ tipo: 'pj', ...dados, primeiroAcesso: true });
   await salvarUsuarios(usuarios);
   return { status: 'ok', message: 'Cadastro PJ realizado.' };
 };
 
-const recuperarSenha = async (dados) => {
+const recuperarSenha = async ({ cpf, cnpj, email }) => {
   await simularAtraso();
   const usuarios = await obterUsuarios();
-  const id = apenasNumeros(dados.cpf || dados.cnpj);
+  const id = apenasNumeros(cpf || cnpj);
   const usuario = usuarios.find(u => apenasNumeros(u.cpf || u.cnpj) === id);
-
   if (!usuario) throw new Error('Usuário não encontrado.');
-  if (usuario.email !== dados.email) throw new Error('E-mail não confere.');
-
+  if (usuario.email !== email) throw new Error('E-mail não confere.');
   return { status: 'ok' };
 };
 
-const redefinirSenha = async (dados) => {
+const redefinirSenha = async ({ cpf, cnpj, novaSenha }) => {
   await simularAtraso();
   const usuarios = await obterUsuarios();
-  const id = apenasNumeros(dados.cpf || dados.cnpj);
+  const id = apenasNumeros(cpf || cnpj);
   const usuarioIndex = usuarios.findIndex(u => apenasNumeros(u.cpf || u.cnpj) === id);
 
   if (usuarioIndex === -1) throw new Error('Usuário não encontrado.');
-  if (!regexSenha.test(dados.novaSenha)) {
-    throw new Error('A nova senha deve conter letra, número e caractere especial.');
-  }
+  if (!regexSenha.test(novaSenha)) throw new Error('Senha inválida.');
 
-  usuarios[usuarioIndex].senha = dados.novaSenha;
+  usuarios[usuarioIndex].senha = novaSenha;
   await salvarUsuarios(usuarios);
-
   return { status: 'ok' };
 };
 
-const logout = async () => {
-  await AsyncStorage.removeItem('token');
-};
+const logout = async () => await AsyncStorage.removeItem('token');
 
-const getToken = async () => {
-  return await AsyncStorage.getItem('token');
-};
+const getToken = async () => await AsyncStorage.getItem('token');
+
+
 ///tela pegada - questionario
 const salvarPegada = async (cpfOuCnpj, pontuacao) => {
   await simularAtraso();
@@ -264,10 +223,6 @@ const registrarDeposito = async (cpf, materiais, totalPontos,codigo) => {
 
   return { status: 'ok', message: 'Depósito registrado com sucesso.' };
 };
-
-
-
-
 
 //movimentação de pontos-cnpj e cpf
 
@@ -377,8 +332,11 @@ const obterVouchersDisponiveisPF = async () => {
   const hoje = new Date();
 
   return todos
-    .filter((lote) => new Date(lote.dataValidade) >= hoje && lote.quantidade > 0)
-    .map((lote) => ({
+    .filter((lote) => 
+        new Date(lote.dataValidade) >= hoje &&
+        lote.quantidade > 0 &&
+        lote.codigos?.length > 0
+      ).map((lote) => ({
       tipo: lote.tipo,
       produtos: lote.produtos,
       pontos: lote.tipo === 'Alimentacao' ? 150 : lote.tipo === 'Higiene' ? 100 : 50,
@@ -497,12 +455,13 @@ export default {
   obterUsuarioPorCPF,
   registrarDeposito,
   registrarMovimentacao,
-  registrarMovimentacao,
   gerarVouchersPJ,
   obterVouchersPorCNPJ,
   obterVouchersDisponiveisPF,
   comprarVouchersPF,
   obterUsuarios,
   salvarUsuarios,
-  marcarVoucherComoUtilizado
+  marcarVoucherComoUtilizado,
+  limparUsuarios,
+  limparVouchers
 };

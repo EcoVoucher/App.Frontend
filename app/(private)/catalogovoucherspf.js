@@ -35,15 +35,29 @@ export default function CatalogoVouchersPF() {
   const [modalMensagem, setModalMensagem] = useState(null);
   const [modalSucesso, setModalSucesso] = useState(false);
   const [tipoSelecionado, setTipoSelecionado] = useState('Alimentacao');
+  const [saldoAtual, setSaldoAtual] = useState(0);
 
-  useEffect(() => {
-    carregarVouchers();
-  }, []);
+
+useEffect(() => {
+  carregarVouchers();
+  carregarSaldoAtualizado();
+}, []);
+
+
+  const carregarSaldoAtualizado = async () => {
+  const user = await api.obterUsuarioPorCPF(usuario.cpf);
+  setSaldoAtual(user.pontos || 0);
+};
+
 
   const carregarVouchers = async () => {
-    const lista = await api.obterVouchersDisponiveisPF();
-    setVouchers(lista);
-  };
+  const lista = await api.obterVouchersDisponiveisPF();
+  setVouchers(lista);
+
+  const atual = await api.obterUsuarioPorCPF(usuario.cpf);
+  setSaldoAtual(atual.pontos || 0);
+};
+
 
   const alternarSelecao = (lote) => {
     const id = lote.codigos[0];
@@ -75,26 +89,31 @@ export default function CatalogoVouchersPF() {
     0
   );
 
-  const finalizarCompra = async () => {
-    try {
-      const listaFinal = selecionados.flatMap((item) => {
-        const codigosUsados = item.codigos.slice(0, item.quantidade);
-        return codigosUsados.map((codigo) => ({
-          codigo,
-          tipo: item.tipo,
-          produtos: item.produtos,
-          empresa: item.empresa,
-          endereco: item.endereco,
-          validade: item.validade,
-          pontos: item.pontos,
-        }));
-      });
+ const finalizarCompra = async () => {
+  try {
+    const listaFinal = selecionados.flatMap((item) => {
+      const codigosUsados = item.codigos.slice(0, item.quantidade);
+      return codigosUsados.map((codigo) => ({
+        codigo,
+        tipo: item.tipo,
+        produtos: item.produtos,
+        empresa: item.empresa,
+        endereco: item.endereco,
+        validade: item.validade,
+        pontos: item.pontos,
+      }));
+    });
 
-      await api.comprarVouchersPF(usuario.cpf, listaFinal);
+    await api.comprarVouchersPF(usuario.cpf, listaFinal);
+
+
+      setTimeout(async () => {
+      await carregarVouchers(); 
+
       const atual = await api.obterUsuarioPorCPF(usuario.cpf);
       const novoSaldo = atual.pontos;
+      setSaldoAtual(novoSaldo); 
 
-      await carregarVouchers();
       setSelecionados([]);
       setModalVisivel(false);
 
@@ -117,6 +136,7 @@ export default function CatalogoVouchersPF() {
                 backgroundColor: '#4CAF50',
                 padding: 10,
                 borderRadius: 8,
+                
                 marginTop: 16,
                 alignItems: 'center'
               }}
@@ -127,21 +147,22 @@ export default function CatalogoVouchersPF() {
           </ScrollView>
         )
       });
+    }, 300); // espera 300ms para garantir leitura correta do AsyncStorage
 
-    } catch (error) {
-      setModalVisivel(false);
-      setSelecionados([]);
-      setModalMensagem({
-        titulo: 'Pontos insuficientes',
-        conteudo: (
-          <Text>
-            Você não possui pontos suficientes para realizar esta compra.
-            Faça novos depósitos de materiais para acumular mais pontos.
-          </Text>
-        ),
-      });
-    }
-  };
+  } catch (error) {
+    setModalVisivel(false);
+    setSelecionados([]);
+    setModalMensagem({
+      titulo: 'Pontos insuficientes',
+      conteudo: (
+        <Text>
+          Você não possui pontos suficientes para realizar esta compra.
+          Faça novos depósitos de materiais para acumular mais pontos.
+        </Text>
+      ),
+    });
+  }
+};
 
   const limparSelecao = () => setSelecionados([]);
   const filtrarPorTipo = () => tipoSelecionado === 'Todos' ? vouchers : vouchers.filter((v) => v.tipo === tipoSelecionado);
@@ -160,6 +181,8 @@ export default function CatalogoVouchersPF() {
         <View style={styles.boxResumo}>
           <Text style={styles.titulo}>Catálogo de Vouchers</Text>
           <Text style={styles.subtitulo}>Troque seus pontos por produtos!</Text>
+          <Text style={styles.saldo}>🥇 Saldo atual: {saldoAtual} pontos</Text>
+
           <View style={styles.filtrosLinha}>
             {tipos.map((tipo) => (
               <BotaoVerdePequeno
@@ -255,19 +278,12 @@ export default function CatalogoVouchersPF() {
   );
 }
 const styles = StyleSheet.create({
-  container: {
-  flex: 1,
-  paddingTop: spacing.lg,
-  paddingBottom: spacing.xl,
-},
-
   contentBox: {
     width: width > 700 ? '70%' : '100%',
     alignSelf: 'center',
   },
   boxResumo: {
     backgroundColor: colors.branco,
-    paddingTop:10,
     borderRadius: 12,
     marginBottom: spacing.lg,
   },
@@ -276,7 +292,7 @@ const styles = StyleSheet.create({
     fontWeight: fonts.weight.bold,
     color: colors.verde,
     textAlign: 'center',
-    marginBottom: spacing.xl,
+    marginBottom: spacing.md,
   },
   subtitulo: {
     fontSize: fonts.size.md,
@@ -285,12 +301,20 @@ const styles = StyleSheet.create({
     color: colors.verde,
     marginBottom: spacing.md,
   },
+  saldo: {
+  textAlign: 'center',
+  fontSize: fonts.size.md,
+  fontWeight: fonts.weight.bold,
+  color: colors.verde,
+  marginBottom: spacing.md,
+},
+
   filtrosLinha: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
+    gap: spacing.md,
     justifyContent: 'center',
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   card: {
     padding: spacing.md,
@@ -329,7 +353,7 @@ const styles = StyleSheet.create({
   rodapeBox: {
     marginTop: spacing.lg,
     padding: spacing.md,
-    backgroundColor: colors.fundo,
+    backgroundColor: colors.branco,
     borderTopWidth: 1,
     borderColor: colors.cinzaClaro,
     alignItems: 'center',
