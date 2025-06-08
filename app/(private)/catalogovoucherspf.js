@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
   saldo: {
   textAlign: 'center',
   fontSize: fonts.size.md,
-  fontWeight: fonts.weight.bold,
+  fontWeight: fonts.weight.regular,
   color: colors.verde,
   marginBottom: spacing.md,
 },

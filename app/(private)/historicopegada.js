@@ -110,7 +110,7 @@ export default function HistoricoPegada() {
 
 const styles = StyleSheet.create({
   scrollContainer: {
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl,
   },
   contentBox: {
