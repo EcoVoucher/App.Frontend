@@ -36,16 +36,20 @@ export default function Pegada() {
   const [resultado, setResultado] = useState(null);
   const [ultimaPontuacao, setUltimaPontuacao] = useState(null);
   const [indiceAtual, setIndiceAtual] = useState(0);
+  const [aguardandoRedirecionamento, setAguardandoRedirecionamento] = useState(false);
+
 
   const perguntaAtual = perguntas[indiceAtual];
 
-  useEffect(() => {
-    if (usuario?.primeiroAcesso && resultado) {
-      setTimeout(() => {
-        router.replace('/(private)/home');
-      }, 4000);
-    }
-  }, [resultado]);
+ useEffect(() => {
+  if (aguardandoRedirecionamento && resultado) {
+    setTimeout(() => {
+      router.replace('/(private)/home');
+    }, 4000);
+  }
+}, [usuario, aguardandoRedirecionamento, resultado]);
+
+
 
   const handleChange = (campo, valor) => {
     setRespostas((prev) => {
@@ -96,6 +100,7 @@ export default function Pegada() {
   };
 
   const calcularPegada = async () => {
+    if (carregando) return;
     const todasRespondidas = perguntas.every((_, i) => {
       const chave = `q${i + 1}`;
       return respostas[chave] !== undefined && respostas[chave] !== '';
@@ -134,11 +139,12 @@ export default function Pegada() {
       setUltimaPontuacao(soma);
 
       if (usuario?.primeiroAcesso) {
-        login({
-          token: 'mock-token-pegada',
-          usuario: { ...usuario, primeiroAcesso: false },
-        });
-      }
+          login({
+            token: 'mock-token-pegada',
+            usuario: { ...usuario, primeiroAcesso: false },
+          });
+          setAguardandoRedirecionamento(true); // <- ativa flag temporária
+        }
 
       setTimeout(() => {
         resultadoRef.current?.measureLayout(

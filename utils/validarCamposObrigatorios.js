@@ -1,4 +1,3 @@
-// validarCamposObrigatorios.js atualizado com validação para vouchers sem alterar lógicas anteriores
 
 export const validarCamposObrigatorios = (dados, campos, tipoPessoa) => {
   const erros = {};
@@ -47,16 +46,20 @@ export const validarCamposObrigatorios = (dados, campos, tipoPessoa) => {
         }
         break;
 
-          case 'cpf':
-        const numerosCPF = valor.replace(/\D/g, '');
-        if (tipoPessoa === 'pf' && !validarCPF(valor)) {
-          erros.cpf = 'CPF inválido';
-        } else if (tipoPessoa === 'pj' && !validarCNPJ(valor)) {
-          erros.cpf = 'CNPJ inválido';
-        } else if (![11, 14].includes(numerosCPF.length)) {
+        case 'cpf':
+        const valor = (dados[campo] || '').trim();
+        const numeros = valor.replace(/\D/g, '');
+
+        if (![11, 14].includes(numeros.length)) {
           erros.cpf = 'CPF ou CNPJ incompleto';
+        } else if (tipoPessoa === 'pf' && !validarCPF(numeros)) {
+          erros.cpf = 'CPF inválido';
+        } else if (tipoPessoa === 'pj' && !validarCNPJ(numeros)) {
+          erros.cpf = 'CNPJ inválido';
         }
         break;
+
+
 
       case 'cnpj':
         if (!validarCNPJ(valor)) {

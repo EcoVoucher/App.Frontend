@@ -10,6 +10,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fonts } from '../theme/fonts';
+import { Masks } from 'react-native-mask-input';
+
 
 export default function InputText({
   value,
@@ -24,21 +26,26 @@ export default function InputText({
   containerStyle,
   ...rest
 }) {
+
   const InputComponent = mask ? MaskInput : TextInput;
 
   return (
     <View style={[styles.container, containerStyle]}>
       <InputComponent
+        key={JSON.stringify(mask) === JSON.stringify(Masks.BRL_CNPJ) ? 'cnpj' : 'cpf'}
         value={value}
-        onChangeText={onChangeText}
+        onChangeText={mask ? (masked) => onChangeText(masked) : onChangeText}
         placeholder={placeholder}
         keyboardType={keyboardType}
         secureTextEntry={secureTextEntry}
-        mask={mask}
+        {...(mask ? { mask } : {})}
         placeholderTextColor={colors.cinzaClaro}
         style={[styles.input, style]}
         {...rest}
       />
+
+
+
       {typeof mostrarSenha === 'boolean' && alternarSenha && (
         <TouchableOpacity onPress={alternarSenha} style={styles.iconBox}>
           <Ionicons

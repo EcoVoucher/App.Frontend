@@ -23,6 +23,8 @@ import logoEcoApp from '../../assets/imagensEco/eco-novo.jpeg';
 import { Masks } from 'react-native-mask-input';
 import { useAuth } from '../../context/AuthContext';
 
+
+
 export default function ValidarVoucherPJ() {
   const { usuario } = useAuth();
   const [codigo, setCodigo] = useState('');
@@ -36,13 +38,9 @@ export default function ValidarVoucherPJ() {
   const [modalVisivel, setModalVisivel] = useState(false);
   const [erroVisivel, setErroVisivel] = useState(false);
   const [mensagemErro, setMensagemErro] = useState('');
-
-  useEffect(() => {
-    if (usuario?.tipo !== 'pj') {
-      setMensagemErro('Acesso restrito a Pessoa Jurídica');
-      setErroVisivel(true);
-    }
-  }, []);
+  const [validando, setValidando] = useState(false);
+  const [buscando, setBuscando] = useState(false);
+  const [confirmando, setConfirmando] = useState(false);
 
   const determinarStatus = (v) => {
     if (v.status === 'utilizado') return 'utilizado';
@@ -58,110 +56,100 @@ export default function ValidarVoucherPJ() {
       return;
     }
 
+      if (validando) return; 
+      setValidando(true);
+
     try {
-      const usuarios = await api.obterUsuarios();
-      let encontrado = null;
+      const resultado = await api.obterVoucherPorCodigoECNPJ(codigo, usuario.cnpj);
 
-      for (const usuario of usuarios) {
-        const movimentacoes = usuario.movimentacoes || [];
-        const mov = movimentacoes.find(
-          (m) => m.codigo === codigo && m.tipo === 'saida'
-        );
-        if (mov) {
-          encontrado = {
-            ...mov,
-            cpf: usuario.cpf,
-            nome: usuario.nome || usuario.nomeEmpresa,
-          };
-          break;
-        }
-      }
-
-      if (!encontrado) {
+      if (!resultado) {
         setMensagemErro('Voucher não localizado.');
         setErroVisivel(true);
         setVoucher(null);
         return;
       }
-
-      setVoucher(encontrado);
-      setStatus(determinarStatus(encontrado));
-
-    } catch (erro) {
-      console.error('Erro ao validar voucher:', erro);
-      setMensagemErro('Erro inesperado ao validar o voucher.');
-      setErroVisivel(true);
-    }
-  };
-
-  const confirmarUso = async (codigoConfirmar = null) => {
-  try {
-    const codigoAlvo = codigoConfirmar || voucher.codigo;
-    await api.marcarVoucherComoUtilizado(codigoAlvo);
-    
-    setVoucher(null);
-    setCodigo('');
-    setVouchersEncontrados(vouchersEncontrados.filter(v => v.codigo !== codigoAlvo));
-    setModalVisivel(true);
-  } catch (error) {
-    setMensagemErro(error.message);
-    setErroVisivel(true);
-  }
-};
-
-
-  const buscarPorCpfETipo = async () => {
-    const dados = { cpf: cpfBusca };
-    const campos = ['cpf'];
-    const errosValidacao = validarCamposObrigatorios(dados, campos, 'pf');
-    setErros(errosValidacao);
-
-    if (Object.keys(errosValidacao).length > 0 || !tipoBusca.trim()) {
-      setMensagemErro(!tipoBusca.trim() ? 'Selecione um tipo de voucher.' : 'CPF inválido.');
-      setErroVisivel(true);
-      return;
-    }
-
-    try {
-      const usuarioPF = await api.obterUsuarioPorCPF(cpfBusca);
-      const lista = (usuarioPF.movimentacoes || []).filter(
-        (m) =>
-          m.tipo === 'saida' &&
-          m.status === 'valido' &&
-          m.descricao?.toLowerCase().includes(tipoBusca.toLowerCase())
-      );
-
-      if (lista.length === 0) {
-        setMensagemErro('Nenhum voucher válido encontrado.');
+        setVoucher({ ...resultado, nome: resultado.nome || 'Usuário' });
+        setStatus(determinarStatus(resultado));
+      } catch (erro) {
+        setMensagemErro(erro.message || 'Erro ao validar voucher.');
         setErroVisivel(true);
+      } finally {
+        setValidando(false);
       }
+    };
 
-      setVouchersEncontrados(lista);
-    } catch (error) {
-      setMensagemErro(error.message);
-      setErroVisivel(true);
-    }
-  };
+      const confirmarUso = async (codigoConfirmar = null) => {
+        if (confirmando) return; 
+        setConfirmando(true);
 
-  const StatusBadge = ({ status }) => {
-    const statusFormatado = status.toLowerCase();
-    let color = colors.cinzaClaro;
-    let icon = 'help-circle-outline';
-    let label = 'Desconhecido';
+        try {
+          const codigoAlvo = codigoConfirmar || voucher.codigo;
+          await api.marcarVoucherComoUtilizado(codigoAlvo);
 
-    if (statusFormatado === 'válido') {
-      color = 'green';
-      icon = 'checkmark-circle-outline';
-      label = 'Válido';
-    } else if (statusFormatado === 'expirado') {
-      color = 'orange';
-      icon = 'time-outline';
-      label = 'Expirado';
-    } else if (statusFormatado === 'utilizado') {
-      color = 'red';
-      icon = 'close-circle-outline';
-      label = 'Utilizado';
-    }
+          setVoucher(null);
+          setCodigo('');
+          setVouchersEncontrados(vouchersEncontrados.filter(v => v.codigo !== codigoAlvo));
+          setModalVisivel(true);
+        } catch (error) {
+          setMensagemErro(error.message);
+          setErroVisivel(true);
+        } finally {
+          setConfirmando(false);
+        }
+    };
+        const buscarPorCpfETipo = async () => {
+          if (buscando) return;
+
+        const dados = { cpf: cpfBusca };
+        const campos = ['cpf'];
+        const errosValidacao = validarCamposObrigatorios(dados, campos, 'pf');
+        setErros(errosValidacao);
+
+        if (Object.keys(errosValidacao).length > 0 || !tipoBusca.trim()) {
+          setMensagemErro(!tipoBusca.trim() ? 'Selecione um tipo de voucher.' : 'CPF inválido.');
+          setErroVisivel(true);
+          return;
+        }
+        try {
+        const resultado = await api.obterVouchersPorCpfTipoECNPJ(
+          cpfBusca,
+          tipoBusca,
+          usuario.cnpj
+        );
+
+        if (resultado.length === 0) {
+          setMensagemErro('Nenhum voucher válido encontrado.');
+          setErroVisivel(true);
+        }
+
+        setVouchersEncontrados(resultado);
+      } catch (error) {
+        setMensagemErro(error.message);
+        setErroVisivel(true);
+      } finally {
+        setBuscando(false);
+      }
+    };
+
+      const StatusBadge = ({ status }) => {
+        const statusFormatado = status.toLowerCase();
+        let color = colors.cinzaClaro;
+        let icon = 'help-circle-outline';
+        let label = 'Desconhecido';
+
+        if (statusFormatado === 'válido') {
+          color = 'green';
+          icon = 'checkmark-circle-outline';
+          label = 'Válido';
+        } else if (statusFormatado === 'expirado') {
+          color = 'orange';
+          icon = 'time-outline';
+          label = 'Expirado';
+        } else if (statusFormatado === 'utilizado') {
+          color = 'red';
+          icon = 'close-circle-outline';
+          label = 'Utilizado';
+        }
 
     return (
       <View style={[styles.statusBadge, { borderColor: color }]}>
@@ -200,8 +188,11 @@ export default function ValidarVoucherPJ() {
             onChangeText={setCodigo}
             placeholder="Digite o código"
           />
-          <BotaoVerde texto="Validar" onPress={validarCodigo} />
-
+         <BotaoVerde
+            texto={validando ? 'Validando...' : 'Validar'}
+            onPress={validarCodigo}
+            disabled={validando}
+          />
           {voucher && (
             <View style={styles.detalhes}>
               <Text style={styles.info}>Código: {voucher.codigo}</Text>
@@ -243,8 +234,11 @@ export default function ValidarVoucherPJ() {
             </Picker>
           </View>
 
-          <BotaoVerde texto="Buscar Vouchers" onPress={buscarPorCpfETipo} />
-
+          <BotaoVerde
+              texto={buscando ? 'Buscando...' : 'Buscar Vouchers'}
+              onPress={buscarPorCpfETipo}
+              disabled={buscando}
+            />
           <FlatList
             data={vouchersEncontrados}
             keyExtractor={(item) => item.codigo}
@@ -257,7 +251,11 @@ export default function ValidarVoucherPJ() {
                 <Text style={styles.info}>Validade: {new Date(item.validade).toLocaleDateString('pt-BR')}</Text>
                 <StatusBadge status={determinarStatus(item)} />
                 {determinarStatus(item) === 'válido' && (
-                  <BotaoVerde texto="Confirmar uso" onPress={() => confirmarUso(item.codigo)} />
+                  <BotaoVerde
+                  texto={confirmando ? 'Confirmando...' : 'Confirmar uso'}
+                  onPress={() => confirmarUso(item?.codigo)}
+                  disabled={confirmando}
+                />
                 )}
               </View>
             )}
@@ -325,7 +323,7 @@ logo: {
     fontSize: fonts.size.sm,
     marginBottom: spacing.xs,
     color: colors.preto,
-    textAlign: 'left',
+    textAlign: 'center',
     width: '100%',
   },
   pickerContainer: {
@@ -337,6 +335,8 @@ logo: {
     borderColor: colors.cinzaClaro,
     width: '100%',
     maxWidth: 500,
+    textAlign: 'center',
+    justifyContent:"center"
   },
   picker: {
     height: 55,

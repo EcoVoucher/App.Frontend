@@ -23,9 +23,27 @@ export default function HistoricoPontos() {
   const [carregando, setCarregando] = useState(true);
   const [mostrarTodos, setMostrarTodos] = useState(false);
   const [itensPorPagina] = useState(5);
+  const [carregandoMais, setCarregandoMais] = useState(false);
 
-  const carregarMais = () => setMostrarTodos(true);
-  const verMenos = () => setMostrarTodos(false);
+
+ const carregarMais = () => {
+  if (carregandoMais) return; 
+  setCarregandoMais(true);
+  setTimeout(() => {
+    setMostrarTodos(true);
+    setCarregandoMais(false);
+  }, 300);
+};
+
+ const verMenos = () => {
+  if (carregandoMais) return;
+  setCarregandoMais(true);
+  setTimeout(() => {
+    setMostrarTodos(false);
+    setCarregandoMais(false);
+  }, 300);
+};
+
 
   const opcoesFiltro = [
     'todos',
@@ -162,11 +180,12 @@ export default function HistoricoPontos() {
 
         {!carregando && historico.length > 3 && (
           <View style={styles.botaoContainer}>
-            {!mostrarTodos && temMais && (
-              <BotaoVerde texto="Ver mais ▼" onPress={carregarMais} />
+          {!mostrarTodos && temMais && (
+              <BotaoVerde texto="Ver mais ▼" onPress={carregarMais} carregando={carregandoMais} />
             )}
+
             {(mostrarTodos || (!temMais && historico.length > itensPorPagina)) && (
-              <BotaoVerde texto="Ver menos ▲" onPress={verMenos} />
+              <BotaoVerde texto="Ver menos ▲" onPress={verMenos} carregando={carregandoMais} />
             )}
           </View>
         )}

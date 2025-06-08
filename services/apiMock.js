@@ -157,6 +157,7 @@ const salvarPegada = async (cpfOuCnpj, pontuacao) => {
   const index = usuarios.findIndex((u) => apenasNumeros(u.cpf || u.cnpj) === id);
 
   if (index === -1) throw new Error('Usuário não encontrado.');
+  if (usuarios[index].tipo !== 'pf') throw new Error('Apenas usuários PF podem salvar pegada.');
 
   const data = new Date().toISOString();
   if (!usuarios[index].historicoPegada) {
@@ -168,15 +169,17 @@ const salvarPegada = async (cpfOuCnpj, pontuacao) => {
 
   return { status: 'ok', message: 'Pontuação salva com sucesso.' };
 };
+
 ///historico pegada
 const obterHistoricoPegada = async (cpfOuCnpj) => {
   const usuarios = await obterUsuarios();
   const id = apenasNumeros(cpfOuCnpj);
   const usuario = usuarios.find((u) => apenasNumeros(u.cpf || u.cnpj) === id);
   if (!usuario) throw new Error('Usuário não encontrado.');
+  if (usuario.tipo !== 'pf') throw new Error('Apenas usuários PF possuem histórico de pegada.');
+
   return usuario.historicoPegada || [];
 };
-
 
 //api simulação deposito
 const obterUsuarioPorCPF = async (cpf) => {
@@ -241,11 +244,11 @@ const registrarMovimentacao = async (cpf, tipo, pontos, descricao, codigo = null
   const agora = new Date();
 
   const novaMovimentacao = {
-    tipo, // 'entrada' ou 'saida'
+    tipo, 
     descricao,
     pontos,
     data: agora.toLocaleString('pt-BR'),
-    timestamp: agora.toISOString(), // <-- adicionado
+    timestamp: agora.toISOString(),
     ...(codigo && { codigo })
   };
 
@@ -316,7 +319,7 @@ const gerarVouchersPJ = async (cnpj, dados) => {
 };
 
 
-// Obter todos os vouchers gerados por um CNPJ
+
 const obterVouchersPorCNPJ = async (cnpj) => {
   const chave = '@vouchersGerados';
   const json = await AsyncStorage.getItem(chave);
@@ -344,7 +347,7 @@ const obterVouchersDisponiveisPF = async () => {
       endereco: lote.endereco,
       validade: lote.dataValidade,
       quantidade: lote.quantidade,
-      codigos: lote.codigos.slice(0, lote.quantidade) // apenas os ainda disponíveis
+      codigos: lote.codigos.slice(0, lote.quantidade) 
     }));
 };
 
@@ -368,44 +371,47 @@ const comprarVouchersPF = async (cpf, listaVouchers) => {
   let vouchersConsumidos = [];
 
   for (const desejado of listaVouchers) {
-    const lote = todos.find(
-      (l) =>
-        l.tipo === desejado.tipo &&
-        l.empresa === desejado.empresa &&
-        l.endereco === desejado.endereco &&
-        l.produtos?.join(',') === desejado.produtos?.join(',') &&
-        l.dataValidade === desejado.validade &&
-        l.quantidade > 0
-    );
+  const lote = todos.find(
+    (l) =>
+      l.tipo === desejado.tipo &&
+      l.empresa === desejado.empresa &&
+      l.endereco === desejado.endereco &&
+      l.produtos?.join(',') === desejado.produtos?.join(',') &&
+      l.dataValidade === desejado.validade &&
+      l.quantidade > 0
+  );
 
-    if (!lote || !lote.codigos?.length) {
-      throw new Error(`Sem códigos disponíveis para: ${desejado.tipo}`);
-    }
-
-    // Pega um código único do lote
-    const codigoUsado = lote.codigos.shift();
-    
-
-    // Adiciona movimentação com esse código
-    usuario.movimentacoes = usuario.movimentacoes || [];
-    usuario.movimentacoes.push({
-      tipo: 'saida',
-      descricao: `Troca por voucher de ${desejado.tipo}`,
-      tipoVoucher: desejado.tipo,
-      pontos: desejado.pontos,
-      data: dataFormatada,
-      timestamp: timestamp,
-      codigo: codigoUsado,
-      produtos: desejado.produtos,
-      empresa: desejado.empresa,
-      endereco: desejado.endereco,
-      validade: desejado.validade,
-      status: 'valido'
-    });
-
-    usuario.pontos = (usuario.pontos || 0) - desejado.pontos;
-    vouchersConsumidos.push(codigoUsado);
+  if (!lote || !lote.codigos?.length) {
+    throw new Error(`Sem códigos disponíveis para: ${desejado.tipo}`);
   }
+
+  const cnpjEmpresa = lote.cnpj || '';
+
+  // Pega um código único do lote
+  const codigoUsado = lote.codigos.shift();
+
+  // Adiciona movimentação com esse código
+  usuario.movimentacoes = usuario.movimentacoes || [];
+ usuario.movimentacoes.push({
+  tipo: 'saida',
+  descricao: `Troca por voucher de ${desejado.tipo}`,
+  tipoVoucher: desejado.tipo,
+  pontos: desejado.pontos,
+  data: dataFormatada,
+  timestamp: timestamp,
+  codigo: codigoUsado,
+  produtos: desejado.produtos,
+  empresa: desejado.empresa,
+  endereco: desejado.endereco,
+  validade: desejado.validade,
+  status: 'valido',
+  cnpj: cnpjEmpresa,
+  quantidade: 1, 
+});
+
+  usuario.pontos = (usuario.pontos || 0) - desejado.pontos;
+  vouchersConsumidos.push(codigoUsado);
+}
 
   await salvarUsuarios(usuarios);
   await AsyncStorage.setItem('@vouchersGerados', JSON.stringify(todos));
@@ -439,7 +445,61 @@ async function marcarVoucherComoUtilizado(codigoAlvo) {
 
   await salvarUsuarios(usuarios);
 }
+const contarVouchersCompradosPorCNPJ = async (cnpj) => {
+  const cnpjLimpo = apenasNumeros(cnpj);
+  const usuarios = await obterUsuarios();
 
+  let total = 0;
+
+  for (const user of usuarios) {
+    if (user.tipo === 'pf' && Array.isArray(user.movimentacoes)) {
+      for (const mov of user.movimentacoes) {
+        if (
+          mov.tipo === 'saida' &&
+          ['valido', 'utilizado'].includes(mov.status) &&
+         mov.cnpj && apenasNumeros(mov.cnpj) === cnpjLimpo
+
+        ) {
+          total += mov.quantidade || 1;
+        }
+      }
+    }
+  }
+
+  return total;
+};
+const obterVouchersPorCpfTipoECNPJ = async (cpf, tipo, cnpj) => {
+  const usuarios = await obterUsuarios();
+  const usuario = usuarios.find((u) => apenasNumeros(u.cpf) === apenasNumeros(cpf));
+  if (!usuario) throw new Error('Usuário não encontrado.');
+
+  const cnpjLimpo = apenasNumeros(cnpj);
+
+  const movimentacoes = (usuario.movimentacoes || []).filter(
+    (mov) =>
+      mov.tipo === 'saida' &&
+      mov.tipoVoucher === tipo &&
+      apenasNumeros(mov.cnpj) === cnpjLimpo
+  );
+
+  return movimentacoes;
+};
+const obterVoucherPorCodigoECNPJ = async (codigo, cnpj) => {
+  const usuarios = await obterUsuarios();
+  const cnpjLimpo = apenasNumeros(cnpj);
+
+  for (const usuario of usuarios) {
+    const mov = (usuario.movimentacoes || []).find(
+      (m) =>
+        m.tipo === 'saida' &&
+        m.codigo === codigo &&
+        apenasNumeros(m.cnpj) === cnpjLimpo
+    );
+    if (mov) return mov;
+  }
+
+  throw new Error('Voucher não encontrado para este CNPJ.');
+};
 
 
 export default {
@@ -463,5 +523,9 @@ export default {
   salvarUsuarios,
   marcarVoucherComoUtilizado,
   limparUsuarios,
-  limparVouchers
+  limparVouchers,
+  contarVouchersCompradosPorCNPJ,
+  obterVouchersPorCpfTipoECNPJ,
+  obterVoucherPorCodigoECNPJ,
+
 };

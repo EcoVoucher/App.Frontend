@@ -1,4 +1,3 @@
-
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import {
@@ -49,6 +48,8 @@ export default function CatalogoRecompensaPJ() {
   const [criterioOrdenacao, setCriterioOrdenacao] = useState('validade');
   const [busca, setBusca] = useState('');
   const [verMais, setVerMais] = useState(false);
+  const [qtdAdquiridos, setQtdAdquiridos] = useState(0);
+  const [gerandoVoucher, setGerandoVoucher] = useState(false);
 
 
   const carregarVouchers = async () => {
@@ -80,9 +81,18 @@ export default function CatalogoRecompensaPJ() {
     carregarVouchers();
   }, [criterioOrdenacao, filtroStatus, busca]);
 
+    useEffect(() => {
+      const buscarAdquiridos = async () => {
+        const total = await apiMock.contarVouchersCompradosPorCNPJ(usuario.cnpj);
+        setQtdAdquiridos(total);
+      };
+      if (usuario?.cnpj) buscarAdquiridos();
+    }, [usuario, vouchersGerados]);
+
+
   const totalLotes = vouchersGerados.length;
   const totalVouchers = vouchersGerados.reduce((acc, v) => acc + v.quantidade, 0);
-  const totalUtilizados = vouchersGerados.reduce((acc, v) => acc + (v.quantidade - v.codigos.length), 0);
+  const qtdAtivos = totalVouchers - qtdAdquiridos;
 
   const handleAbrirModal = () => {
     setTipo('');
@@ -93,15 +103,15 @@ export default function CatalogoRecompensaPJ() {
     setModalVisible(true);
   };
 
+
   return (
     <View style={styles.container}>
       <View style={styles.contentBox}>
         <View style={styles.boxResumo}>
           <Text style={styles.titulo}>Histórico de Vouchers Emitidos</Text>
           <Text style={styles.subtitulo}>
-            🧾 Lotes: {totalLotes} · ✅ Ativos: {totalVouchers - totalUtilizados} · 🔁 Adquiridos: {totalUtilizados}
+           🧾 Lotes: {totalLotes} · ✅ Ativos: {qtdAtivos} · 🔁 Adquiridos: {qtdAdquiridos}
           </Text>
-
           <View style={styles.filtrosLinha}>
             {['todos', 'validos', 'expirados'].map((value) => (
               <View key={value} style={styles.botaoFiltroBox}>
@@ -257,8 +267,10 @@ export default function CatalogoRecompensaPJ() {
 
             <View style={styles.botoesBox}>
               <BotaoVerde
-                texto="Gerar Voucher"
+                texto={gerandoVoucher ? "Gerando..." : "Gerar Voucher"}
                 onPress={async () => {
+                  if (gerandoVoucher) return; // proteção extra
+
                   const [dia, mes, ano] = dataValidade.split('/');
                   const dataFormatada = new Date(`${ano}-${mes}-${dia}T00:00:00`);
 
@@ -270,30 +282,37 @@ export default function CatalogoRecompensaPJ() {
                   };
 
                   const errosValidacao = validarCamposObrigatorios(dados, ['tipo', 'produtos', 'quantidade', 'dataValidade']);
-
-
                   if (Object.keys(errosValidacao).length > 0) {
                     setErros(errosValidacao);
                     return;
                   }
 
-                  await apiMock.gerarVouchersPJ(usuario.cnpj, {
-                    tipo,
-                    produtos,
-                    quantidade: parseInt(quantidade),
-                    dataValidade: dataFormatada.toISOString(),
-                  });
+                  setGerandoVoucher(true);
+                  try {
+                    await apiMock.gerarVouchersPJ(usuario.cnpj, {
+                      tipo,
+                      produtos,
+                      quantidade: parseInt(quantidade),
+                      dataValidade: dataFormatada.toISOString(),
+                    });
 
-                  setModalVisible(false);
-                  setModalSucesso(true);
-                  setTipo('');
-                  setProdutos([]);
-                  setQuantidade('');
-                  setDataValidade('');
-                  setErros({});
-                  carregarVouchers();
+                    setModalVisible(false);
+                    setModalSucesso(true);
+                    setTipo('');
+                    setProdutos([]);
+                    setQuantidade('');
+                    setDataValidade('');
+                    setErros({});
+                    carregarVouchers();
+                  } catch (error) {
+                    setErros({ tipo: 'Erro ao gerar voucher' });
+                  } finally {
+                    setGerandoVoucher(false);
+                  }
                 }}
+                disabled={gerandoVoucher}
               />
+
 
               <BotaoVerde
                 texto="Cancelar"

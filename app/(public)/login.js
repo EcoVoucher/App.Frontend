@@ -50,6 +50,7 @@ export default function Login() {
   };
 
   const handleLogin = async () => {
+    if (carregando) return; 
     if (!validarCampos()) {
       setMensagemErro('Por favor, preencha CPF/CNPJ e senha corretamente.');
       setErroVisivel(true);
@@ -76,8 +77,8 @@ export default function Login() {
       const { token, usuario } = await apiMock.login(cpf, senha, tipoPessoa);
       await login({ token, usuario });
 
-      if (usuario.primeiroAcesso) {
-        router.replace('/(private)/pegada');
+      if (usuario.primeiroAcesso && usuario.tipo === 'pf') {
+      router.replace('/(private)/pegada');
       } else {
         router.replace('/(private)/home');
       }
@@ -125,6 +126,7 @@ export default function Login() {
         cpf={cpf}
         senha={senha}
         erros={erros}
+        tipoPessoa={tipoPessoa} 
         handleChange={handleChange}
         mostrarSenha={mostrarSenha}
         setMostrarSenha={setMostrarSenha}

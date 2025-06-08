@@ -13,20 +13,25 @@ import {
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import apiMock from '../../services/apiMock';
+import { useRouter } from 'expo-router';
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
 import PegadaTermometro from '../../components/PegadaTermometro';
 import BotaoVerde from '../../components/BotaoVerde';
-import { formatarDataBR, obterComparativoPegada, obterIconePegada } from '../../utils/formatadores';
+import { formatarDataBR, obterComparativoPegada} from '../../utils/formatadores';
+
+
 
 const { height } = Dimensions.get('window');
+
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
 export default function HistoricoPegada() {
+  const router = useRouter(); 
   const { width } = useWindowDimensions();
   const { usuario } = useAuth();
   const [historico, setHistorico] = useState([]);
@@ -34,12 +39,15 @@ export default function HistoricoPegada() {
   const [mostrarTodos, setMostrarTodos] = useState(false);
   const [pagina, setPagina] = useState(1);
   const itensPorPagina = 3;
+  const [carregandoMais, setCarregandoMais] = useState(false);
+
+
 
   useEffect(() => {
     const carregarHistorico = async () => {
       setCarregando(true);
       try {
-        const dados = await apiMock.obterHistoricoPegada(usuario?.cpf || usuario?.cnpj);
+        const dados = await apiMock.obterHistoricoPegada(usuario?.cpf);
         const ordenado = dados.sort((a, b) => new Date(b.data) - new Date(a.data));
         setHistorico(ordenado);
       } catch (error) {
@@ -58,16 +66,16 @@ export default function HistoricoPegada() {
 
   const temMais = historicoVisivel.length < historico.length;
 
-  const carregarMais = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setPagina((p) => p + 1);
-  };
+const carregarMais = () => {
+  if (carregandoMais) return; 
 
-  const verMenos = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setMostrarTodos(false);
-    setPagina(1);
-  };
+  setCarregandoMais(true);
+  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+  setPagina((p) => p + 1);
+
+  // Simula um tempo de carregamento para resetar o estado
+  setTimeout(() => setCarregandoMais(false), 500);
+};
 
   return (
     <ScrollView contentContainerStyle={[styles.scrollContainer, { minHeight: height }]} showsVerticalScrollIndicator={false}>
@@ -96,7 +104,11 @@ export default function HistoricoPegada() {
         {!carregando && historico.length > 3 && (
           <View style={styles.botaoContainer}>
             {!mostrarTodos && temMais && (
-              <BotaoVerde texto="Ver mais ▼" onPress={carregarMais} />
+             <BotaoVerde
+                texto="Ver mais ▼"
+                onPress={carregarMais}
+                carregando={carregandoMais} // se quiser mostrar o loader
+              />
             )}
             {(mostrarTodos || (!temMais && historico.length > itensPorPagina)) && (
               <BotaoVerde texto="Ver menos ▲" onPress={verMenos} />

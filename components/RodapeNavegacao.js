@@ -20,7 +20,6 @@ export default function RodapeNavegacao() {
   const pathname = usePathname();
   const { usuario, logout } = useAuth();
   const menuItems = usuario?.tipo === 'pj' ? [
-  { texto: 'Histórico Pegada', icone: 'history', rota: '/(private)/historicopegada' },
   { texto: 'Conheça o Eco Voucher', icone: 'recycle', rota:'/(private)/ecoempresa' },
   { texto: 'Seu Perfil', icone: 'account', rota:'/(private)/perfil' },
 

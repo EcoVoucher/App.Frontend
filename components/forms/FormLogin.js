@@ -6,21 +6,21 @@ export default function FormLogin({
   cpf,
   senha,
   erros,
+  tipoPessoa, 
   handleChange,
   mostrarSenha,
   setMostrarSenha,
 }) {
+  const mask = tipoPessoa === 'pj' ? Masks.BRL_CNPJ : Masks.BRL_CPF;
+
   return (
     <>
       <InputField
-        label="CPF ou CNPJ"
+        label={tipoPessoa === 'pj' ? 'CNPJ' : 'CPF'}
         value={cpf}
         onChangeText={(v) => handleChange('cpf', v)}
         keyboardType="numeric"
-        mask={(value) => {
-          const digits = value.replace(/\D/g, '');
-          return digits.length <= 11 ? Masks.BRL_CPF : Masks.BRL_CNPJ;
-        }}
+        mask={mask}
         error={erros.cpf}
         autoCapitalize="none"
       />

@@ -14,22 +14,47 @@ import { useRouter, Slot, usePathname } from 'expo-router';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 
-
 export default function PrivateLayout() {
   const { usuario } = useAuth();
   const router = useRouter();
   const [isReady, setIsReady] = useState(false);
   const pathname = usePathname();
+  const esconderRodape = pathname.includes('/pegada') && usuario?.primeiroAcesso;
 
   useEffect(() => {
     setIsReady(true);
   }, []);
 
   useEffect(() => {
-    if (isReady && !usuario) {
+    if (!isReady || !usuario) return;
+
+    if (!usuario) {
       router.replace('/(public)/login');
+      return;
     }
-  }, [isReady, usuario]);
+
+    const rota = pathname.toLowerCase();
+
+    if (
+      rota.includes('catalogorecompensapj') ||
+      rota.includes('validarvoucherpj') ||
+      rota.includes('faleconosco')
+    ) {
+      if (usuario.tipo !== 'pj') {
+        router.replace('/(private)/home');
+      }
+    }
+    if (
+      rota.includes('pegada') ||
+      rota.includes('historicopontos') ||
+      rota.includes('catalogovoucherspf') ||
+      rota.includes('historicopegada')
+    ) {
+      if (usuario.tipo !== 'pf') {
+        router.replace('/(private)/home');
+      }
+    }
+  }, [isReady, usuario, pathname]);
 
   if (!usuario) return null;
 
@@ -50,12 +75,11 @@ export default function PrivateLayout() {
             <Slot />
           </ScrollView>
         </View>
-        {!(pathname.includes('/pegada') && usuario?.primeiroAcesso === true) && (
+        {!esconderRodape && (
           <View style={styles.rodape}>
             <RodapeNavegacao ativo="menu" />
           </View>
         )}
-
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -67,19 +91,17 @@ const styles = StyleSheet.create({
     backgroundColor: colors.fundo,
   },
   container: {
-  flex: 1,
-  backgroundColor: colors.fundo,
-  paddingTop: spacing.lg,
-},
-
+    flex: 1,
+    backgroundColor: colors.fundo,
+    paddingTop: spacing.lg,
+  },
   conteudoWrapper: {
     flex: 1,
   },
   conteudo: {
-  flexGrow: 1,
-  paddingHorizontal: 16,
-  paddingTop: 16,
-  paddingBottom: 48,
-},
-
+    flexGrow: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 48,
+  },
 });

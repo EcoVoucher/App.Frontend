@@ -53,6 +53,7 @@ export default function Cadastro() {
   const [carregando, setCarregando] = useState(false);
 
   const handleChange = (campo, valor) => {
+     if (carregando) return; // 
     setDados((prev) => {
       const novosDados = { ...prev, [campo]: valor };
 
@@ -142,28 +143,28 @@ export default function Cadastro() {
   };
 
   const handleCadastro = async () => {
-    if (!validarCampos()) return;
+  if (carregando) return; 
+  if (!validarCampos()) return;
 
-    setCarregando(true);
-    try {
-      if (tipoPessoa === 'pf') {
-        await apiMock.cadastroPF(dados);
-      } else {
-        await apiMock.cadastroPJ(dados);
-      }
-
-      setModalSucesso(true);
-    } catch (error) {
-      console.error(error);
-      setMensagemErro(
-          error?.message || error?.response?.data?.message || 'Não foi possível realizar o cadastro.'
-        );
-        setErroVisivel(true);
-
-    } finally {
-      setCarregando(false);
+  setCarregando(true);
+  try {
+    if (tipoPessoa === 'pf') {
+      await apiMock.cadastroPF(dados);
+    } else {
+      await apiMock.cadastroPJ(dados);
     }
-  };
+    setModalSucesso(true);
+  } catch (error) {
+    console.error(error);
+    setMensagemErro(
+      error?.message || error?.response?.data?.message || 'Não foi possível realizar o cadastro.'
+    );
+    setErroVisivel(true);
+  } finally {
+    setCarregando(false);
+  }
+};
+
 
   const limparCampos = () => {
     setDados(ESTADO_INICIAL);

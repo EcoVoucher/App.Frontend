@@ -12,23 +12,21 @@ export default function FormRecuperarSenha({
   erros,
   onSubmit,
   carregando,
-  tentouEnviar
+  tentouEnviar,
+  maskDocumento,
 }) {
-  const maskDocumento = (valor) => {
-    const digitos = valor.replace(/\D/g, '');
-    return digitos.length <= 11 ? Masks.BRL_CPF : Masks.BRL_CNPJ;
-  };
 
   return (
     <>
-      <InputField
+     <InputField
         label="CPF ou CNPJ"
         value={dados.cpf}
-        onChangeText={(v) => handleChange('cpf', v)}
-        mask={maskDocumento}
+        onChangeText={(valor) => handleChange('cpf', valor)}
         keyboardType="numeric"
-        error={erros.cpf}
+        mask={maskDocumento}
+        error={erros?.cpf}
       />
+
       <InputField
         label="E-mail"
         value={dados.email}
@@ -37,7 +35,7 @@ export default function FormRecuperarSenha({
         error={erros.email}
       />
 
-      {tentouEnviar && Object.keys(erros).length > 0 && (
+      {tentouEnviar && erros && Object.keys(erros).length > 0 && (
         <Text style={styles.erroAviso}>Corrija os campos destacados para continuar</Text>
       )}
 
@@ -45,7 +43,10 @@ export default function FormRecuperarSenha({
         {carregando ? (
           <ActivityIndicator size="large" color={colors.verde} />
         ) : (
-          <BotaoVerde texto="RECUPERAR SENHA" onPress={onSubmit} disabled={carregando || Object.keys(erros).length > 0}
+          <BotaoVerde
+            texto="RECUPERAR SENHA"
+            onPress={onSubmit}
+            disabled={carregando || Object.keys(erros).length > 0}
           />
         )}
       </View>

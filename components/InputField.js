@@ -35,6 +35,7 @@ export default function InputField({
         style={style}
         {...rest}
       />
+
       {!!error && <Text style={styles.error}>{error}</Text>}
     </View>
   );

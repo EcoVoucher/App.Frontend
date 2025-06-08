@@ -20,6 +20,7 @@ import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
 import { validarCamposObrigatorios } from '../../utils/validarCamposObrigatorios';
+import { Masks } from 'react-native-mask-input';
 
 const { width } = Dimensions.get('window');
 
@@ -39,36 +40,53 @@ export default function RecuperarSenha() {
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
 
+
+  const [maskDocumento, setMaskDocumento] = useState(Masks.BRL_CPF);
+
+
   const handleChange = (campo, valor) => {
     setDados((prev) => ({ ...prev, [campo]: valor }));
     setErros((prev) => ({ ...prev, [campo]: null }));
   };
 
-  const validarCampos = () => {
-    const campos = ['cpf', 'email'];
-    const novoErros = validarCamposObrigatorios(dados, campos, null);
-    setErros(novoErros);
-    return Object.keys(novoErros).length === 0;
-  };
+const handleDocumentoChange = (campo, valor) => {
+  handleChange(campo, valor);
 
-  const handleRecuperar = async () => {
-    setTentouEnviar(true);
-    if (!validarCampos()) return;
+  const somenteNumeros = valor.replace(/\D/g, '');
+  if (campo === 'cpf') {
+    setMaskDocumento(somenteNumeros.length > 11 ? Masks.BRL_CNPJ : Masks.BRL_CPF);
+  }
+};
 
-    setCarregando(true);
-    try {
-      await apiMock.recuperarSenha(dados);
-      setModalNovaSenha(true);
-    } catch (error) {
-      console.error(error);
-      setMensagemErro(error?.response?.data?.message || 'Erro ao recuperar senha.');
-      setErroVisivel(true);
-    } finally {
-      setCarregando(false);
-    }
-  };
+ const handleRecuperar = async () => {
+  if (carregando) return;
+  setTentouEnviar(true);
+
+  const apenasNumeros = dados.cpf.replace(/\D/g, '');
+  const tipoDetectado = apenasNumeros.length > 11 ? 'pj' : 'pf';
+  const campos = ['cpf', 'email'];
+
+  const novoErros = validarCamposObrigatorios(dados, campos, tipoDetectado);
+  setErros(novoErros);
+
+  if (Object.keys(novoErros).length > 0) return;
+
+  setCarregando(true);
+  try {
+    await apiMock.recuperarSenha(dados);
+    setModalNovaSenha(true);
+  } catch (error) {
+    console.error(error);
+    setMensagemErro(error?.response?.data?.message || 'Erro ao recuperar senha.');
+    setErroVisivel(true);
+  } finally {
+    setCarregando(false);
+  }
+};
+
 
   const handleSalvarNovaSenha = async () => {
+    if (carregando) return; 
     const campos = ['senha', 'confirmarSenha'];
     const errosValidacao = validarCamposObrigatorios(
       { senha: novaSenha, confirmarSenha },
@@ -93,7 +111,7 @@ export default function RecuperarSenha() {
     }
   };
 return (
-  <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+<>
     <ScrollView
       contentContainerStyle={styles.scrollContainer}
       keyboardShouldPersistTaps="handled"
@@ -102,15 +120,17 @@ return (
         <Text style={styles.titulo}>Recuperar senha</Text>
         <Text style={styles.subtitulo}>Preencha CPF/CNPJ e e-mail para continuar</Text>
 
-        <FormRecuperarSenha
-          dados={dados}
-          handleChange={handleChange}
-          erros={erros}
-          onSubmit={handleRecuperar}
-          carregando={carregando}
-          tentouEnviar={tentouEnviar}
-        />
+      <FormRecuperarSenha
+        dados={dados}
+        handleChange={handleDocumentoChange} 
+        erros={erros}
+        onSubmit={handleRecuperar}
+        carregando={carregando}
+        tentouEnviar={tentouEnviar}
+        maskDocumento={maskDocumento}
+      />
       </View>
+
     </ScrollView>
 
     <Modal visible={modalNovaSenha} transparent animationType="slide">
@@ -164,7 +184,7 @@ return (
       mensagem={mensagemErro}
       onClose={() => setErroVisivel(false)}
     />
-  </KeyboardAvoidingView>
+  </>
 );
 }
 
@@ -198,16 +218,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    width:'100%'
   },
   modalBox: {
     backgroundColor: colors.branco,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xxl,
     borderRadius: 12,
-    width: '90%',
+    width: '100%',
     maxWidth: 400,
     alignItems: 'center',
-    gap: spacing.sm, // espaçamento entre campos do modal
+    gap: spacing.sm,
   },
   modalTitulo: {
     fontSize: fonts.size.md,

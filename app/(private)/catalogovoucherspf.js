@@ -36,6 +36,8 @@ export default function CatalogoVouchersPF() {
   const [modalSucesso, setModalSucesso] = useState(false);
   const [tipoSelecionado, setTipoSelecionado] = useState('Alimentacao');
   const [saldoAtual, setSaldoAtual] = useState(0);
+  const [comprando, setComprando] = useState(false);
+
 
 
 useEffect(() => {
@@ -89,7 +91,10 @@ useEffect(() => {
     0
   );
 
- const finalizarCompra = async () => {
+const finalizarCompra = async () => {
+  if (comprando) return;
+
+  setComprando(true);
   try {
     const listaFinal = selecionados.flatMap((item) => {
       const codigosUsados = item.codigos.slice(0, item.quantidade);
@@ -106,16 +111,16 @@ useEffect(() => {
 
     await api.comprarVouchersPF(usuario.cpf, listaFinal);
 
-
-      setTimeout(async () => {
-      await carregarVouchers(); 
+    setTimeout(async () => {
+      await carregarVouchers();
 
       const atual = await api.obterUsuarioPorCPF(usuario.cpf);
       const novoSaldo = atual.pontos;
-      setSaldoAtual(novoSaldo); 
+      setSaldoAtual(novoSaldo);
 
       setSelecionados([]);
       setModalVisivel(false);
+      setComprando(false); 
 
       setModalMensagem({
         titulo: 'Compra realizada com sucesso! 🎉',
@@ -136,22 +141,22 @@ useEffect(() => {
                 backgroundColor: '#4CAF50',
                 padding: 10,
                 borderRadius: 8,
-                
                 marginTop: 16,
-                alignItems: 'center'
+                alignItems: 'center',
               }}
               onPress={() => router.push('/(private)/historicopontos')}
             >
               <Text style={{ color: 'white', fontWeight: 'bold' }}>Ir para o Histórico</Text>
             </TouchableOpacity>
           </ScrollView>
-        )
+        ),
       });
-    }, 300); // espera 300ms para garantir leitura correta do AsyncStorage
+    }, 300);
 
   } catch (error) {
     setModalVisivel(false);
     setSelecionados([]);
+    setComprando(false); 
     setModalMensagem({
       titulo: 'Pontos insuficientes',
       conteudo: (
@@ -163,6 +168,7 @@ useEffect(() => {
     });
   }
 };
+
 
   const limparSelecao = () => setSelecionados([]);
   const filtrarPorTipo = () => tipoSelecionado === 'Todos' ? vouchers : vouchers.filter((v) => v.tipo === tipoSelecionado);
@@ -254,7 +260,12 @@ useEffect(() => {
               <Text style={styles.totalTexto}>Total: {totalPontos} pontos</Text>
             </ScrollView>
             <View style={styles.botoesBox}>
-              <BotaoVerde texto="Confirmar" onPress={finalizarCompra} />
+            <BotaoVerde
+              texto={comprando ? 'Comprando...' : 'Confirmar'}
+              onPress={finalizarCompra}
+              disabled={comprando}
+            />
+
               <BotaoVerde texto="Cancelar" onPress={() => setModalVisivel(false)} style={{ backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.erro }} textoStyle={{ color: colors.erro }} />
             </View>
           </View>

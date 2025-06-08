@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   useWindowDimensions,
-  ActivityIndicator,
   TouchableOpacity,
   Image,
 } from 'react-native';
@@ -16,6 +15,7 @@ import { fonts } from '../../theme/fonts';
 import AnimatedCard from '../../components/AnimatedCard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../services/apiMock';
+import { obterComparativoPegada } from '../../utils/formatadores';
 
 export default function Home() {
   const router = useRouter();
@@ -36,76 +36,67 @@ export default function Home() {
     { texto: '🌍 Contribua com os ODS da ONU.' },
   ];
 
-  useEffect(() => {
-    let intervalo;
-    const carregarDados = async () => {
+ useEffect(() => {
+  let intervalo;
+
+  const carregarDados = async () => {
+    try {
       const json = await AsyncStorage.getItem('usuario');
       if (!json) return;
+
       const u = JSON.parse(json);
-      setUsuario(u);
+      const usuarios = await api.obterUsuarios();
+      const usuarioAtualizado = usuarios.find(us => (us.cpf || us.cnpj) === (u.cpf || u.cnpj));
+      if (!usuarioAtualizado) return;
 
-  const usuarioAtualizado = await api.obterUsuarioPorCPF(u.cpf);
-      setPontos(usuarioAtualizado?.pontos || 0);
-
-
-      const historico = await api.obterHistoricoPegada(u.cpf || u.cnpj);
-      if (historico.length > 0) {
-        const ultima = historico[historico.length - 1];
-        setPegada(ultima.pontuacao);
-      }
+      setUsuario(usuarioAtualizado);
+      setPontos(usuarioAtualizado.pontos || 0);
 
       if (u.tipo === 'pf') {
+        // Apenas PF pode acessar histórico de pegada
+        if (u.cpf) {
+          const historico = await api.obterHistoricoPegada(u.cpf);
+          if (historico.length > 0) {
+            const ultima = historico[historico.length - 1];
+            setPegada(ultima.pontuacao);
+          }
+        }
+
         setIcones([
-          { imagem: require('../../assets/imagensEco/historicoIcon.png'), rota: '/(private)/historicopontos', label: 'Histórico \nde Pontos'},
-          { imagem: require('../../assets/imagensEco/catalogoIcon.png'), rota: '/(private)/catalogovoucherspf', label: 'Vouchers \npara Troca'},
-          { imagem: require('../../assets/imagensEco/pontoColetaIcon.png'), rota:'/(private)/pontoscoleta', label: 'Pontos \nde Coleta'},
+          { imagem: require('../../assets/imagensEco/historicoIcon.png'), rota: '/(private)/historicopontos', label: 'Histórico \nde Pontos' },
+          { imagem: require('../../assets/imagensEco/catalogoIcon.png'), rota: '/(private)/catalogovoucherspf', label: 'Vouchers \npara Troca' },
+          { imagem: require('../../assets/imagensEco/pontoColetaIcon.png'), rota: '/(private)/pontoscoleta', label: 'Pontos \nde Coleta' },
         ]);
-      } else if (u.tipo === 'pj') {
+      }
+
+      if (u.tipo === 'pj') {
         const vouchers = await api.obterVouchersPorCNPJ(u.cnpj);
         const totalGerados = vouchers.reduce((acc, v) => acc + (v.quantidade || 0), 0);
         setQtdVouchers(totalGerados);
 
-        const todosUsuarios = await api.obterUsuarios();
-        const utilizados = todosUsuarios
-          .filter(user => user.tipo === 'pf')
-          .flatMap(user => user.movimentacoes || [])
-          .filter(m => m.tipo === 'saida' && ['valido', 'utilizado'].includes(m.status)).length;
+        const utilizados = await api.contarVouchersCompradosPorCNPJ(u.cnpj);
         setVouchersUtilizados(utilizados);
 
         setIcones([
-          { imagem: require('../../assets/imagensEco/gerarVoucherIcon.png'), rota:'/(private)/catalogorecompensapj', label: 'Gerar Voucher'},
-          { imagem: require('../../assets/imagensEco/validarVoucherIcon.png'), rota: '/(private)/validarvoucherpj', label: 'Validar Voucher'},
+          { imagem: require('../../assets/imagensEco/gerarVoucherIcon.png'), rota: '/(private)/catalogorecompensapj', label: 'Gerar Voucher' },
+          { imagem: require('../../assets/imagensEco/validarVoucherIcon.png'), rota: '/(private)/validarvoucherpj', label: 'Validar Voucher' },
           { imagem: require('../../assets/imagensEco/faleConoscoIcon.png'), rota: '(private)/faleconosco', label: 'Contato' },
         ]);
       }
 
+    } catch (erro) {
+      console.error('Erro ao carregar dados da Home:', erro);
+    } finally {
       setCarregando(false);
-    };
+    }
+  };
 
-    carregarDados();
-    intervalo = setInterval(carregarDados, 10000);
-    return () => clearInterval(intervalo);
-  }, []);
+  carregarDados();
+  intervalo = setInterval(carregarDados, 10000);
+  return () => clearInterval(intervalo);
+}, []);
 
-const gerarTextoPegada = (valor) => {
-  if (valor <= 160) return '✅ Sustentável: até 1.6 gha, limite do planeta 🌍';
-  if (valor <= 270) return '🟢 Abaixo da média mundial (~2.7 gha)';
-  if (valor <= 300) return '🟠 Similar ao Brasil (~3.0 gha)';
-  if (valor <= 460) return '🟡 Alta, como a França (~4.6 gha)';
-  if (valor <= 600) return '🔵 Muito alta, como a Suécia (~6.0 gha)';
-  return '🔴 Extremamente alta, como os EUA (~8.0 gha)';
-};
-
-
-
-  if (carregando) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.verde} />
-        <Text style={{ color: colors.verde, marginTop: 10 }}>Carregando...</Text>
-      </View>
-    );
-  }
+obterComparativoPegada(pegada)
 
   return (
     <View style={styles.container}>
@@ -123,7 +114,7 @@ const gerarTextoPegada = (valor) => {
               <Text style={styles.destaqueItem}>💚 Pontos Disponíveis: <Text style={styles.valor}>{pontos}</Text></Text>
               <Text style={styles.destaqueItem}>🌿 Pegada Ecológica: <Text style={[styles.valor, { color: colors.verde }]}>{pegada ?? '---'} pts</Text></Text>
               {pegada && (
-                <Text style={styles.destaqueItemDesc}><Text style={{ fontStyle: 'italic' }}>{gerarTextoPegada(pegada)}</Text></Text>
+                <Text style={styles.destaqueItemDesc}><Text style={{ fontStyle: 'italic' }}>{obterComparativoPegada(pegada)}</Text></Text>
               )}
               <TouchableOpacity onPress={() => router.push('/(private)/pegada')} style={[styles.botaoPrincipal, { width: isLargeScreen ? 220 : 180 }]}>
                 <Text style={[styles.botaoPrincipalTexto, { fontSize: isLargeScreen ? fonts.size.md : fonts.size.sm }]}>Atualizar Pegada</Text>
@@ -133,13 +124,6 @@ const gerarTextoPegada = (valor) => {
            <>
             <Text style={styles.destaqueItem}>📦 Vouchers gerados: <Text style={styles.valor}>{qtdVouchers}</Text></Text>
             <Text style={styles.destaqueItem}>✅ Adquiridos por PF: <Text style={styles.valor}>{vouchersUtilizados}</Text></Text>
-            <Text style={styles.destaqueItem}>🌿 Pegada Ecológica: <Text style={[styles.valor, { color: colors.verde }]}>{pegada ?? '---'} pts</Text></Text>
-            {pegada && (
-              <Text style={styles.destaqueItemDesc}><Text style={{ fontStyle: 'italic' }}>{gerarTextoPegada(pegada)}</Text></Text>
-            )}
-            <TouchableOpacity onPress={() => router.push('/(private)/pegada')} style={[styles.botaoPrincipal, { width: isLargeScreen ? 220 : 180 }]}>
-              <Text style={[styles.botaoPrincipalTexto, { fontSize: isLargeScreen ? fonts.size.md : fonts.size.sm }]}>Atualizar Pegada</Text>
-            </TouchableOpacity>
           </>
           )}
         </View>
