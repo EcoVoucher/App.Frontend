@@ -348,9 +348,9 @@ const styles = StyleSheet.create({
   },
  filtrosLinha: {
   flexDirection: 'row',
-  flexWrap: 'wrap',       // permite quebra de linha
+  flexWrap: 'wrap',      
   justifyContent: 'center',
-  gap: spacing.sm,        // espaçamento entre botões
+  gap: spacing.sm,       
   marginBottom: spacing.sm,
 },
 
