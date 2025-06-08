@@ -38,6 +38,7 @@ export default function CatalogoRecompensaPJ() {
   const { usuario } = useAuth();
   const [modalVisible, setModalVisible] = useState(false);
   const [modalSucesso, setModalSucesso] = useState(false);
+  const [modalInfo, setModalInfo] = useState(false);
   const [tipo, setTipo] = useState('');
   const [produtos, setProdutos] = useState([]);
   const [quantidade, setQuantidade] = useState('');
@@ -47,6 +48,8 @@ export default function CatalogoRecompensaPJ() {
   const [filtroStatus, setFiltroStatus] = useState('todos');
   const [criterioOrdenacao, setCriterioOrdenacao] = useState('validade');
   const [busca, setBusca] = useState('');
+  const [verMais, setVerMais] = useState(false);
+
 
   const carregarVouchers = async () => {
     const lista = await apiMock.obterVouchersPorCNPJ(usuario.cnpj);
@@ -91,50 +94,52 @@ export default function CatalogoRecompensaPJ() {
   };
 
   return (
-  <>
     <View style={styles.container}>
       <View style={styles.contentBox}>
         <View style={styles.boxResumo}>
-        <Text style={styles.titulo}>Histórico de Vouchers Emitidos</Text>
-        <Text style={styles.subtitulo}>
-          🧾 Lotes: {totalLotes} · ✅ Ativos: {totalVouchers - totalUtilizados} · 🔁 Adquiridos: {totalUtilizados}
-        </Text>
+          <Text style={styles.titulo}>Histórico de Vouchers Emitidos</Text>
+          <Text style={styles.subtitulo}>
+            🧾 Lotes: {totalLotes} · ✅ Ativos: {totalVouchers - totalUtilizados} · 🔁 Adquiridos: {totalUtilizados}
+          </Text>
 
-        <View style={styles.filtrosLinha}>
-          {['todos', 'válidos', 'expirados'].map((value) => (
-            <View key={value} style={styles.botaoFiltroBox}>
-              <BotaoVerdePequeno
-                texto={value.charAt(0).toUpperCase() + value.slice(1)}
-                onPress={() => setFiltroStatus(value)}
-                ativo={filtroStatus === value}
+          <View style={styles.filtrosLinha}>
+            {['todos', 'validos', 'expirados'].map((value) => (
+              <View key={value} style={styles.botaoFiltroBox}>
+                <BotaoVerdePequeno
+                  texto={value.charAt(0).toUpperCase() + value.slice(1)}
+                  onPress={() => setFiltroStatus(value)}
+                  ativo={filtroStatus === value}
+                />
+              </View>
+            ))}
+            <TouchableOpacity onPress={() => setModalInfo(true)} style={{ marginLeft: spacing.sm }}>
+              <Ionicons name="information-circle-outline" size={20} color={colors.verdeEscuro} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.linhaAcao}>
+            <View style={styles.ordenarBox}>
+              <SelectField
+                label="Ordenar por:"
+                selectedValue={criterioOrdenacao}
+                onValueChange={setCriterioOrdenacao}
+                options={[
+                  { label: 'Validade (mais próximas primeiro)', value: 'validade' },
+                  { label: 'Tipo de voucher (A-Z)', value: 'tipo' },
+                  { label: 'Mais utilizados', value: 'uso' },
+                ]}
               />
             </View>
-          ))}
-        </View>
 
-
-        <View style={styles.linhaAcao}>
-          <View style={styles.ordenarBox}>
-            <SelectField
-              label="Ordenar por:"
-              selectedValue={criterioOrdenacao}
-              onValueChange={setCriterioOrdenacao}
-              options={[
-                { label: 'Validade (mais próximas primeiro)', value: 'validade' },
-                { label: 'Tipo de voucher (A-Z)', value: 'tipo' },
-                { label: 'Mais utilizados', value: 'uso' },
-              ]}
-            />
+            <TouchableOpacity style={styles.botaoCadastrar} onPress={handleAbrirModal}>
+              <Ionicons name="add-circle" size={20} color={colors.branco} style={{ marginRight: 6 }} />
+              <Text style={styles.textoCadastrar}>Cadastrar novo voucher</Text>
+            </TouchableOpacity>
           </View>
-          </View>
-          <TouchableOpacity style={styles.botaoCadastrar} onPress={handleAbrirModal}>
-            <Ionicons name="add-circle" size={20} color={colors.branco} style={{ marginRight: 6 }} />
-            <Text style={styles.textoCadastrar}>Cadastrar novo voucher</Text>
-          </TouchableOpacity>
         </View>
 
         <FlatList
-          data={vouchersGerados}
+          data={verMais ? vouchersGerados : vouchersGerados.slice(0, 5)}
           keyExtractor={(_, i) => i.toString()}
           scrollEnabled={false}
           renderItem={({ item }) => {
@@ -165,10 +170,17 @@ export default function CatalogoRecompensaPJ() {
             );
           }}
         />
+        {vouchersGerados.length > 5 && (
+            <View style={styles.verMaisBox}>
+              <BotaoVerde
+                texto={verMais ? 'Ver menos ▲' : 'Ver mais ▼'}
+                onPress={() => setVerMais(!verMais)}
+              />
+            </View>
+          )}
 
         <View style={{ height: 100 }}/>
       </View>
-    </View>
 
     {/* Modal de Cadastro */}
     <Modal visible={modalVisible} animationType="slide">
@@ -259,15 +271,6 @@ export default function CatalogoRecompensaPJ() {
 
                   const errosValidacao = validarCamposObrigatorios(dados, ['tipo', 'produtos', 'quantidade', 'dataValidade']);
 
-                  const hoje = new Date();
-                  const minValidade = new Date();
-                  minValidade.setDate(hoje.getDate() + 10);
-
-                  if (isNaN(dataFormatada)) {
-                    errosValidacao.dataValidade = 'Data inválida';
-                  } else if (dataFormatada < minValidade) {
-                    errosValidacao.dataValidade = 'Validade deve ser no mínimo 10 dias à frente';
-                  }
 
                   if (Object.keys(errosValidacao).length > 0) {
                     setErros(errosValidacao);
@@ -309,13 +312,29 @@ export default function CatalogoRecompensaPJ() {
         onFechar={() => setModalSucesso(false)}
         mensagem="Voucher gerado com sucesso."
      />
-  </>
-);} 
+     <Modal visible={modalInfo} transparent animationType="fade">
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' }}>
+            <View style={{ backgroundColor:colors.branco, padding: 20, borderRadius: 12 }}>
+              <Text style={{ fontWeight: 'bold', marginBottom: 10 }}>Legenda de cores dos lotes:</Text>
+              <Text style={{ color:colors.cinza }}>🟩 Verde: Nenhum voucher usado</Text>
+              <Text style={{color:colors.cinza }}>🟨 Amarelo: Parcialmente usado</Text>
+              <Text style={{ color:colors.cinza }}>⬜ Cinza: Todos utilizados</Text>
+              <TouchableOpacity onPress={() => setModalInfo(false)} style={{ marginTop: 10 }}>
+                <Text style={{ color: colors.verde, fontWeight: 'bold' }}>Fechar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      </View>
+  );
+}
+ 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingBottom: spacing.xl,
     minHeight: height,
+    alignItems:'center',
   },
   contentBox: {
     width: width > 700 ? '60%' : '100%',
@@ -330,7 +349,6 @@ const styles = StyleSheet.create({
   shadowRadius: 3,
   elevation: 2,
 },
-
   titulo: {
     fontSize: fonts.size.xl,
     fontWeight: fonts.weight.bold,
@@ -458,5 +476,11 @@ botaoFiltroBox: {
     justifyContent: 'center',
     gap: spacing.md,
     flexWrap: 'wrap',
+
   },
+  verMaisBox: {
+  alignItems: 'center',
+  marginVertical: spacing.md,
+},
+
 });

@@ -111,15 +111,17 @@ export const validarCamposObrigatorios = (dados, campos, tipoPessoa) => {
         const validade = new Date(valor);
         const hojeValidade = new Date();
         const dataMinima = new Date();
+        const dataMaxima = new Date();
         dataMinima.setDate(hojeValidade.getDate() + 10);
+        dataMaxima.setDate(hojeValidade.getDate() + 365);
 
-        if (isNaN(new Date(valor).getTime())) {
+        if (isNaN(validade.getTime())) {
           erros.dataValidade = 'Data inválida';
         } else if (validade < dataMinima) {
           erros.dataValidade = 'Validade deve ser no mínimo 10 dias à frente';
+        } else if (validade > dataMaxima) {
+          erros.dataValidade = 'Validade não pode ultrapassar 1 ano';
         }
-        break;
-      default:
         break;
     }
   });
