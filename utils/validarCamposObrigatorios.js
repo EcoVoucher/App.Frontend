@@ -47,8 +47,8 @@ export const validarCamposObrigatorios = (dados, campos, tipoPessoa) => {
         break;
 
         case 'cpf':
-        const valor = (dados[campo] || '').trim();
-        const numeros = valor.replace(/\D/g, '');
+       case 'cpf':
+        const numeros = valor.trim().replace(/\D/g, '');
 
         if (![11, 14].includes(numeros.length)) {
           erros.cpf = 'CPF ou CNPJ incompleto';
@@ -58,6 +58,7 @@ export const validarCamposObrigatorios = (dados, campos, tipoPessoa) => {
           erros.cpf = 'CNPJ inválido';
         }
         break;
+
 
 
 

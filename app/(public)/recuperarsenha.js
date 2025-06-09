@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState,useEffect } from 'react';
 import {
   View,
   Text,
@@ -39,9 +39,18 @@ export default function RecuperarSenha() {
   const [errosSenha, setErrosSenha] = useState({});
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
-
-
   const [maskDocumento, setMaskDocumento] = useState(Masks.BRL_CPF);
+
+    useEffect(() => {
+      const numeros = dados.cpf.replace(/\D/g, '');
+      if (numeros.length > 11 && maskDocumento !== Masks.BRL_CNPJ) {
+        setMaskDocumento(Masks.BRL_CNPJ);
+        console.log('Aplicando máscara: CNPJ');
+      } else if (numeros.length <= 11 && maskDocumento !== Masks.BRL_CPF) {
+        setMaskDocumento(Masks.BRL_CPF);
+        console.log('Aplicando máscara: CPF');
+      }
+    }, [dados.cpf]);
 
 
   const handleChange = (campo, valor) => {
@@ -53,9 +62,15 @@ const handleDocumentoChange = (campo, valor) => {
   handleChange(campo, valor);
 
   const somenteNumeros = valor.replace(/\D/g, '');
-  if (campo === 'cpf') {
-    setMaskDocumento(somenteNumeros.length > 11 ? Masks.BRL_CNPJ : Masks.BRL_CPF);
-  }
+
+if (campo === 'cpf') {
+  const novaMascara =
+    somenteNumeros.length > 11 ? Masks.BRL_CNPJ : Masks.BRL_CPF;
+
+  setMaskDocumento(novaMascara);
+  console.log('Máscara aplicada:', novaMascara === Masks.BRL_CNPJ ? 'CNPJ' : 'CPF');
+}
+
 };
 
  const handleRecuperar = async () => {
@@ -64,20 +79,30 @@ const handleDocumentoChange = (campo, valor) => {
 
   const apenasNumeros = dados.cpf.replace(/\D/g, '');
   const tipoDetectado = apenasNumeros.length > 11 ? 'pj' : 'pf';
-  const campos = ['cpf', 'email'];
 
-  const novoErros = validarCamposObrigatorios(dados, campos, tipoDetectado);
+  const campos = tipoDetectado === 'pj' ? ['cnpj', 'email'] : ['cpf', 'email'];
+  const dadosValidacao = {
+    email: dados.email,
+    ...(tipoDetectado === 'pj' ? { cnpj: dados.cpf } : { cpf: dados.cpf }),
+  };
+
+  const novoErros = validarCamposObrigatorios(dadosValidacao, campos, tipoDetectado);
   setErros(novoErros);
 
   if (Object.keys(novoErros).length > 0) return;
 
   setCarregando(true);
   try {
-    await apiMock.recuperarSenha(dados);
+    await apiMock.recuperarSenha({
+      email: dados.email,
+      cpf: tipoDetectado === 'pf' ? dados.cpf : undefined,
+      cnpj: tipoDetectado === 'pj' ? dados.cpf : undefined,
+    });
+
     setModalNovaSenha(true);
   } catch (error) {
     console.error(error);
-    setMensagemErro(error?.response?.data?.message || 'Erro ao recuperar senha.');
+    setMensagemErro(error?.message || 'Erro ao recuperar senha.');
     setErroVisivel(true);
   } finally {
     setCarregando(false);
@@ -93,6 +118,7 @@ const handleDocumentoChange = (campo, valor) => {
       campos,
       null
     );
+
     setErrosSenha(errosValidacao);
 
     if (Object.keys(errosValidacao).length > 0) return;
@@ -110,6 +136,7 @@ const handleDocumentoChange = (campo, valor) => {
       setCarregando(false);
     }
   };
+
 return (
 <>
     <ScrollView
