@@ -1,4 +1,3 @@
-
 export const validarCamposObrigatorios = (dados, campos, tipoPessoa) => {
   const erros = {};
 
@@ -8,27 +7,24 @@ export const validarCamposObrigatorios = (dados, campos, tipoPessoa) => {
   campos.forEach((campo) => {
     const valor = dados[campo];
 
-    if ((campo !== 'complemento') && (!valor || (typeof valor === 'string' && !valor.trim()))) {
+    // Campos obrigatórios (exceto complemento)
+    if (campo !== 'complemento' && (!valor || (typeof valor === 'string' && !valor.trim()))) {
       erros[campo] = 'Campo obrigatório';
       return;
     }
 
     switch (campo) {
       case 'nome':
-        if (valor.trim().length < 3) {
-          erros.nome = 'Nome muito curto';
-        }
+        if (valor.trim().length < 3) erros.nome = 'Nome muito curto';
         break;
 
       case 'nomeEmpresa':
-        if (valor.trim().length < 3) {
-          erros.nomeEmpresa = 'Nome da empresa muito curto';
-        }
+        if (valor.trim().length < 3) erros.nomeEmpresa = 'Nome da empresa muito curto';
         break;
 
       case 'email':
         if (!regexEmail.test(valor)) {
-          erros.email = 'Email inválido - formato esperado:xxxx@gmail.com ';
+          erros.email = 'Email inválido - formato esperado: xxxx@dominio.com';
         }
         break;
 
@@ -46,10 +42,8 @@ export const validarCamposObrigatorios = (dados, campos, tipoPessoa) => {
         }
         break;
 
-        case 'cpf':
-       case 'cpf':
+      case 'cpf':
         const numeros = valor.trim().replace(/\D/g, '');
-
         if (![11, 14].includes(numeros.length)) {
           erros.cpf = 'CPF ou CNPJ incompleto';
         } else if (tipoPessoa === 'pf' && !validarCPF(numeros)) {
@@ -59,11 +53,9 @@ export const validarCamposObrigatorios = (dados, campos, tipoPessoa) => {
         }
         break;
 
-
-
-
       case 'cnpj':
-        if (!validarCNPJ(valor)) {
+        const cnpjLimpo = valor.trim().replace(/\D/g, '');
+        if (cnpjLimpo.length !== 14 || !validarCNPJ(cnpjLimpo)) {
           erros.cnpj = 'CNPJ inválido';
         }
         break;
@@ -72,30 +64,28 @@ export const validarCamposObrigatorios = (dados, campos, tipoPessoa) => {
         const [dia, mes, ano] = valor.split('/');
         const nascimento = new Date(`${ano}-${mes}-${dia}`);
         const hoje = new Date();
-        if (!dia || !mes || !ano || nascimento.toString() === 'Invalid Date' || nascimento > hoje) {
+        if (
+          !dia || !mes || !ano ||
+          nascimento.toString() === 'Invalid Date' ||
+          nascimento > hoje
+        ) {
           erros.dataNascimento = 'Data de nascimento inválida';
         }
         break;
 
       case 'cep':
         const cepLimpo = valor.replace(/\D/g, '');
-        if (cepLimpo.length !== 8) {
-          erros.cep = 'CEP inválido';
-        }
+        if (cepLimpo.length !== 8) erros.cep = 'CEP inválido';
         break;
 
       case 'telefone':
         const telLimpo = valor.replace(/\D/g, '');
-        if (telLimpo.length < 10) {
-          erros.telefone = 'Telefone incompleto';
-        }
+        if (telLimpo.length < 10) erros.telefone = 'Telefone incompleto';
         break;
 
-      // Validações específicas para geração de voucher
+      // Validações específicas de voucher
       case 'tipo':
-        if (!valor || valor.trim() === '') {
-          erros.tipo = 'Selecione o tipo do voucher';
-        }
+        if (!valor || valor.trim() === '') erros.tipo = 'Selecione o tipo do voucher';
         break;
 
       case 'produtos':
@@ -133,7 +123,7 @@ export const validarCamposObrigatorios = (dados, campos, tipoPessoa) => {
   return erros;
 };
 
-// Validadores auxiliares (mantidos como estavam)
+// Validador de CPF
 function validarCPF(cpf) {
   cpf = cpf.replace(/[^\d]+/g, '');
   if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
@@ -151,6 +141,7 @@ function validarCPF(cpf) {
   return resto === parseInt(cpf.charAt(10));
 }
 
+// Validador de CNPJ
 function validarCNPJ(cnpj) {
   cnpj = cnpj.replace(/[^\d]+/g, '');
   if (cnpj.length !== 14 || /^(\d)\1+$/.test(cnpj)) return false;

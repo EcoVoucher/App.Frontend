@@ -1,4 +1,4 @@
-import { useState,useEffect } from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,9 @@ import {
   ScrollView,
   Modal,
   Dimensions,
+  TouchableOpacity,
 } from 'react-native';
-import ModalErro from '../../components/ModalErro'; 
+import ModalErro from '../../components/ModalErro';
 import { useRouter } from 'expo-router';
 import apiMock from '../../services/apiMock';
 import FormRecuperarSenha from '../../components/forms/FormRecuperarSenha';
@@ -39,79 +40,55 @@ export default function RecuperarSenha() {
   const [errosSenha, setErrosSenha] = useState({});
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
-  const [maskDocumento, setMaskDocumento] = useState(Masks.BRL_CPF);
+  const [tipoPessoa, setTipoPessoa] = useState('pf');
 
-    useEffect(() => {
-      const numeros = dados.cpf.replace(/\D/g, '');
-      if (numeros.length > 11 && maskDocumento !== Masks.BRL_CNPJ) {
-        setMaskDocumento(Masks.BRL_CNPJ);
-        console.log('Aplicando máscara: CNPJ');
-      } else if (numeros.length <= 11 && maskDocumento !== Masks.BRL_CPF) {
-        setMaskDocumento(Masks.BRL_CPF);
-        console.log('Aplicando máscara: CPF');
-      }
-    }, [dados.cpf]);
-
+  const maskDocumento = tipoPessoa === 'pf' ? Masks.BRL_CPF : Masks.BRL_CNPJ;
 
   const handleChange = (campo, valor) => {
     setDados((prev) => ({ ...prev, [campo]: valor }));
     setErros((prev) => ({ ...prev, [campo]: null }));
   };
 
-const handleDocumentoChange = (campo, valor) => {
-  handleChange(campo, valor);
-
-  const somenteNumeros = valor.replace(/\D/g, '');
-
-if (campo === 'cpf') {
-  const novaMascara =
-    somenteNumeros.length > 11 ? Masks.BRL_CNPJ : Masks.BRL_CPF;
-
-  setMaskDocumento(novaMascara);
-  console.log('Máscara aplicada:', novaMascara === Masks.BRL_CNPJ ? 'CNPJ' : 'CPF');
-}
-
-};
-
- const handleRecuperar = async () => {
-  if (carregando) return;
-  setTentouEnviar(true);
-
-  const apenasNumeros = dados.cpf.replace(/\D/g, '');
-  const tipoDetectado = apenasNumeros.length > 11 ? 'pj' : 'pf';
-
-  const campos = tipoDetectado === 'pj' ? ['cnpj', 'email'] : ['cpf', 'email'];
-  const dadosValidacao = {
-    email: dados.email,
-    ...(tipoDetectado === 'pj' ? { cnpj: dados.cpf } : { cpf: dados.cpf }),
+  const handleDocumentoChange = (campo, valor) => {
+    handleChange(campo, valor);
   };
 
-  const novoErros = validarCamposObrigatorios(dadosValidacao, campos, tipoDetectado);
-  setErros(novoErros);
+  const handleRecuperar = async () => {
+    if (carregando) return;
+    setTentouEnviar(true);
 
-  if (Object.keys(novoErros).length > 0) return;
-
-  setCarregando(true);
-  try {
-    await apiMock.recuperarSenha({
+    const campos = tipoPessoa === 'pj' ? ['cnpj', 'email'] : ['cpf', 'email'];
+    const dadosValidacao = {
       email: dados.email,
-      cpf: tipoDetectado === 'pf' ? dados.cpf : undefined,
-      cnpj: tipoDetectado === 'pj' ? dados.cpf : undefined,
-    });
+      ...(tipoPessoa === 'pj' ? { cnpj: dados.cpf } : { cpf: dados.cpf }),
+    };
 
-    setModalNovaSenha(true);
-  } catch (error) {
-    console.error(error);
-    setMensagemErro(error?.message || 'Erro ao recuperar senha.');
-    setErroVisivel(true);
-  } finally {
-    setCarregando(false);
-  }
-};
+    const novoErros = validarCamposObrigatorios(dadosValidacao, campos, tipoPessoa);
+    setErros(novoErros);
 
+    if (Object.keys(novoErros).length > 0) return;
+
+    setCarregando(true);
+    try {
+      await apiMock.recuperarSenha({
+        email: dados.email,
+        cpf: tipoPessoa === 'pf' ? dados.cpf : undefined,
+        cnpj: tipoPessoa === 'pj' ? dados.cpf : undefined,
+      });
+
+      setModalNovaSenha(true);
+    } catch (error) {
+      console.error(error);
+      setMensagemErro(error?.message || 'Erro ao recuperar senha.');
+      setErroVisivel(true);
+    } finally {
+      setCarregando(false);
+    }
+  };
 
   const handleSalvarNovaSenha = async () => {
-    if (carregando) return; 
+    if (carregando) return;
+
     const campos = ['senha', 'confirmarSenha'];
     const errosValidacao = validarCamposObrigatorios(
       { senha: novaSenha, confirmarSenha },
@@ -137,82 +114,102 @@ if (campo === 'cpf') {
     }
   };
 
-return (
-<>
-    <ScrollView
-      contentContainerStyle={styles.scrollContainer}
-      keyboardShouldPersistTaps="handled"
-    >
-      <View style={styles.contentBox}>
-        <Text style={styles.titulo}>Recuperar senha</Text>
-        <Text style={styles.subtitulo}>Preencha CPF/CNPJ e e-mail para continuar</Text>
-
-      <FormRecuperarSenha
-        dados={dados}
-        handleChange={handleDocumentoChange} 
-        erros={erros}
-        onSubmit={handleRecuperar}
-        carregando={carregando}
-        tentouEnviar={tentouEnviar}
-        maskDocumento={maskDocumento}
-      />
-      </View>
-
-    </ScrollView>
-
-    <Modal visible={modalNovaSenha} transparent animationType="slide">
-      <KeyboardAvoidingView
-        style={styles.modalContainer}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+  return (
+    <>
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        keyboardShouldPersistTaps="handled"
       >
-        <ScrollView
-          contentContainerStyle={styles.modalBox}
-          keyboardShouldPersistTaps="handled"
+        <View style={styles.contentBox}>
+          <Text style={styles.titulo}>Recuperar senha</Text>
+          <Text style={styles.subtitulo}>Preencha CPF/CNPJ e e-mail para continuar</Text>
+
+          <View style={styles.tipoBox}>
+            <TouchableOpacity
+              style={[styles.tipoBotao, tipoPessoa === 'pf' && styles.tipoSelecionado]}
+              onPress={() => setTipoPessoa('pf')}
+            >
+              <Text style={[styles.tipoTexto, tipoPessoa === 'pf' && styles.tipoTextoSelecionado]}>
+                Pessoa Física
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.tipoBotao, tipoPessoa === 'pj' && styles.tipoSelecionado]}
+              onPress={() => setTipoPessoa('pj')}
+            >
+              <Text style={[styles.tipoTexto, tipoPessoa === 'pj' && styles.tipoTextoSelecionado]}>
+                Pessoa Jurídica
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <FormRecuperarSenha
+            dados={dados}
+            handleChange={handleDocumentoChange}
+            erros={erros}
+            onSubmit={handleRecuperar}
+            carregando={carregando}
+            tentouEnviar={tentouEnviar}
+            maskDocumento={maskDocumento}
+            tipoPessoa={tipoPessoa}
+          />
+        </View>
+      </ScrollView>
+
+      <Modal visible={modalNovaSenha} transparent animationType="slide">
+        <KeyboardAvoidingView
+          style={styles.modalContainer}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <Text style={styles.modalTitulo}>Defina sua nova senha</Text>
+          <ScrollView
+            contentContainerStyle={styles.modalBox}
+            keyboardShouldPersistTaps="handled"
+          >
+            <Text style={styles.modalTitulo}>Defina sua nova senha</Text>
 
-          <InputField
-            label="Nova senha"
-            value={novaSenha}
-            onChangeText={setNovaSenha}
-            secureTextEntry={!mostrarSenha}
-            mostrarSenha={mostrarSenha}
-            alternarSenha={() => setMostrarSenha(!mostrarSenha)}
-            error={errosSenha.senha}
-          />
+            <InputField
+              label="Nova senha"
+              value={novaSenha}
+              onChangeText={setNovaSenha}
+              secureTextEntry={!mostrarSenha}
+              mostrarSenha={mostrarSenha}
+              alternarSenha={() => setMostrarSenha(!mostrarSenha)}
+              error={errosSenha.senha}
+            />
 
-          <InputField
-            label="Confirmar senha"
-            value={confirmarSenha}
-            onChangeText={setConfirmarSenha}
-            secureTextEntry={!mostrarConfirmarSenha}
-            mostrarSenha={mostrarConfirmarSenha}
-            alternarSenha={() => setMostrarConfirmarSenha(!mostrarConfirmarSenha)}
-            error={errosSenha.confirmarSenha}
-          />
+            <InputField
+              label="Confirmar senha"
+              value={confirmarSenha}
+              onChangeText={setConfirmarSenha}
+              secureTextEntry={!mostrarConfirmarSenha}
+              mostrarSenha={mostrarConfirmarSenha}
+              alternarSenha={() => setMostrarConfirmarSenha(!mostrarConfirmarSenha)}
+              error={errosSenha.confirmarSenha}
+            />
 
-          <BotaoVerde texto="SALVAR" onPress={handleSalvarNovaSenha} />
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </Modal>
+            <BotaoVerde texto="SALVAR" onPress={handleSalvarNovaSenha} />
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </Modal>
 
-    <ModalSucesso
-      visivel={modalSucesso}
-      mensagem="Senha redefinida com sucesso!"
-      botaoTexto="Voltar ao Login"
-      onFechar={() => {
-        setModalSucesso(false);
-        router.replace('/(public)/login');
-      }}
-    />
+      <ModalSucesso
+        visivel={modalSucesso}
+        mensagem="Senha redefinida com sucesso!"
+        botaoTexto="Voltar ao Login"
+        onFechar={() => {
+          setModalSucesso(false);
+          router.replace('/(public)/login');
+        }}
+      />
 
-    <ModalErro
-      visivel={erroVisivel}
-      mensagem={mensagemErro}
-      onClose={() => setErroVisivel(false)}
-    />
-  </>
-);
+      <ModalErro
+        visivel={erroVisivel}
+        mensagem={mensagemErro}
+        onClose={() => setErroVisivel(false)}
+      />
+    </>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -240,12 +237,35 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: spacing.md,
   },
+  tipoBox: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+    gap: 12,
+  },
+  tipoBotao: {
+    borderWidth: 1,
+    borderColor: colors.verde,
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  tipoSelecionado: {
+    backgroundColor: colors.verde,
+  },
+  tipoTexto: {
+    color: colors.verde,
+    fontWeight: 'bold',
+  },
+  tipoTextoSelecionado: {
+    color: colors.branco,
+  },
   modalContainer: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    width:'100%'
+    width: '100%',
   },
   modalBox: {
     backgroundColor: colors.branco,
@@ -265,4 +285,3 @@ const styles = StyleSheet.create({
     color: colors.verde,
   },
 });
-

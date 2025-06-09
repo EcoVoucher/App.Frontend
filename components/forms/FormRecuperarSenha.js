@@ -4,7 +4,6 @@ import InputField from '../InputField';
 import BotaoVerde from '../BotaoVerde';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
-import { Masks } from 'react-native-mask-input';
 
 export default function FormRecuperarSenha({
   dados,
@@ -15,10 +14,9 @@ export default function FormRecuperarSenha({
   tentouEnviar,
   maskDocumento,
 }) {
-
   return (
     <>
-     <InputField
+      <InputField
         label="CPF ou CNPJ"
         value={dados.cpf}
         onChangeText={(valor) => handleChange('cpf', valor)}
@@ -36,7 +34,9 @@ export default function FormRecuperarSenha({
       />
 
       {tentouEnviar && erros && Object.keys(erros).length > 0 && (
-        <Text style={styles.erroAviso}>Corrija os campos destacados para continuar</Text>
+        <Text style={styles.erroAviso}>
+          Corrija os campos destacados para continuar
+        </Text>
       )}
 
       <View style={styles.botaoBox}>
