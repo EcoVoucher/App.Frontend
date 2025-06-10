@@ -29,6 +29,9 @@ export default function Login() {
   const [tipoPessoa, setTipoPessoa] = useState('pf');
   const [erroVisivel, setErroVisivel] = useState(false);
   const [mensagemErro, setMensagemErro] = useState('');
+  const [tentativas, setTentativas] = useState(0);
+  const [bloqueado, setBloqueado] = useState(false);
+
 
   const handleChange = (campo, valor) => {
     if (campo === 'cpf') setCpf(valor);
@@ -50,48 +53,70 @@ export default function Login() {
   };
 
   const handleLogin = async () => {
-    if (carregando) return; 
-    if (!validarCampos()) {
-      setMensagemErro('Por favor, preencha CPF/CNPJ e senha corretamente.');
-      setErroVisivel(true);
-      return;
-    }
+  if (carregando || bloqueado) return;
 
-    const apenasNumeros = cpf.replace(/\D/g, '');
+  if (!validarCampos()) {
+    setMensagemErro('Por favor, preencha CPF/CNPJ e senha corretamente.');
+    setErroVisivel(true);
+    return;
+  }
 
-    if (tipoPessoa === 'pf' && apenasNumeros.length !== 11) {
-      setMensagemErro('Você selecionou Pessoa Física, mas o CPF está inválido.');
-      setErroVisivel(true);
-      return;
-    }
+  const cpfOuCnpj = cpf.replace(/\D/g, '');
 
-    if (tipoPessoa === 'pj' && apenasNumeros.length !== 14) {
-      setMensagemErro('Você selecionou Pessoa Jurídica, mas o CNPJ está inválido.');
-      setErroVisivel(true);
-      return;
-    }
+  if (tipoPessoa === 'pf' && cpfOuCnpj.length !== 11) {
+    setMensagemErro('Você selecionou Pessoa Física, mas o CPF está inválido.');
+    setErroVisivel(true);
+    return;
+  }
 
-    setCarregando(true);
+  if (tipoPessoa === 'pj' && cpfOuCnpj.length !== 14) {
+    setMensagemErro('Você selecionou Pessoa Jurídica, mas o CNPJ está inválido.');
+    setErroVisivel(true);
+    return;
+  }
 
-    try {
-      const { token, usuario } = await apiMock.login(cpf, senha, tipoPessoa);
-      await login({ token, usuario });
+  setCarregando(true);
 
-      if (usuario.primeiroAcesso && usuario.tipo === 'pf') {
+  try {
+    const { token, usuario } = await apiMock.login(cpfOuCnpj, senha, tipoPessoa);
+    await login({ token, usuario });
+
+    setTentativas(0); // limpa tentativas
+
+    if (usuario.primeiroAcesso && usuario.tipo === 'pf') {
       router.replace('/(private)/pegada');
-      } else {
-        router.replace('/(private)/home');
-      }
-    } catch (error) {
-      console.error('Erro ao fazer login:', error);
-      setMensagemErro(
-        error?.message?.toString() || error?.toString() || 'Não foi possível acessar sua conta.'
-      );
-      setErroVisivel(true);
-    } finally {
-      setCarregando(false);
+    } else {
+      router.replace('/(private)/home');
     }
-  };
+  } catch (error) {
+  console.error('Erro ao fazer login:', error);
+  const mensagem = error?.message || 'Não foi possível acessar sua conta.';
+
+  // 🔴 PJ não aprovado: encerra loading, mostra erro e limpa campos
+  if (mensagem.includes('não aprovado')) {
+    setMensagemErro(mensagem);
+    setErroVisivel(true);
+    setCpf('');
+    setSenha('');
+    setCarregando(false);
+    return;
+  }
+  setTentativas(prev => prev + 1);
+
+  if (tentativas + 1 >= 5) {
+    setBloqueado(true);
+    setMensagemErro('Muitas tentativas incorretas. Tente novamente em 30 segundos.');
+    setTimeout(() => {
+      setTentativas(0);
+      setBloqueado(false);
+    }, 30000);
+  } else {
+    setMensagemErro(error?.message || 'Não foi possível acessar sua conta.');
+  }
+
+  setErroVisivel(true);
+}
+};
 
   return (
     <View style={styles.contentBox}>
@@ -146,10 +171,11 @@ export default function Login() {
         />
       ) : (
         <BotaoVerde
-          texto="ENTRAR"
+          texto={bloqueado ? "AGUARDE..." : "ENTRAR"}
           onPress={handleLogin}
-          disabled={carregando || Object.keys(erros).length > 0}
+          disabled={carregando || bloqueado || Object.keys(erros).length > 0}
         />
+
       )}
 
       <TouchableOpacity onPress={() => router.push('/(public)/recuperarsenha')}>

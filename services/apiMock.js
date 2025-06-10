@@ -76,6 +76,9 @@ const login = async (identificador, senha, tipo) => {
   const usuario = usuarios[usuarioIndex];
 
   if (usuario.tipo !== tipo) throw new Error('Tipo de usuário incorreto.');
+  if (usuario.tipo === 'pj' && !usuario.aprovado) {
+    throw new Error('Cadastro ainda não aprovado. Aguarde a validação do administrador.');
+  }
   if (usuario.senha !== senha) throw new Error('Senha incorreta.');
 
   const primeiroAcesso = !!(usuario.primeiroAcesso ?? true);
@@ -115,10 +118,28 @@ const cadastroPJ = async (dados) => {
   if (!regexSenha.test(dados.senha)) throw new Error('Senha fraca.');
   if (dados.senha !== dados.confirmarSenha) throw new Error('Senhas não coincidem.');
 
-  usuarios.push({ tipo: 'pj', ...dados, primeiroAcesso: true });
+  usuarios.push({ tipo: 'pj', ...dados, primeiroAcesso: true, aprovado: false });
   await salvarUsuarios(usuarios);
-  return { status: 'ok', message: 'Cadastro PJ realizado.' };
+  return { status: 'ok', message: 'Cadastro PJ realizado. Aguarde a aprovação do administrador.' };
 };
+
+const aprovarCadastroPJ = async (cnpj) => {
+  const usuarios = await obterUsuarios();
+  const cnpjLimpo = apenasNumeros(cnpj);
+
+  const index = usuarios.findIndex(u => apenasNumeros(u.cnpj) === cnpjLimpo && u.tipo === 'pj');
+  if (index === -1) throw new Error('Usuário PJ não encontrado.');
+
+  usuarios[index].aprovado = true;
+  await salvarUsuarios(usuarios);
+  return { status: 'ok', message: 'Cadastro aprovado com sucesso.' };
+};
+
+const listarPJsPendentes = async () => {
+  const usuarios = await obterUsuarios();
+  return usuarios.filter(u => u.tipo === 'pj' && !u.aprovado);
+};
+
 
 const recuperarSenha = async ({ cpf, cnpj, email }) => {
   await simularAtraso();
@@ -506,6 +527,8 @@ export default {
   login,
   cadastroPF,
   cadastroPJ,
+  aprovarCadastroPJ,
+  listarPJsPendentes,
   recuperarSenha,
   redefinirSenha,
   logout,

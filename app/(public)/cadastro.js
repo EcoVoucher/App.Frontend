@@ -217,24 +217,38 @@ export default function Cadastro() {
       </View>
     </Modal>
 
-    {/* Modal sucesso */}
-    <Modal visible={modalSucesso} transparent animationType="fade">
-      <View style={styles.modalContainer}>
-        <View style={styles.modalBox}>
-          <Text style={styles.modalTitulo}>Cadastro realizado com sucesso!</Text>
-          <BotaoVerde
-            texto="Ir para Login"
-            onPress={() => {
-              setModalSucesso(false);
-              setTipoPessoa(null);
-              setDados(ESTADO_INICIAL);
-              setErros({});
-              router.replace('/(public)/login');
-            }}
-          />
-        </View>
-      </View>
-    </Modal>
+  {/* Modal sucesso */}
+<Modal visible={modalSucesso} transparent animationType="fade">
+  <View style={styles.modalContainer}>
+    <View style={styles.modalBox}>
+      <Text style={styles.modalTitulo}>
+        {tipoPessoa === 'pj'
+          ? 'Cadastro realizado com sucesso!\nAguarde a aprovação do administrador.\n Entraremos em contato.'
+          : 'Cadastro realizado com sucesso!'}
+      </Text>
+
+        <BotaoVerde
+      texto={tipoPessoa === 'pj' ? 'Voltar' : 'Ir para Login'}
+      onPress={() => {
+        setModalSucesso(false);
+        setDados(ESTADO_INICIAL);
+        setErros({});
+
+        if (tipoPessoa === 'pf') {
+          setTipoPessoa(null);
+          router.replace('/(public)/login');
+        } else {
+          // Exibe o formulário novamente
+          setTipoPessoa('pj');
+          setModalTipoVisivel(false);
+        }
+      }}
+    />
+
+    </View>
+  </View>
+</Modal>
+
 
     <ModalErro
       visivel={erroVisivel}
