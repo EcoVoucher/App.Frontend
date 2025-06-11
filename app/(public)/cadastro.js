@@ -11,11 +11,12 @@ import {
 import ModalErro from '../../components/ModalErro';
 import BotaoVerde from '../../components/BotaoVerde';
 import FormCadastro from '../../components/forms/FormCadastro';
-import apiMock from '../../services/apiMock';
+import apiMock from '../../services/apiMock'; //substituir pela api.js
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
 import { validarCamposObrigatorios } from '../../utils/validarCamposObrigatorios';
+import { formatarCadastro } from '../../utils/formatarenvio';
 
 const { width } = Dimensions.get('window');
 
@@ -81,7 +82,11 @@ export default function Cadastro() {
 
   const buscarEndereco = async (cep) => {
     try {
-      const res = await fetch(`http://viacep.com.br/ws/${cep}/json/`);
+      // Adicionar timeout de segurança para evitar travamento em caso de rede lenta
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(), 5000);
+      const res = await fetch(`http://viacep.com.br/ws/${cep}/json/`, { signal: controller.signal });
+
       console.log(cep)
       const data = await res.json();
       if (data.erro) {
@@ -148,11 +153,19 @@ export default function Cadastro() {
 
   setCarregando(true);
   try {
+    const dadosFormatados = formatarCadastro(dados);
+
     if (tipoPessoa === 'pf') {
-      await apiMock.cadastroPF(dados);
+     // 🔄 Aqui usa a API mock - futuramente substituir por chamada real:
+        await apiMock.cadastroPF(dadosFormatados);
+        // 📝 Exemplo com API real:
+        // await api.cadastrarPF(dadosFormatados);
     } else {
-      await apiMock.cadastroPJ(dados);
+        await apiMock.cadastroPJ(dadosFormatados);
+      // 📝 Exemplo com API real:
+      // await api.cadastrarPJ(dadosFormatados);
     }
+  
     setModalSucesso(true);
   } catch (error) {
     console.error(error);

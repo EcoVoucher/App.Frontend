@@ -7,6 +7,7 @@ import { spacing } from '../../theme/spacing';
 
 export default function FormRecuperarSenha({
   dados,
+  tipoPessoa,
   handleChange,
   erros,
   onSubmit,
@@ -17,22 +18,14 @@ export default function FormRecuperarSenha({
   return (
     <>
       <InputField
-        label="CPF ou CNPJ"
+        label={tipoPessoa === 'pj' ? 'CNPJ' : 'CPF'}
         value={dados.cpf}
         onChangeText={(valor) => handleChange('cpf', valor)}
         keyboardType="numeric"
         mask={maskDocumento}
-        error={erros?.cpf}
+        error={tipoPessoa === 'pj' ? erros?.cnpj : erros?.cpf}
       />
-
-      <InputField
-        label="E-mail"
-        value={dados.email}
-        onChangeText={(v) => handleChange('email', v)}
-        keyboardType="email-address"
-        error={erros.email}
-      />
-
+      
       {tentouEnviar && erros && Object.keys(erros).length > 0 && (
         <Text style={styles.erroAviso}>
           Corrija os campos destacados para continuar

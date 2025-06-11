@@ -66,31 +66,6 @@ function validarCNPJ(cnpj) {
   let dig2 = resto < 2 ? 0 : 11 - resto;
   return dig2 === parseInt(cnpj[13]);
 }
-const login = async (identificador, senha, tipo) => {
-  await simularAtraso();
-  const usuarios = await obterUsuarios();
-  const id = apenasNumeros(identificador);
-  const usuarioIndex = usuarios.findIndex(u => apenasNumeros(u.cpf || u.cnpj) === id);
-
-  if (usuarioIndex === -1) throw new Error('Usuário não encontrado.');
-  const usuario = usuarios[usuarioIndex];
-
-  if (usuario.tipo !== tipo) throw new Error('Tipo de usuário incorreto.');
-  if (usuario.tipo === 'pj' && !usuario.aprovado) {
-    throw new Error('Cadastro ainda não aprovado. Aguarde a validação do administrador.');
-  }
-  if (usuario.senha !== senha) throw new Error('Senha incorreta.');
-
-  const primeiroAcesso = !!(usuario.primeiroAcesso ?? true);
-  usuarios[usuarioIndex].primeiroAcesso = false;
-  await salvarUsuarios(usuarios);
-
-  const token = 'mock-token-' + Math.random().toString(36).substring(2, 10);
-  await AsyncStorage.setItem('token', token);
-
-  return { token, usuario: { ...usuario, primeiroAcesso } };
-};
-
 const cadastroPF = async (dados) => {
   await simularAtraso();
   const usuarios = await obterUsuarios();
@@ -141,33 +116,71 @@ const listarPJsPendentes = async () => {
 };
 
 
-const recuperarSenha = async ({ cpf, cnpj, email }) => {
+const login = async (identificador, senha, tipo) => {
   await simularAtraso();
   const usuarios = await obterUsuarios();
-  const id = apenasNumeros(cpf || cnpj);
-  const usuario = usuarios.find(u => apenasNumeros(u.cpf || u.cnpj) === id);
-  if (!usuario) throw new Error('Usuário não encontrado.');
-  if (usuario.email !== email) throw new Error('E-mail não confere.');
-  return { status: 'ok' };
-};
-
-const redefinirSenha = async ({ cpf, cnpj, novaSenha }) => {
-  await simularAtraso();
-  const usuarios = await obterUsuarios();
-  const id = apenasNumeros(cpf || cnpj);
+  const id = apenasNumeros(identificador);
   const usuarioIndex = usuarios.findIndex(u => apenasNumeros(u.cpf || u.cnpj) === id);
 
   if (usuarioIndex === -1) throw new Error('Usuário não encontrado.');
-  if (!regexSenha.test(novaSenha)) throw new Error('Senha inválida.');
+  const usuario = usuarios[usuarioIndex];
 
-  usuarios[usuarioIndex].senha = novaSenha;
+  if (usuario.tipo !== tipo) throw new Error('Tipo de usuário incorreto.');
+  if (usuario.tipo === 'pj' && !usuario.aprovado) {
+    throw new Error('Cadastro ainda não aprovado. Aguarde a validação do administrador.');
+  }
+  if (usuario.senha !== senha) throw new Error('Senha incorreta.');
+
+  const primeiroAcesso = !!(usuario.primeiroAcesso ?? true);
+  usuarios[usuarioIndex].primeiroAcesso = false;
   await salvarUsuarios(usuarios);
-  return { status: 'ok' };
+
+  const token = 'mock-token-' + Math.random().toString(36).substring(2, 10);
+  await AsyncStorage.setItem('token', token);
+
+  return { token, usuario: { ...usuario, primeiroAcesso } };
 };
 
+
+const recuperarSenha = async ({ cpf, cnpj }) => {
+  await simularAtraso();
+  const usuarios = await obterUsuarios();
+  const id = apenasNumeros(cpf || cnpj);
+
+  const index = usuarios.findIndex(u => apenasNumeros(u.cpf || u.cnpj) === id);
+  if (index === -1) throw new Error('Usuário não encontrado.');
+
+  // 🔄 MOCK: gera token interno e simula envio por e-mail
+  const token = 'token-' + Math.random().toString(36).substring(2, 12);
+  usuarios[index].tokenRecuperacao = token;
+
+  await salvarUsuarios(usuarios);
+
+  return {
+    status: 'ok',
+    email: usuarios[index].email,
+    mensagem: `Link de redefinição enviado para ${usuarios[index].email}`,
+    token, // ⚠️ apenas para uso local (não será usado na API real)
+  };
+};
 const logout = async () => await AsyncStorage.removeItem('token');
 
 const getToken = async () => await AsyncStorage.getItem('token');
+
+const redefinirSenhaComToken = async ({ token, novaSenha }) => {
+  await simularAtraso();
+  const usuarios = await obterUsuarios();
+
+  const index = usuarios.findIndex(u => u.tokenRecuperacao === token);
+  if (index === -1) throw new Error('Token inválido ou expirado.');
+  if (!regexSenha.test(novaSenha)) throw new Error('Senha inválida.');
+
+  usuarios[index].senha = novaSenha;
+  delete usuarios[index].tokenRecuperacao;
+
+  await salvarUsuarios(usuarios);
+  return { status: 'ok', message: 'Senha redefinida com sucesso.' };
+};
 
 
 ///tela pegada - questionario
@@ -207,6 +220,8 @@ const obterUsuarioPorCPF = async (cpf) => {
   const usuarios = await obterUsuarios();
   const id = apenasNumeros(cpf);
   return usuarios.find((u) => apenasNumeros(u.cpf) === id);
+    // 🔁 API real:
+  // return await api.get(`/usuarios/cpf/${id}`);
 };
 
 ///simulação deposito
@@ -244,6 +259,9 @@ const registrarDeposito = async (cpf, materiais, totalPontos,codigo) => {
   });
 
   await salvarUsuarios(usuarios);
+  // 📤 🔁 (FUTURO) Enviar comprovante automático por e-mail
+  // await api.post('/deposito', { cpf, materiais, totalPontos, codigo });
+  // await api.sendEmailComprovante(cpf, codigo); ← integração real
 
   return { status: 'ok', message: 'Depósito registrado com sucesso.' };
 };
@@ -530,7 +548,7 @@ export default {
   aprovarCadastroPJ,
   listarPJsPendentes,
   recuperarSenha,
-  redefinirSenha,
+  redefinirSenhaComToken,
   logout,
   getToken,
   salvarPegada,

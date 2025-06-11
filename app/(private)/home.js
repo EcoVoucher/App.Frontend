@@ -104,7 +104,8 @@ obterComparativoPegada(pegada)
           <View style={styles.cabecalho}>
             <Image source={require ('../../assets/imagensEco/ecoVoucherIcon.png')} style={styles.logo} />
             <View style={styles.boasVindas}>
-              <Text style={[styles.titulo, { fontSize: isLargeScreen ? fonts.size.xl : fonts.size.lg }]}>Olá, {usuario?.nome || usuario?.nomeEmpresa || ''}!</Text>
+              <Text style={[styles.titulo, { fontSize: isLargeScreen ? fonts.size.xl : fonts.size.lg }]}>Olá, {(usuario?.nome || usuario?.nomeEmpresa || '').replace(/\b\w/g, l => l.toUpperCase())}
+</Text>
               <Text style={[styles.subtitulo, { fontSize: isLargeScreen ? fonts.size.md : fonts.size.sm }]}>Transforme suas ações em benefícios.</Text>
             </View>
           </View>

@@ -11,7 +11,7 @@ import ModalErro from '../../components/ModalErro';
 import BotaoVerde from '../../components/BotaoVerde';
 import FormLogin from '../../components/forms/FormLogin';
 import { useAuth } from '../../context/AuthContext';
-import apiMock from '../../services/apiMock';
+import apiMock from '../../services/apiMock';// import api from '../../services/api'; // 🔄 Substituir apiMock pela API real no futuro
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
@@ -78,7 +78,10 @@ export default function Login() {
   setCarregando(true);
 
   try {
-    const { token, usuario } = await apiMock.login(cpfOuCnpj, senha, tipoPessoa);
+    // 🔄 Quando for usar a API real, descomente a linha abaixo e comente a do mock
+// const { token, usuario } = await api.login(cpfOuCnpj, senha, tipoPessoa);
+    const { token, usuario } = await apiMock.login(cpfOuCnpj, senha, tipoPessoa); // ✅ uso atual com mock
+
     await login({ token, usuario });
 
     setTentativas(0); // limpa tentativas
@@ -90,7 +93,23 @@ export default function Login() {
     }
   } catch (error) {
   console.error('Erro ao fazer login:', error);
-  const mensagem = error?.message || 'Não foi possível acessar sua conta.';
+  
+    // 🔄 Quando estiver usando a API real, substitua esse tratamento:
+const mensagem = error?.message || 'Não foi possível acessar sua conta.';
+
+    // 🔄 Por este (com axios, por exemplo):
+    /*
+    let mensagem = 'Não foi possível acessar sua conta.';
+    if (error.response) {
+      if (error.response.status === 403) {
+        mensagem = 'Cadastro ainda não aprovado.';
+      } else if (error.response.status === 401) {
+        mensagem = 'CPF/CNPJ ou senha incorretos.';
+      } else {
+        mensagem = error.response.data?.erro || mensagem;
+      }
+    }
+    */
 
   // 🔴 PJ não aprovado: encerra loading, mostra erro e limpa campos
   if (mensagem.includes('não aprovado')) {
@@ -115,7 +134,9 @@ export default function Login() {
   }
 
   setErroVisivel(true);
-}
+  } finally {
+    setCarregando(false); 
+  }
 };
 
   return (

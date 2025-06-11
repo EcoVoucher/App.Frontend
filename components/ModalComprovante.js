@@ -13,6 +13,7 @@ import logoEcoApp from '../assets/imagensEco/eco-novo.jpeg';
 export default function ModalComprovante({ visible, onClose, extrato }) {
   if (!extrato) return null;
 
+  // 🧾 Gera HTML para exportação do PDF
   const gerarHtml = () => {
     const { cpf, dataHora, codigo, materiais, total } = extrato;
     return `
@@ -62,6 +63,7 @@ export default function ModalComprovante({ visible, onClose, extrato }) {
       <View style={styles.overlay}>
         <View style={styles.modalBox}>
           <Image source={logoEcoApp} style={styles.logo} resizeMode="contain" />
+
           <Text style={styles.titulo}>✅ Depósito Registrado com Sucesso!</Text>
           <Text style={styles.codigo}>Código: {extrato.codigo}</Text>
           <Text style={styles.info}>CPF: {extrato.cpf}</Text>
@@ -77,10 +79,6 @@ export default function ModalComprovante({ visible, onClose, extrato }) {
 
           <View style={styles.botoesContainer}>
             <BotaoVerde texto="Imprimir PDF" onPress={imprimirComprovante} />
-            <BotaoVerde texto="Enviar por e-mail" onPress={() => {
-              console.log('Simulação: envio de e-mail');
-              Alert.alert('Comprovante enviado', 'O comprovante foi enviado para o e-mail associado ao CPF.');
-            }} />
           </View>
 
           <Text style={styles.fechar} onPress={onClose}>Fechar</Text>
@@ -101,7 +99,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.branco,
     padding: spacing.lg,
     borderRadius: 10,
-    width: '60%',
+    width: '90%',
+    maxWidth: 500,
     alignItems: 'center',
   },
   logo: {
@@ -143,7 +142,7 @@ const styles = StyleSheet.create({
   },
   botoesContainer: {
     marginTop: spacing.md,
-    width: '20%',
+    width: '100%',
   },
   fechar: {
     marginTop: spacing.md,

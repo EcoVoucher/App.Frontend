@@ -3,43 +3,29 @@ import {
   View,
   Text,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
-  Modal,
-  Dimensions,
   TouchableOpacity,
 } from 'react-native';
-import ModalErro from '../../components/ModalErro';
 import { useRouter } from 'expo-router';
-import apiMock from '../../services/apiMock';
+import { Masks } from 'react-native-mask-input';
+import ModalErro from '../../components/ModalErro';
+import ModalSucesso from '../../components/ModalSucesso'; // ✅ Adicionado para uso futuro
 import FormRecuperarSenha from '../../components/forms/FormRecuperarSenha';
-import ModalSucesso from '../../components/ModalSucesso';
-import InputField from '../../components/InputField';
-import BotaoVerde from '../../components/BotaoVerde';
+import { validarCamposObrigatorios } from '../../utils/validarCamposObrigatorios';
+import apiMock from '../../services/apiMock'; // 🔄 Trocar por `api.js` no futuro
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
-import { validarCamposObrigatorios } from '../../utils/validarCamposObrigatorios';
-import { Masks } from 'react-native-mask-input';
-
-const { width } = Dimensions.get('window');
 
 export default function RecuperarSenha() {
   const router = useRouter();
   const [tentouEnviar, setTentouEnviar] = useState(false);
-  const [modalNovaSenha, setModalNovaSenha] = useState(false);
   const [erroVisivel, setErroVisivel] = useState(false);
   const [mensagemErro, setMensagemErro] = useState('');
-  const [modalSucesso, setModalSucesso] = useState(false);
+  const [modalSucessoVisivel, setModalSucessoVisivel] = useState(false); // ✅ uso futuro
   const [carregando, setCarregando] = useState(false);
-  const [dados, setDados] = useState({ cpf: '', email: '' });
+  const [dados, setDados] = useState({ cpf: '' });
   const [erros, setErros] = useState({});
-  const [novaSenha, setNovaSenha] = useState('');
-  const [confirmarSenha, setConfirmarSenha] = useState('');
-  const [errosSenha, setErrosSenha] = useState({});
-  const [mostrarSenha, setMostrarSenha] = useState(false);
-  const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
   const [tipoPessoa, setTipoPessoa] = useState('pf');
 
   const maskDocumento = tipoPessoa === 'pf' ? Masks.BRL_CPF : Masks.BRL_CNPJ;
@@ -49,65 +35,46 @@ export default function RecuperarSenha() {
     setErros((prev) => ({ ...prev, [campo]: null }));
   };
 
-  const handleDocumentoChange = (campo, valor) => {
-    handleChange(campo, valor);
-  };
-
   const handleRecuperar = async () => {
     if (carregando) return;
     setTentouEnviar(true);
 
-    const campos = tipoPessoa === 'pj' ? ['cnpj', 'email'] : ['cpf', 'email'];
+    const campos = tipoPessoa === 'pj' ? ['cnpj'] : ['cpf'];
     const dadosValidacao = {
-      email: dados.email,
       ...(tipoPessoa === 'pj' ? { cnpj: dados.cpf } : { cpf: dados.cpf }),
     };
 
     const novoErros = validarCamposObrigatorios(dadosValidacao, campos, tipoPessoa);
     setErros(novoErros);
-
     if (Object.keys(novoErros).length > 0) return;
 
     setCarregando(true);
     try {
-      await apiMock.recuperarSenha({
-        email: dados.email,
+      // 🔄 Substituir por chamada real no futuro:
+      // const resposta = await api.recuperarSenha(dadosValidacao);
+      const resposta = await apiMock.recuperarSenha({
         cpf: tipoPessoa === 'pf' ? dados.cpf : undefined,
         cnpj: tipoPessoa === 'pj' ? dados.cpf : undefined,
       });
 
-      setModalNovaSenha(true);
+      // ✅ MODO ATUAL (mock): redireciona direto
+      if (resposta?.token) {
+        router.replace(`/(public)/redefinirsenha?token=${resposta.token}`);
+      } else {
+        throw new Error('Não foi possível gerar o token.');
+      }
+
+      /* ✅ MODO FUTURO (com API real):
+      if (resposta?.sucesso) {
+        setModalSucessoVisivel(true);
+      } else {
+        throw new Error(resposta?.mensagem || 'Erro ao recuperar senha.');
+      }
+      */
+
     } catch (error) {
       console.error(error);
       setMensagemErro(error?.message || 'Erro ao recuperar senha.');
-      setErroVisivel(true);
-    } finally {
-      setCarregando(false);
-    }
-  };
-
-  const handleSalvarNovaSenha = async () => {
-    if (carregando) return;
-
-    const campos = ['senha', 'confirmarSenha'];
-    const errosValidacao = validarCamposObrigatorios(
-      { senha: novaSenha, confirmarSenha },
-      campos,
-      null
-    );
-
-    setErrosSenha(errosValidacao);
-
-    if (Object.keys(errosValidacao).length > 0) return;
-
-    setCarregando(true);
-    try {
-      await apiMock.redefinirSenha({ ...dados, novaSenha });
-      setModalNovaSenha(false);
-      setModalSucesso(true);
-    } catch (error) {
-      console.error(error);
-      setMensagemErro(error?.response?.data?.message || 'Erro ao redefinir senha.');
       setErroVisivel(true);
     } finally {
       setCarregando(false);
@@ -122,7 +89,7 @@ export default function RecuperarSenha() {
       >
         <View style={styles.contentBox}>
           <Text style={styles.titulo}>Recuperar senha</Text>
-          <Text style={styles.subtitulo}>Preencha CPF/CNPJ e e-mail para continuar</Text>
+          <Text style={styles.subtitulo}>Preencha CPF/CNPJ para continuar</Text>
 
           <View style={styles.tipoBox}>
             <TouchableOpacity
@@ -146,7 +113,7 @@ export default function RecuperarSenha() {
 
           <FormRecuperarSenha
             dados={dados}
-            handleChange={handleDocumentoChange}
+            handleChange={handleChange}
             erros={erros}
             onSubmit={handleRecuperar}
             carregando={carregando}
@@ -157,56 +124,20 @@ export default function RecuperarSenha() {
         </View>
       </ScrollView>
 
-      <Modal visible={modalNovaSenha} transparent animationType="slide">
-        <KeyboardAvoidingView
-          style={styles.modalContainer}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-          <ScrollView
-            contentContainerStyle={styles.modalBox}
-            keyboardShouldPersistTaps="handled"
-          >
-            <Text style={styles.modalTitulo}>Defina sua nova senha</Text>
-
-            <InputField
-              label="Nova senha"
-              value={novaSenha}
-              onChangeText={setNovaSenha}
-              secureTextEntry={!mostrarSenha}
-              mostrarSenha={mostrarSenha}
-              alternarSenha={() => setMostrarSenha(!mostrarSenha)}
-              error={errosSenha.senha}
-            />
-
-            <InputField
-              label="Confirmar senha"
-              value={confirmarSenha}
-              onChangeText={setConfirmarSenha}
-              secureTextEntry={!mostrarConfirmarSenha}
-              mostrarSenha={mostrarConfirmarSenha}
-              alternarSenha={() => setMostrarConfirmarSenha(!mostrarConfirmarSenha)}
-              error={errosSenha.confirmarSenha}
-            />
-
-            <BotaoVerde texto="SALVAR" onPress={handleSalvarNovaSenha} />
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </Modal>
-
-      <ModalSucesso
-        visivel={modalSucesso}
-        mensagem="Senha redefinida com sucesso!"
-        botaoTexto="Voltar ao Login"
-        onFechar={() => {
-          setModalSucesso(false);
-          router.replace('/(public)/login');
-        }}
-      />
-
       <ModalErro
         visivel={erroVisivel}
         mensagem={mensagemErro}
         onClose={() => setErroVisivel(false)}
+      />
+
+      {/* ✅ Modal de sucesso FUTURO (com API real) */}
+      <ModalSucesso
+        visivel={modalSucessoVisivel}
+        mensagem="Enviamos as instruções para redefinir sua senha ao e-mail cadastrado. Verifique sua caixa de entrada!"
+        onClose={() => {
+          setModalSucessoVisivel(false);
+          router.replace('/(public)/login');
+        }}
       />
     </>
   );
@@ -259,29 +190,5 @@ const styles = StyleSheet.create({
   },
   tipoTextoSelecionado: {
     color: colors.branco,
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: '100%',
-  },
-  modalBox: {
-    backgroundColor: colors.branco,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xxl,
-    borderRadius: 12,
-    width: '100%',
-    maxWidth: 400,
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  modalTitulo: {
-    fontSize: fonts.size.md,
-    marginBottom: spacing.sm,
-    textAlign: 'center',
-    fontWeight: fonts.weight.bold,
-    color: colors.verde,
   },
 });

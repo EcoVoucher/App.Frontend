@@ -1,34 +1,48 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import api from '../../services/apiMock';
+import api from '../../services/apiMock'; // 🔄 Substituir futuramente por: import api from '../../services/api';
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
 import { obterComparativoPegada, formatarDataBR } from '../../utils/formatadores';
+// import { useAuth } from '../../context/AuthContext'; // 🔐 No futuro para proteger com token
 
 export default function AdminDevScreen() {
   const [usuarios, setUsuarios] = useState([]);
   const [visiveis, setVisiveis] = useState([]);
 
- const carregarUsuarios = async () => {
-  try {
-    const lista = await api.obterUsuarios();
-    setUsuarios(lista);
-    setVisiveis(new Array(lista.length).fill(false));
-  } catch (err) {
-    Alert.alert('Erro ao carregar usuários');
-  }
-};
+  // 🔐 Proteger rota futuramente:
+  // const { usuario, token } = useAuth();
+  // useEffect(() => {
+  //   if (!usuario?.isAdmin) router.replace('/(public)/login');
+  // }, []);
 
-const aprovarPJ = async (cnpj) => {
-  try {
-    await api.aprovarCadastroPJ(cnpj);
-    Alert.alert('Sucesso', 'Cadastro aprovado com sucesso!');
-    carregarUsuarios(); // recarrega lista atualizada
-  } catch (err) {
-    Alert.alert('Erro ao aprovar cadastro', err.message);
-  }
-};
+  const carregarUsuarios = async () => {
+    try {
+      const lista = await api.obterUsuarios(); 
+      // 🔄 Substituir por API real:
+      // const response = await api.get('/usuarios');
+      // const lista = response.data;
+
+      setUsuarios(lista);
+      setVisiveis(new Array(lista.length).fill(false));
+    } catch (err) {
+      Alert.alert('Erro ao carregar usuários');
+    }
+  };
+
+  const aprovarPJ = async (cnpj) => {
+    try {
+      await api.aprovarCadastroPJ(cnpj);
+      // 🔄 Substituir por:
+      // await api.patch('/admin/aprovar-pj', { cnpj });
+
+      Alert.alert('Sucesso', 'Cadastro aprovado com sucesso!');
+      carregarUsuarios(); // ✅ Recarrega a lista após aprovação
+    } catch (err) {
+      Alert.alert('Erro ao aprovar cadastro', err.message || 'Erro desconhecido');
+    }
+  };
 
   const toggleVisibilidade = (index) => {
     const novos = [...visiveis];
@@ -37,6 +51,7 @@ const aprovarPJ = async (cnpj) => {
   };
 
   const resetarUsuarios = async () => {
+    // 🧼 Apenas para ambiente mock/dev. Remover na API real.
     await AsyncStorage.multiRemove(['@usuarios_mock', '@vouchersGerados', 'contador_vouchers_gerados']);
     setUsuarios([]);
     Alert.alert('Base de usuários mock foi resetada!');
@@ -49,62 +64,61 @@ const aprovarPJ = async (cnpj) => {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={{ width: '100%', maxWidth: 600 }}>
-        <Text style={styles.titulo}>Usuários Mock Cadastrados</Text>
+        <Text style={styles.titulo}>Usuários Cadastrados</Text>
 
         {usuarios.length === 0 ? (
           <Text style={styles.vazio}>Nenhum usuário cadastrado.</Text>
         ) : (
-         usuarios.map((usuario, index) => {
-  const historico = Array.isArray(usuario.historicoPegada) ? usuario.historicoPegada : [];
-  const ultima = historico.length > 0 ? historico[historico.length - 1] : null;
+          usuarios.map((usuario, index) => {
+            const historico = Array.isArray(usuario.historicoPegada) ? usuario.historicoPegada : [];
+            const ultima = historico.length > 0 ? historico[historico.length - 1] : null;
 
-  return (
-    <View key={index} style={styles.card}>
-      <Text style={[styles.tipo, { color: usuario.tipo === 'pf' ? colors.azul : colors.laranja }]}>
-        {usuario.tipo.toUpperCase()}
-      </Text>
-      <Text style={styles.nome}>{usuario.nome || usuario.nomeEmpresa}</Text>
+            return (
+              <View key={index} style={styles.card}>
+                <Text style={[styles.tipo, { color: usuario.tipo === 'pf' ? colors.azul : colors.laranja }]}>
+                  {usuario.tipo.toUpperCase()}
+                </Text>
+                <Text style={styles.nome}>{usuario.nome || usuario.nomeEmpresa}</Text>
 
-      {/* ✅ AQUI DENTRO do card: */}
-      {usuario.tipo === 'pj' && !usuario.aprovado && (
-        <TouchableOpacity onPress={() => aprovarPJ(usuario.cnpj)} style={[styles.botao, { marginTop: 8 }]}>
-          <Text style={styles.botaoTexto}>Aprovar Cadastro</Text>
-        </TouchableOpacity>
-      )}
+                {usuario.tipo === 'pj' && !usuario.aprovado && (
+                  <TouchableOpacity onPress={() => aprovarPJ(usuario.cnpj)} style={[styles.botao, { marginTop: 8 }]}>
+                    <Text style={styles.botaoTexto}>Aprovar Cadastro</Text>
+                  </TouchableOpacity>
+                )}
 
-      {usuario.tipo === 'pj' && usuario.aprovado && (
-        <Text style={[styles.info, { color: colors.sucesso, fontWeight: 'bold' }]}>
-          ✅ PJ aprovado
-        </Text>
-      )}
+                {usuario.tipo === 'pj' && usuario.aprovado && (
+                  <Text style={[styles.info, { color: colors.sucesso, fontWeight: 'bold' }]}>
+                    ✅ PJ aprovado
+                  </Text>
+                )}
 
-      <TouchableOpacity onPress={() => toggleVisibilidade(index)}>
-        <Text style={styles.toggleBotao}>
-          {visiveis[index] ? 'Ocultar detalhes ▲' : 'Ver detalhes ▼'}
-        </Text>
-      </TouchableOpacity>
+                <TouchableOpacity onPress={() => toggleVisibilidade(index)}>
+                  <Text style={styles.toggleBotao}>
+                    {visiveis[index] ? 'Ocultar detalhes ▲' : 'Ver detalhes ▼'}
+                  </Text>
+                </TouchableOpacity>
 
-      {visiveis[index] && (
-        <View style={styles.detalhesBox}>
-          <Text style={styles.info}>CPF/CNPJ: {usuario.cpf || usuario.cnpj}</Text>
-          <Text style={styles.info}>Email: {usuario.email}</Text>
-          <Text style={styles.info}>Senha: ••••••</Text>
+                {visiveis[index] && (
+                  <View style={styles.detalhesBox}>
+                    <Text style={styles.info}>CPF/CNPJ: {usuario.cpf || usuario.cnpj}</Text>
+                    <Text style={styles.info}>Email: {usuario.email}</Text>
+                    <Text style={styles.info}>Senha: ••••••</Text>
 
-          {ultima ? (
-            <>
-              <Text style={styles.info}>Pegada recente: {ultima.pontuacao} pontos</Text>
-              <Text style={styles.info}>Data: {formatarDataBR(ultima.data)}</Text>
-              <Text style={styles.info}>Comparativo: {obterComparativoPegada(ultima.pontuacao)}</Text>
-            </>
-          ) : (
-            <Text style={styles.info}>Nenhuma pegada registrada ainda.</Text>
-          )}
-        </View>
-      )}
-    </View>
-  );
-})
-)}
+                    {ultima ? (
+                      <>
+                        <Text style={styles.info}>Pegada recente: {ultima.pontuacao} pontos</Text>
+                        <Text style={styles.info}>Data: {formatarDataBR(ultima.data)}</Text>
+                        <Text style={styles.info}>Comparativo: {obterComparativoPegada(ultima.pontuacao)}</Text>
+                      </>
+                    ) : (
+                      <Text style={styles.info}>Nenhuma pegada registrada ainda.</Text>
+                    )}
+                  </View>
+                )}
+              </View>
+            );
+          })
+        )}
 
         <TouchableOpacity style={styles.botao} onPress={carregarUsuarios}>
           <Text style={styles.botaoTexto}>Atualizar Lista</Text>
