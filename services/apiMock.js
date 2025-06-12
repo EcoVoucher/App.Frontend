@@ -140,7 +140,9 @@ const login = async (identificador, senha, tipo) => {
 
   return { token, usuario: { ...usuario, primeiroAcesso } };
 };
+const logout = async () => await AsyncStorage.removeItem('token');
 
+const getToken = async () => await AsyncStorage.getItem('token');
 
 const recuperarSenha = async ({ cpf, cnpj }) => {
   await simularAtraso();
@@ -163,9 +165,6 @@ const recuperarSenha = async ({ cpf, cnpj }) => {
     token, // ⚠️ apenas para uso local (não será usado na API real)
   };
 };
-const logout = async () => await AsyncStorage.removeItem('token');
-
-const getToken = async () => await AsyncStorage.getItem('token');
 
 const redefinirSenhaComToken = async ({ token, novaSenha }) => {
   await simularAtraso();

@@ -48,6 +48,9 @@ export default function HistoricoPegada() {
       setCarregando(true);
       try {
         const dados = await apiMock.obterHistoricoPegada(usuario?.cpf);
+        // 🔄 Substituir por chamada real de API futuramente:
+        // const response = await api.get(`/pegada/historico/${usuario?.cpf}`);
+        // const dados = response.data;
         const ordenado = dados.sort((a, b) => new Date(b.data) - new Date(a.data));
         setHistorico(ordenado);
       } catch (error) {

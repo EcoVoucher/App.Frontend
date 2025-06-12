@@ -241,7 +241,7 @@ export default function Cadastro() {
       </Text>
 
         <BotaoVerde
-      texto={tipoPessoa === 'pj' ? 'Voltar' : 'Ir para Login'}
+      texto={tipoPessoa === 'pj' ? 'Concluir' : 'Ir para Login'}
       onPress={() => {
         setModalSucesso(false);
         setDados(ESTADO_INICIAL);

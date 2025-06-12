@@ -124,7 +124,7 @@ const mensagem = error?.message || 'Não foi possível acessar sua conta.';
 
   if (tentativas + 1 >= 5) {
     setBloqueado(true);
-    setMensagemErro('Muitas tentativas incorretas. Tente novamente em 30 segundos.');
+    setMensagemErro('Por segurança, sua conta foi temporariamente bloqueada. Tente novamente em 30 segundos.');
     setTimeout(() => {
       setTentativas(0);
       setBloqueado(false);

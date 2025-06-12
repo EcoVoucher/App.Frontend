@@ -7,7 +7,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
-import api from '../../services/apiMock';
+import api from '../../services/apiMock';// 🔄 Substituir por api real futuramente
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { fonts } from '../../theme/fonts';
@@ -59,6 +59,7 @@ export default function HistoricoPontos() {
     const carregar = async () => {
       try {
         setCarregando(true);
+        // 🔄 Substituir por chamada à API real: GET /usuarios/:cpf/historico
         const user = await api.obterUsuarioPorCPF(usuario.cpf);
         const movs = (user.movimentacoes || []).sort(
           (a, b) => new Date(b.timestamp) - new Date(a.timestamp)

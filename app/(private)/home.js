@@ -14,7 +14,7 @@ import { spacing } from '../../theme/spacing';
 import { fonts } from '../../theme/fonts';
 import AnimatedCard from '../../components/AnimatedCard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import api from '../../services/apiMock';
+import api from '../../services/apiMock';//🔄 Substituir por api.js real
 import { obterComparativoPegada } from '../../utils/formatadores';
 
 export default function Home() {
@@ -41,11 +41,12 @@ export default function Home() {
 
   const carregarDados = async () => {
     try {
-      const json = await AsyncStorage.getItem('usuario');
+      const json = await AsyncStorage.getItem('usuario');// 🔄 Substituir por chamada autenticada na API real
+        if (!json) return;
       if (!json) return;
 
       const u = JSON.parse(json);
-      const usuarios = await api.obterUsuarios();
+      const usuarios = await api.obterUsuarios();// 🔄 Substituir por GET /usuarios/:id
       const usuarioAtualizado = usuarios.find(us => (us.cpf || us.cnpj) === (u.cpf || u.cnpj));
       if (!usuarioAtualizado) return;
 
@@ -55,7 +56,7 @@ export default function Home() {
       if (u.tipo === 'pf') {
         // Apenas PF pode acessar histórico de pegada
         if (u.cpf) {
-          const historico = await api.obterHistoricoPegada(u.cpf);
+          const historico = await api.obterHistoricoPegada(u.cpf);// 🔄 Substituir por GET /pegada/:cpf
           if (historico.length > 0) {
             const ultima = historico[historico.length - 1];
             setPegada(ultima.pontuacao);
@@ -70,11 +71,11 @@ export default function Home() {
       }
 
       if (u.tipo === 'pj') {
-        const vouchers = await api.obterVouchersPorCNPJ(u.cnpj);
+        const vouchers = await api.obterVouchersPorCNPJ(u.cnpj);// 🔄 Substituir por GET /vouchers?cnpj=...
         const totalGerados = vouchers.reduce((acc, v) => acc + (v.quantidade || 0), 0);
         setQtdVouchers(totalGerados);
 
-        const utilizados = await api.contarVouchersCompradosPorCNPJ(u.cnpj);
+        const utilizados = await api.contarVouchersCompradosPorCNPJ(u.cnpj); // 🔄 Substituir por GET /vouchers/comprados?cnpj=...
         setVouchersUtilizados(utilizados);
 
         setIcones([

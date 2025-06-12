@@ -134,11 +134,13 @@ export default function Pegada() {
 
     setCarregando(true);
     try {
+       // 🔄 Substituir por chamada real: await api.post('/pegada', { cpfOuCnpj: usuario?.cpf || usuario?.cnpj, pontuacao: soma })
       await apiMock.salvarPegada(usuario?.cpf || usuario?.cnpj, soma);
       setResultado({ pontos: soma, comparativo });
       setUltimaPontuacao(soma);
 
       if (usuario?.primeiroAcesso) {
+        // 🔄 Substituir por refresh da sessão via API real (ex: revalidar token e atualizar dados)
           login({
             token: 'mock-token-pegada',
             usuario: { ...usuario, primeiroAcesso: false },
