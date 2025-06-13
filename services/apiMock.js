@@ -320,6 +320,27 @@ const gerarCodigosVoucher = async (quantidade) => {
 };
 
 // Geração de vouchers por PJ
+// 🔄 API REAL:
+// Esta função será substituída por uma requisição POST real:
+// await api.post('/vouchers', { cnpj, ...dados });
+//
+// O backend deve:
+// - Gerar e armazenar os códigos únicos.
+// - Associar os códigos à empresa (CNPJ).
+// - Retornar os dados do lote com os códigos gerados.
+//
+// Esperado na resposta:
+// {
+//   idLote: "ECO-VCH-001",
+//   tipo: "Alimentacao",
+//   produtos: [...],
+//   quantidade: 10,
+//   dataValidade: "2025-07-01T00:00:00Z",
+//   codigos: [...],
+//   empresa: "Nome da empresa",
+//   endereco: "Rua tal...",
+//   cnpj: "12345678000100"
+// }
 const gerarVouchersPJ = async (cnpj, dados) => {
   await simularAtraso();
 

@@ -20,6 +20,8 @@ import ModalSucesso from '../../components/ModalSucesso';
 import SelectField from '../../components/SelectField';
 import { useAuth } from '../../context/AuthContext';
 import apiMock from '../../services/apiMock';//trocar pela api real
+// 🔄 Substituir `apiMock` por `api` real quando backend estiver pronto
+// As funções a substituir nesta tela são: gerarVouchersPJ, obterVouchersPorCNPJ, contarVouchersCompradosPorCNPJ
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
@@ -289,6 +291,10 @@ export default function CatalogoRecompensaPJ() {
 
                   setGerandoVoucher(true);
                   try {
+                    // 🔄 FUTURA API REAL
+                    // Substituir chamada ao mock por:
+                     // const resposta = await api.post('/vouchers', { ...dados, cnpj: usuario.cnpj });
+                    // resposta.data incluirá: { id, codigo, status, ... }
                     await apiMock.gerarVouchersPJ(usuario.cnpj, {
                       tipo,
                       produtos,
