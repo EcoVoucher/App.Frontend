@@ -3,25 +3,20 @@ import {
   View,
   Text,
   StyleSheet,
-  Dimensions,
   ScrollView,
   Image,
   Animated,
   Alert,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import BotaoVerde from '../../components/BotaoVerde';
-import SelectField from '../../components/SelectField';
 import { useAuth } from '../../context/AuthContext';
 import apiMock from '../../services/apiMock';
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
 import { perguntas } from '../../components/forms/FormPegada';
-import { obterComparativoPegada, obterIconePegada, formatarDataBR } from '../../utils/formatadores';
-
-
-const { width } = Dimensions.get('window');
+import { obterComparativoPegada } from '../../utils/formatadores';
+import { useRouter } from 'expo-router';
 
 export default function Pegada() {
   const router = useRouter();
@@ -38,29 +33,34 @@ export default function Pegada() {
   const [indiceAtual, setIndiceAtual] = useState(0);
   const [aguardandoRedirecionamento, setAguardandoRedirecionamento] = useState(false);
 
-
   const perguntaAtual = perguntas[indiceAtual];
 
- useEffect(() => {
-  if (aguardandoRedirecionamento && resultado) {
-    setTimeout(() => {
-      router.replace('/(private)/home');
-    }, 4000);
-  }
-}, [usuario, aguardandoRedirecionamento, resultado]);
-
-
+  useEffect(() => {
+    if (aguardandoRedirecionamento && resultado) {
+      setTimeout(() => {
+        router.replace('/(private)/home');
+      }, 4000);
+    }
+  }, [usuario, aguardandoRedirecionamento, resultado, router]);
 
   const handleChange = (campo, valor) => {
-    setRespostas((prev) => {
-      const novos = { ...prev, [campo]: valor };
-      setErros((err) => {
-        const novosErros = { ...err };
-        if (valor !== '') delete novosErros[campo];
-        return novosErros;
-      });
-      return novos;
+    const novasRespostas = { ...respostas, [campo]: valor };
+
+    setRespostas(novasRespostas);
+
+    setErros((err) => {
+      const novosErros = { ...err };
+      if (valor !== '') delete novosErros[campo];
+      return novosErros;
     });
+
+    // Avança imediatamente com as novas respostas
+    setTimeout(() => {
+      const campoAtual = `q${indiceAtual + 1}`;
+      if (novasRespostas[campoAtual] !== '') {
+        avancar();
+      }
+    }, 100);
   };
 
   const avancar = () => {
@@ -89,9 +89,12 @@ export default function Pegada() {
         }),
       ]).start();
 
-      setIndiceAtual((prev) => prev + 1);
-    }
-  };
+       setIndiceAtual((prev) => prev + 1);
+  } else {
+    // 👉 Se for a última pergunta, calcular automaticamente
+    calcularPegada();
+  }
+};
 
   const voltar = () => {
     if (indiceAtual > 0) {
@@ -130,23 +133,22 @@ export default function Pegada() {
     }
 
     const comparativo = obterComparativoPegada(soma);
-    
 
     setCarregando(true);
     try {
-       // 🔄 Substituir por chamada real: await api.post('/pegada', { cpfOuCnpj: usuario?.cpf || usuario?.cnpj, pontuacao: soma })
+      // 🔄 Substituir por chamada real: await api.post('/pegada', { cpfOuCnpj: usuario?.cpf || usuario?.cnpj, pontuacao: soma })
       await apiMock.salvarPegada(usuario?.cpf || usuario?.cnpj, soma);
       setResultado({ pontos: soma, comparativo });
       setUltimaPontuacao(soma);
 
       if (usuario?.primeiroAcesso) {
         // 🔄 Substituir por refresh da sessão via API real (ex: revalidar token e atualizar dados)
-          login({
-            token: 'mock-token-pegada',
-            usuario: { ...usuario, primeiroAcesso: false },
-          });
-          setAguardandoRedirecionamento(true); // <- ativa flag temporária
-        }
+        login({
+          token: 'mock-token-pegada',
+          usuario: { ...usuario, primeiroAcesso: false },
+        });
+        setAguardandoRedirecionamento(true); // <- ativa flag temporária
+      }
 
       setTimeout(() => {
         resultadoRef.current?.measureLayout(
@@ -181,29 +183,43 @@ export default function Pegada() {
         <Text style={styles.subtitulo}>
           Responda o questionário abaixo para descobrir sua pegada ecológica no planeta.
         </Text>
-
+        <View style={styles.progressBar}>
+        <View
+          style={[
+            styles.progressFill,
+            { width: `${((indiceAtual + 1) / perguntas.length) * 100}%` },
+          ]}
+        />
+      </View>
         <Text style={styles.progresso}>Pergunta {progresso}</Text>
         <Text style={styles.pergunta}>{perguntaAtual.label}</Text>
 
         <Animated.View style={{ opacity: fadeAnim, width: '100%', marginBottom: spacing.md }}>
-          <SelectField
-            selectedValue={respostas[`q${indiceAtual + 1}`]}
-            onValueChange={(v) => handleChange(`q${indiceAtual + 1}`, v)}
-            options={perguntaAtual.opcoes}
-            error={erros[`q${indiceAtual + 1}`]}
-          />
+          <View style={styles.opcoesContainer}>
+            {perguntaAtual.opcoes.map((opcao, index) => {
+              const chave = `q${indiceAtual + 1}`;
+              const selecionada = respostas[chave] === opcao.value;
+
+              return (
+                <Text
+                  key={index}
+                  style={[styles.opcaoBotao, selecionada && styles.opcaoSelecionada]}
+                  onPress={() => handleChange(chave, opcao.value)}
+                >
+                  {opcao.label}
+                </Text>
+              );
+            })}
+            {erros[`q${indiceAtual + 1}`] && (
+              <Text style={styles.textoErro}>{erros[`q${indiceAtual + 1}`]}</Text>
+            )}
+          </View>
         </Animated.View>
 
         <View style={styles.botoesBox}>
           {indiceAtual > 0 && (
             <BotaoVerde texto="Voltar" onPress={voltar} style={styles.botaoUnico} />
           )}
-          <BotaoVerde
-            texto={indiceAtual < perguntas.length - 1 ? 'Próxima' : 'Calcular Pegada'}
-            onPress={indiceAtual < perguntas.length - 1 ? avancar : calcularPegada}
-            carregando={indiceAtual === perguntas.length - 1 && carregando}
-            style={styles.botaoUnico}
-          />
         </View>
 
         {resultado && (
@@ -293,4 +309,43 @@ const styles = StyleSheet.create({
     fontSize: fonts.size.sm,
     color: colors.preto,
   },
+  opcoesContainer: {
+    width: '100%',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  opcaoBotao: {
+    padding: spacing.md,
+    backgroundColor: '#f1f1f1',
+    borderRadius: 8,
+    textAlign: 'center',
+    fontSize: fonts.size.md,
+    color: colors.preto,
+    borderWidth: 1,
+    borderColor: '#ccc',
+  },
+  opcaoSelecionada: {
+    backgroundColor: colors.verdeClaro || '#cde8c1',
+    borderColor: colors.verde,
+    color: colors.verdeEscuro || '#135e2f',
+    fontWeight: fonts.weight.bold,
+  },
+  textoErro: {
+    color: 'red',
+    fontSize: fonts.size.sm,
+    marginTop: spacing.xs,
+  },
+  progressBar: {
+  width: '100%',
+  height: 8,
+  backgroundColor: '#e0e0e0',
+  borderRadius: 4,
+  marginBottom: spacing.sm,
+},
+progressFill: {
+  height: '100%',
+  backgroundColor: colors.verde,
+  borderRadius: 4,
+},
+
 });
