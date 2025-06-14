@@ -99,6 +99,7 @@ export default function ValidarVoucherPJ() {
     };
         const buscarPorCpfETipo = async () => {
           if (buscando) return;
+          setBuscando(true); 
 
         const dados = { cpf: cpfBusca };
         const campos = ['cpf'];

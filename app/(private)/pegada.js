@@ -7,6 +7,8 @@ import {
   Image,
   Animated,
   Alert,
+  Pressable,
+  Modal,
 } from 'react-native';
 import BotaoVerde from '../../components/BotaoVerde';
 import { useAuth } from '../../context/AuthContext';
@@ -15,14 +17,12 @@ import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
 import { perguntas } from '../../components/forms/FormPegada';
-import { obterComparativoPegada } from '../../utils/formatadores';
+import { obterComparativoPegada, apenasNumeros } from '../../utils/formatadores';
 import { useRouter } from 'expo-router';
 
 export default function Pegada() {
   const router = useRouter();
   const { usuario, login } = useAuth();
-  const scrollRef = useRef(null);
-  const resultadoRef = useRef(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
   const [respostas, setRespostas] = useState({});
@@ -31,51 +31,47 @@ export default function Pegada() {
   const [resultado, setResultado] = useState(null);
   const [ultimaPontuacao, setUltimaPontuacao] = useState(null);
   const [indiceAtual, setIndiceAtual] = useState(0);
-  const [aguardandoRedirecionamento, setAguardandoRedirecionamento] = useState(false);
-
-  const perguntaAtual = perguntas[indiceAtual];
+  const [mostrarModal, setMostrarModal] = useState(false);
 
   useEffect(() => {
-    if (aguardandoRedirecionamento && resultado) {
+    if (resultado) {
+      setMostrarModal(true);
       setTimeout(() => {
+        setMostrarModal(false);
+
+        if (usuario?.primeiroAcesso) {
+          login({
+            token: 'mock-token-pegada',
+            usuario: { ...usuario, primeiroAcesso: false },
+          });
+        }
         router.replace('/(private)/home');
       }, 4000);
     }
-  }, [usuario, aguardandoRedirecionamento, resultado, router]);
+  }, [resultado]);
 
-  const handleChange = (campo, valor) => {
-    const novasRespostas = { ...respostas, [campo]: valor };
+  const perguntaAtual = perguntas[indiceAtual];
+  const chaveAtual = `q${indiceAtual + 1}`;
 
-    setRespostas(novasRespostas);
+ const handleChange = (campo, valor) => {
+  setRespostas((prev) => ({ ...prev, [campo]: valor }));
+  setErros((prev) => {
+    const novosErros = { ...prev };
+    delete novosErros[campo];
+    return novosErros;
+  });
 
-    setErros((err) => {
-      const novosErros = { ...err };
-      if (valor !== '') delete novosErros[campo];
-      return novosErros;
-    });
-
-    // Avança imediatamente com as novas respostas
+  // 🔥 Espera 200ms para mostrar a seleção antes de avançar
+  if (indiceAtual < perguntas.length - 1) {
     setTimeout(() => {
-      const campoAtual = `q${indiceAtual + 1}`;
-      if (novasRespostas[campoAtual] !== '') {
-        avancar();
-      }
-    }, 100);
-  };
+      avancar();
+    }, 200);
+  }
+};
+
 
   const avancar = () => {
-    const campoAtual = `q${indiceAtual + 1}`;
-    const respostaAtual = respostas[campoAtual];
-
-    if (respostaAtual === '' || respostaAtual === undefined) {
-      setErros((prev) => ({ ...prev, [campoAtual]: 'Campo obrigatório' }));
-      return;
-    }
-
     if (indiceAtual < perguntas.length - 1) {
-      const proximaPergunta = `q${indiceAtual + 2}`;
-      setRespostas((prev) => ({ ...prev, [proximaPergunta]: '' }));
-
       Animated.sequence([
         Animated.timing(fadeAnim, {
           toValue: 0,
@@ -89,12 +85,9 @@ export default function Pegada() {
         }),
       ]).start();
 
-       setIndiceAtual((prev) => prev + 1);
-  } else {
-    // 👉 Se for a última pergunta, calcular automaticamente
-    calcularPegada();
-  }
-};
+      setIndiceAtual((prev) => prev + 1);
+    }
+  };
 
   const voltar = () => {
     if (indiceAtual > 0) {
@@ -103,7 +96,10 @@ export default function Pegada() {
   };
 
   const calcularPegada = async () => {
-    if (carregando) return;
+  if (carregando) return;
+  setCarregando(true); // 🔥 PRIMEIRA COISA: trava o botão e a função!
+
+  try {
     const todasRespondidas = perguntas.every((_, i) => {
       const chave = `q${i + 1}`;
       return respostas[chave] !== undefined && respostas[chave] !== '';
@@ -111,14 +107,7 @@ export default function Pegada() {
 
     if (!todasRespondidas) {
       Alert.alert('Atenção', 'Por favor, responda todas as perguntas.');
-
-      perguntas.forEach((_, i) => {
-        const chave = `q${i + 1}`;
-        if (!respostas[chave]) {
-          setErros((prev) => ({ ...prev, [chave]: 'Campo obrigatório' }));
-        }
-      });
-
+      setCarregando(false);
       return;
     }
 
@@ -129,47 +118,30 @@ export default function Pegada() {
 
     if (soma === ultimaPontuacao) {
       Alert.alert('Pegada já salva', 'Você já salvou essa pegada.');
+      setCarregando(false);
       return;
     }
 
     const comparativo = obterComparativoPegada(soma);
+    const documento = apenasNumeros(usuario?.cpf || usuario?.cnpj);
 
-    setCarregando(true);
-    try {
-      // 🔄 Substituir por chamada real: await api.post('/pegada', { cpfOuCnpj: usuario?.cpf || usuario?.cnpj, pontuacao: soma })
-      await apiMock.salvarPegada(usuario?.cpf || usuario?.cnpj, soma);
-      setResultado({ pontos: soma, comparativo });
-      setUltimaPontuacao(soma);
+    await apiMock.salvarPegada(documento, soma);
 
-      if (usuario?.primeiroAcesso) {
-        // 🔄 Substituir por refresh da sessão via API real (ex: revalidar token e atualizar dados)
-        login({
-          token: 'mock-token-pegada',
-          usuario: { ...usuario, primeiroAcesso: false },
-        });
-        setAguardandoRedirecionamento(true); // <- ativa flag temporária
-      }
+    setResultado({ pontos: soma, comparativo });
+    setUltimaPontuacao(soma);
 
-      setTimeout(() => {
-        resultadoRef.current?.measureLayout(
-          scrollRef.current,
-          (x, y) => scrollRef.current.scrollTo({ y, animated: true }),
-          () => {}
-        );
-      }, 300);
-    } catch (error) {
-      console.error(error);
-      alert('Erro ao salvar pegada.');
-    } finally {
-      setCarregando(false);
-    }
-  };
+  } catch (error) {
+    console.error(error);
+    Alert.alert('Erro', 'Erro ao salvar pegada.');
+  } finally {
+    setCarregando(false);
+  }
+};
 
   const progresso = `${indiceAtual + 1} de ${perguntas.length}`;
 
   return (
     <ScrollView
-      ref={scrollRef}
       contentContainerStyle={styles.scrollContainer}
       showsVerticalScrollIndicator={false}
     >
@@ -183,53 +155,79 @@ export default function Pegada() {
         <Text style={styles.subtitulo}>
           Responda o questionário abaixo para descobrir sua pegada ecológica no planeta.
         </Text>
+
         <View style={styles.progressBar}>
-        <View
-          style={[
-            styles.progressFill,
-            { width: `${((indiceAtual + 1) / perguntas.length) * 100}%` },
-          ]}
-        />
-      </View>
+          <View
+            style={[
+              styles.progressFill,
+              { width: `${((indiceAtual + 1) / perguntas.length) * 100}%` },
+            ]}
+          />
+        </View>
+
         <Text style={styles.progresso}>Pergunta {progresso}</Text>
         <Text style={styles.pergunta}>{perguntaAtual.label}</Text>
 
         <Animated.View style={{ opacity: fadeAnim, width: '100%', marginBottom: spacing.md }}>
           <View style={styles.opcoesContainer}>
             {perguntaAtual.opcoes.map((opcao, index) => {
-              const chave = `q${indiceAtual + 1}`;
-              const selecionada = respostas[chave] === opcao.value;
+              const selecionada = respostas[chaveAtual] === opcao.value;
 
               return (
-                <Text
+                <Pressable
                   key={index}
-                  style={[styles.opcaoBotao, selecionada && styles.opcaoSelecionada]}
-                  onPress={() => handleChange(chave, opcao.value)}
+                  onPress={() => handleChange(chaveAtual, opcao.value)}
+                  style={[
+                    styles.opcaoBotao,
+                    selecionada && styles.opcaoSelecionada,
+                  ]}
                 >
-                  {opcao.label}
-                </Text>
+                  <Text style={{ textAlign: 'center' }}>{opcao.label}</Text>
+                </Pressable>
               );
             })}
-            {erros[`q${indiceAtual + 1}`] && (
-              <Text style={styles.textoErro}>{erros[`q${indiceAtual + 1}`]}</Text>
+
+            {erros[chaveAtual] && (
+              <Text style={styles.textoErro}>{erros[chaveAtual]}</Text>
             )}
           </View>
         </Animated.View>
 
         <View style={styles.botoesBox}>
           {indiceAtual > 0 && (
-            <BotaoVerde texto="Voltar" onPress={voltar} style={styles.botaoUnico} />
+            <BotaoVerde texto="Voltar" onPress={voltar} />
+          )}
+
+          {indiceAtual === perguntas.length - 1 && (
+            <BotaoVerde
+              texto={carregando ? 'Calculando...' : 'Calcular Pegada'}
+              onPress={calcularPegada}
+              disabled={carregando}
+            />
           )}
         </View>
-
-        {resultado && (
-          <View ref={resultadoRef} style={styles.resultadoBox}>
-            <Text style={styles.resultadoTitulo}>Resultado</Text>
-            <Text style={styles.resultadoTexto}>Total de pontos: {resultado.pontos}</Text>
-            <Text style={styles.resultadoTexto}>{resultado.comparativo}</Text>
-          </View>
-        )}
       </View>
+
+      {/* 🔥 Modal Bonito do Resultado */}
+      <Modal
+        visible={mostrarModal}
+        transparent
+        animationType="fade"
+      >
+        <View style={styles.modalFundo}>
+          <View style={styles.modalBox}>
+                        <Image
+              source={require('../../assets/imagensEco/ecoVoucherIcon.png')}
+              style={styles.modalLogo}
+              resizeMode="contain"
+            />
+            <Text style={styles.modalTitulo}>Resultado da Pegada</Text>
+            <Text style={styles.modalTexto}>Total de pontos: {resultado?.pontos}</Text>
+            <Text style={styles.modalTexto}>{resultado?.comparativo}</Text>
+            <Text style={styles.modalAviso}>Redirecionando para a Home...</Text>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -288,27 +286,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     gap: spacing.sm,
   },
-  botaoUnico: {
-    minWidth: 0.5,
-  },
-  resultadoBox: {
-    backgroundColor: colors.branco,
-    padding: spacing.md,
-    borderRadius: 10,
-    marginTop: spacing.lg,
-    elevation: 3,
-    width: '100%',
-  },
-  resultadoTitulo: {
-    fontSize: fonts.size.md,
-    fontWeight: fonts.weight.bold,
-    color: colors.preto,
-    marginBottom: spacing.xs,
-  },
-  resultadoTexto: {
-    fontSize: fonts.size.sm,
-    color: colors.preto,
-  },
   opcoesContainer: {
     width: '100%',
     gap: spacing.sm,
@@ -316,18 +293,17 @@ const styles = StyleSheet.create({
   },
   opcaoBotao: {
     padding: spacing.md,
-    backgroundColor: '#f1f1f1',
+    backgroundColor: colors.branco,
     borderRadius: 8,
     textAlign: 'center',
     fontSize: fonts.size.md,
     color: colors.preto,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: colors.cinza,
   },
   opcaoSelecionada: {
-    backgroundColor: colors.verdeClaro || '#cde8c1',
+    backgroundColor: colors.verdeClaro,
     borderColor: colors.verde,
-    color: colors.verdeEscuro || '#135e2f',
     fontWeight: fonts.weight.bold,
   },
   textoErro: {
@@ -336,16 +312,51 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   progressBar: {
-  width: '100%',
-  height: 8,
-  backgroundColor: '#e0e0e0',
-  borderRadius: 4,
+    width: '100%',
+    height: 8,
+    backgroundColor: colors.branco,
+    borderRadius: 4,
+    marginBottom: spacing.sm,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: colors.verde,
+    borderRadius: 4,
+  },
+  // 🔥 Modal
+  modalFundo: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalBox: {
+    backgroundColor: colors.branco,
+    padding: spacing.lg,
+    borderRadius: 12,
+    alignItems: 'center',
+    maxWidth: 300,
+  },
+  modalLogo: {
+  width: 60,
+  height: 60,
   marginBottom: spacing.sm,
 },
-progressFill: {
-  height: '100%',
-  backgroundColor: colors.verde,
-  borderRadius: 4,
-},
-
+  modalTitulo: {
+    fontSize: fonts.size.lg,
+    fontWeight: fonts.weight.bold,
+    color: colors.verde,
+    marginBottom: spacing.sm,
+  },
+  modalTexto: {
+    fontSize: fonts.size.md,
+    color: colors.preto,
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+  },
+  modalAviso: {
+    fontSize: fonts.size.sm,
+    color: colors.cinza,
+    marginTop: spacing.md,
+  },
 });

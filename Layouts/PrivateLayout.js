@@ -17,14 +17,22 @@ import { spacing } from '../theme/spacing';
 export default function PrivateLayout() {
   const { usuario } = useAuth();
   const router = useRouter();
-  const [isReady, setIsReady] = useState(false);
   const pathname = usePathname();
-  const esconderRodape = pathname.includes('/pegada') && usuario?.primeiroAcesso;
+  const [isReady, setIsReady] = useState(false);
+  // Detecta se está na tela da pegada
+const estaNaPegada = pathname.includes('/pegada');
+
+// 🔥 Verifica se está exibindo o resultado da pegada no primeiro acesso
+const exibindoResultado = estaNaPegada && usuario?.primeiroAcesso && pathname.includes('/home') === false;
+
+  // 🔥 Esconder rodapé somente na tela Pegada e no primeiro acesso
+const esconderRodape = pathname.includes('/pegada') && (usuario?.primeiroAcesso || exibindoResultado);
 
   useEffect(() => {
     setIsReady(true);
   }, []);
 
+  // 🔐 Controle de acesso por tipo de usuário
   useEffect(() => {
     if (!isReady || !usuario) return;
 
@@ -35,6 +43,7 @@ export default function PrivateLayout() {
 
     const rota = pathname.toLowerCase();
 
+    // 🔒 Bloqueia rotas específicas de PJ
     if (
       rota.includes('catalogorecompensapj') ||
       rota.includes('validarvoucherpj') ||
@@ -44,6 +53,8 @@ export default function PrivateLayout() {
         router.replace('/(private)/home');
       }
     }
+
+    // 🔒 Bloqueia rotas específicas de PF
     if (
       rota.includes('pegada') ||
       rota.includes('historicopontos') ||
@@ -75,6 +86,8 @@ export default function PrivateLayout() {
             <Slot />
           </ScrollView>
         </View>
+
+        {/* 🔥 Rodapé aparece em tudo, menos se for primeiro acesso na pegada */}
         {!esconderRodape && (
           <View style={styles.rodape}>
             <RodapeNavegacao ativo="menu" />

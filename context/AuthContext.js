@@ -31,11 +31,19 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     await AsyncStorage.removeItem('token');
     await AsyncStorage.removeItem('usuario');
-    setUsuario(null); 
+    setUsuario(null);
   };
 
   return (
-    <AuthContext.Provider value={{ usuario, login, logout, carregando, setUsuario }}>
+    <AuthContext.Provider
+      value={{
+        usuario,
+        login,
+        logout,
+        carregando,
+        setUsuario,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -23,6 +23,11 @@ export default function ModalSucesso({ visivel, onFechar, mensagem }) {
     >
       <View style={styles.container}>
         <View style={styles.box}>
+          <Image
+            source={require('../assets/imagensEco/ecoVoucherIcon.png')}
+            style={styles.modalLogo}
+            resizeMode="contain"
+            />
           <Text style={styles.titulo}>Sucesso</Text>
 
           <ScrollView
@@ -58,6 +63,11 @@ const styles = StyleSheet.create({
     maxHeight: height * 0.8,
     alignItems: 'center',
   },
+  modalLogo: {
+  width: 60,
+  height: 60,
+  marginBottom: spacing.sm,
+},
   titulo: {
     fontSize: fonts.size.lg,
     fontWeight: fonts.weight.bold,

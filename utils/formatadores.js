@@ -29,3 +29,4 @@ export const formatarDataBR = (dataISO) => {
   const data = new Date(dataISO);
   return isNaN(data.getTime()) ? 'Data inválida' : data.toLocaleDateString('pt-BR');
 };
+export const apenasNumeros = (str) => (str || '').replace(/\D/g, '');

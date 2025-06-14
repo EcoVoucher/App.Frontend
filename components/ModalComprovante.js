@@ -29,6 +29,7 @@ export default function ModalComprovante({ visible, onClose, extrato }) {
           </style>
         </head>
         <body>
+        <img src="data:image/jpeg;base64,SEU-BASE64-AQUI" style="width: 120px; margin-bottom: 20px;" />
           <h1>Comprovante de Depósito</h1>
           <p class="info">Código: ${codigo}</p>
           <p class="info">CPF: ${cpf}</p>
