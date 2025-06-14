@@ -29,8 +29,6 @@ export default function ModalSucesso({ visivel, onFechar, mensagem }) {
             style={styles.modalLogo}
             resizeMode="contain"
             />
-          <Text style={styles.titulo}>Sucesso</Text>
-
           <ScrollView
             style={styles.scrollArea}
             contentContainerStyle={styles.scrollContent}

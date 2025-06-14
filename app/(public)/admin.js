@@ -4,6 +4,7 @@ import api from '../../services/apiMock'; // 🔄 Substituir futuramente por: im
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
+import AsyncStorage from '../../utils/storage';
 import { obterComparativoPegada, formatarDataBR } from '../../utils/formatadores';
 // import { useAuth } from '../../context/AuthContext'; // 🔐 No futuro para proteger com token
 
@@ -50,12 +51,17 @@ export default function AdminDevScreen() {
     setVisiveis(novos);
   };
 
-  const resetarUsuarios = async () => {
-    // 🧼 Apenas para ambiente mock/dev. Remover na API real.
+ const resetarUsuarios = async () => {
+  try {
     await AsyncStorage.multiRemove(['@usuarios_mock', '@vouchersGerados', 'contador_vouchers_gerados']);
     setUsuarios([]);
     Alert.alert('Base de usuários mock foi resetada!');
-  };
+  } catch (error) {
+    console.log('Erro ao resetar usuários:', error);
+    Alert.alert('Erro ao resetar dados');
+  }
+};
+  
 
   useEffect(() => {
     carregarUsuarios();
