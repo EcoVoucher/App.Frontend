@@ -8,8 +8,8 @@ import {
   Animated,
   Alert,
   Pressable,
-  Modal,
 } from 'react-native';
+import ModalSucesso from '../../components/ModalSucesso';
 import BotaoVerde from '../../components/BotaoVerde';
 import { useAuth } from '../../context/AuthContext';
 import apiMock from '../../services/apiMock';
@@ -135,10 +135,12 @@ export default function Pegada() {
     Alert.alert('Erro', 'Erro ao salvar pegada.');
   } finally {
     setCarregando(false);
-  }
+  } 
 };
 
   const progresso = `${indiceAtual + 1} de ${perguntas.length}`;
+
+
 
   return (
     <ScrollView
@@ -166,32 +168,37 @@ export default function Pegada() {
         </View>
 
         <Text style={styles.progresso}>Pergunta {progresso}</Text>
-        <Text style={styles.pergunta}>{perguntaAtual.label}</Text>
 
-        <Animated.View style={{ opacity: fadeAnim, width: '100%', marginBottom: spacing.md }}>
-          <View style={styles.opcoesContainer}>
-            {perguntaAtual.opcoes.map((opcao, index) => {
-              const selecionada = respostas[chaveAtual] === opcao.value;
+        {perguntaAtual && (
+          <>
+            <Text style={styles.pergunta}>{perguntaAtual.label}</Text>
 
-              return (
-                <Pressable
-                  key={index}
-                  onPress={() => handleChange(chaveAtual, opcao.value)}
-                  style={[
-                    styles.opcaoBotao,
-                    selecionada && styles.opcaoSelecionada,
-                  ]}
-                >
-                  <Text style={{ textAlign: 'center' }}>{opcao.label}</Text>
-                </Pressable>
-              );
-            })}
+            <Animated.View style={{ opacity: fadeAnim, width: '100%', marginBottom: spacing.md }}>
+              <View style={styles.opcoesContainer}>
+                {(perguntaAtual.opcoes || []).map((opcao, index) => {
+                  const selecionada = respostas[chaveAtual] === opcao.value;
 
-            {erros[chaveAtual] && (
-              <Text style={styles.textoErro}>{erros[chaveAtual]}</Text>
-            )}
-          </View>
-        </Animated.View>
+                  return (
+                    <Pressable
+                      key={index}
+                      onPress={() => handleChange(chaveAtual, opcao.value)}
+                      style={[
+                        styles.opcaoBotao,
+                        selecionada && styles.opcaoSelecionada,
+                      ]}
+                    >
+                      <Text style={{ textAlign: 'center' }}>{opcao.label}</Text>
+                    </Pressable>
+                  );
+                })}
+
+                {erros[chaveAtual] && (
+                  <Text style={styles.textoErro}>{erros[chaveAtual]}</Text>
+                )}
+              </View>
+            </Animated.View>
+          </>
+        )}
 
         <View style={styles.botoesBox}>
           {indiceAtual > 0 && (
@@ -207,27 +214,27 @@ export default function Pegada() {
           )}
         </View>
       </View>
+      <ModalSucesso
+        visivel={mostrarModal}
+        exibirBotao={false}
+        onFechar={() => setMostrarModal(false)}
+        titulo="Resultado da Pegada"
+        mensagem={
+          <>
+            <Text style={{ fontWeight: 'bold', marginBottom: 8 }}>
+              Total de pontos: {resultado?.pontos}
+            </Text>
+            <Text style={{ marginBottom: 8 }}>
+              {resultado?.comparativo}
+            </Text>
+            
+            <Text style={{ fontSize: fonts.size.sm, color: colors.cinza }}>
+              Redirecionando para a Home...
+            </Text>
+          </>
+        }
+/>
 
-      {/* 🔥 Modal Bonito do Resultado */}
-      <Modal
-        visible={mostrarModal}
-        transparent
-        animationType="fade"
-      >
-        <View style={styles.modalFundo}>
-          <View style={styles.modalBox}>
-                        <Image
-              source={require('../../assets/imagensEco/ecoVoucherIcon.png')}
-              style={styles.modalLogo}
-              resizeMode="contain"
-            />
-            <Text style={styles.modalTitulo}>Resultado da Pegada</Text>
-            <Text style={styles.modalTexto}>Total de pontos: {resultado?.pontos}</Text>
-            <Text style={styles.modalTexto}>{resultado?.comparativo}</Text>
-            <Text style={styles.modalAviso}>Redirecionando para a Home...</Text>
-          </View>
-        </View>
-      </Modal>
     </ScrollView>
   );
 }
@@ -322,41 +329,5 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: colors.verde,
     borderRadius: 4,
-  },
-  // 🔥 Modal
-  modalFundo: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalBox: {
-    backgroundColor: colors.branco,
-    padding: spacing.lg,
-    borderRadius: 12,
-    alignItems: 'center',
-    maxWidth: 300,
-  },
-  modalLogo: {
-  width: 60,
-  height: 60,
-  marginBottom: spacing.sm,
-},
-  modalTitulo: {
-    fontSize: fonts.size.lg,
-    fontWeight: fonts.weight.bold,
-    color: colors.verde,
-    marginBottom: spacing.sm,
-  },
-  modalTexto: {
-    fontSize: fonts.size.md,
-    color: colors.preto,
-    textAlign: 'center',
-    marginBottom: spacing.xs,
-  },
-  modalAviso: {
-    fontSize: fonts.size.sm,
-    color: colors.cinza,
-    marginTop: spacing.md,
   },
 });

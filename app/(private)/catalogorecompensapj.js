@@ -9,7 +9,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -17,15 +16,15 @@ import BotaoVerde from '../../components/BotaoVerde';
 import BotaoVerdePequeno from '../../components/BotaoVerdePequeno';
 import InputField from '../../components/InputField';
 import ModalSucesso from '../../components/ModalSucesso';
+import ModalErro from '../../components/ModalErro';
 import SelectField from '../../components/SelectField';
 import { useAuth } from '../../context/AuthContext';
-import apiMock from '../../services/apiMock';//trocar pela api real
-// 🔄 Substituir `apiMock` por `api` real quando backend estiver pronto
-// As funções a substituir nesta tela são: gerarVouchersPJ, obterVouchersPorCNPJ, contarVouchersCompradosPorCNPJ
+import apiMock from '../../services/apiMock';
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
 import { validarCamposObrigatorios } from '../../utils/validarCamposObrigatorios';
+import VerMaisMenos from '../../components/VerMaisMenos';
 
 const { width, height } = Dimensions.get('window');
 
@@ -35,36 +34,122 @@ const produtosPorTipo = {
   Transporte: ['Metrô', 'Ônibus'],
 };
 
+const formatarData = (data) => {
+  if (!data) return '';
+  if (data.includes('/')) return data;
+  const [ano, mes, dia] = data.split('-');
+  return `${dia}/${mes}/${ano}`;
+};
+
 export default function CatalogoRecompensaPJ() {
   const { usuario } = useAuth();
+  const [filtroStatus, setFiltroStatus] = useState('todos');
+  const [criterioOrdenacao, setCriterioOrdenacao] = useState('validade');
   const [modalVisible, setModalVisible] = useState(false);
   const [modalSucesso, setModalSucesso] = useState(false);
   const [modalInfo, setModalInfo] = useState(false);
+
   const [tipo, setTipo] = useState('');
   const [produtos, setProdutos] = useState([]);
   const [quantidade, setQuantidade] = useState('');
   const [dataValidade, setDataValidade] = useState('');
+
   const [erros, setErros] = useState({});
   const [vouchersGerados, setVouchersGerados] = useState([]);
-  const [filtroStatus, setFiltroStatus] = useState('todos');
-  const [criterioOrdenacao, setCriterioOrdenacao] = useState('validade');
-  const [busca, setBusca] = useState('');
-  const [verMais, setVerMais] = useState(false);
   const [qtdAdquiridos, setQtdAdquiridos] = useState(0);
+
+  const [mostrarTodos, setMostrarTodos] = useState(false);
+  const [erroVisivel, setErroVisivel] = useState(false);
+  const [mensagemErro, setMensagemErro] = useState('');
   const [gerandoVoucher, setGerandoVoucher] = useState(false);
 
+  const itensPorPagina = 5;
 
   const carregarVouchers = async () => {
     const lista = await apiMock.obterVouchersPorCNPJ(usuario.cnpj);
-    const filtrado = lista
-      .filter((item) => {
-        if (filtroStatus === 'validos') return new Date(item.dataValidade) >= new Date();
-        if (filtroStatus === 'expirados') return new Date(item.dataValidade) < new Date();
-        return true;
-      })
-      .filter((item) => item.tipo.toLowerCase().includes(busca.toLowerCase()));
+    setVouchersGerados(lista);
+  };
 
-    const ordenado = [...filtrado].sort((a, b) => {
+  useEffect(() => {
+    carregarVouchers();
+  }, []);
+
+  useEffect(() => {
+    const buscarAdquiridos = async () => {
+      const total = await apiMock.contarVouchersCompradosPorCNPJ(usuario.cnpj);
+      setQtdAdquiridos(total);
+    };
+    if (usuario?.cnpj) buscarAdquiridos();
+  }, [usuario, vouchersGerados]);
+
+  const handleAbrirModal = () => {
+    setTipo('');
+    setProdutos([]);
+    setQuantidade('');
+    setDataValidade('');
+    setErros({});
+    setModalVisible(true);
+  };
+
+  const handleGerarVoucher = async () => {
+    if (gerandoVoucher) return;
+
+    const dados = {
+      tipo,
+      produtos,
+      quantidade,
+      dataValidade,
+    };
+
+    const errosValidacao = validarCamposObrigatorios(
+      dados,
+      ['tipo', 'produtos', 'quantidade', 'dataValidade']
+    );
+
+    if (Object.keys(errosValidacao).length > 0) {
+      setErros(errosValidacao);
+      return;
+    }
+      // 🔥 Validação extra da quantidade
+      if (parseInt(quantidade) < 1 || parseInt(quantidade) > 20) {
+        setErros((prev) => ({ ...prev, quantidade: 'A quantidade deve ser entre 1 e 20.' }));
+        return;
+      }
+
+    setGerandoVoucher(true);
+
+    try {
+      await apiMock.gerarVouchersPJ(usuario.cnpj, {
+        tipo,
+        produtos,
+        quantidade: parseInt(quantidade),
+        dataValidade,
+      });
+      setModalVisible(false);
+      setModalSucesso(true);
+      setTipo('');
+      setProdutos([]);
+      setQuantidade('');
+      setDataValidade('');
+      setErros({});
+      carregarVouchers();
+    } catch (error) {
+      const mensagem = error?.message || 'Erro ao gerar voucher.';
+      setMensagemErro(mensagem);
+      setErroVisivel(true);
+    } finally {
+      setGerandoVoucher(false);
+    }
+  };
+
+  // 🔥 Filtros e ordenação
+  const vouchersFiltrados = vouchersGerados
+    .filter((item) => {
+      if (filtroStatus === 'validos') return new Date(item.dataValidade) >= new Date();
+      if (filtroStatus === 'expirados') return new Date(item.dataValidade) < new Date();
+      return true;
+    })
+    .sort((a, b) => {
       if (criterioOrdenacao === 'tipo') return a.tipo.localeCompare(b.tipo);
       if (criterioOrdenacao === 'uso') {
         const usadosA = a.quantidade - a.codigos.length;
@@ -76,35 +161,9 @@ export default function CatalogoRecompensaPJ() {
       return new Date(a.dataValidade) - new Date(b.dataValidade);
     });
 
-    setVouchersGerados(ordenado);
-  };
-
-  useEffect(() => {
-    carregarVouchers();
-  }, [criterioOrdenacao, filtroStatus, busca]);
-
-    useEffect(() => {
-      const buscarAdquiridos = async () => {
-        const total = await apiMock.contarVouchersCompradosPorCNPJ(usuario.cnpj);
-        setQtdAdquiridos(total);
-      };
-      if (usuario?.cnpj) buscarAdquiridos();
-    }, [usuario, vouchersGerados]);
-
-
-  const totalLotes = vouchersGerados.length;
-  const totalVouchers = vouchersGerados.reduce((acc, v) => acc + v.quantidade, 0);
+  const totalLotes = vouchersFiltrados.length;
+  const totalVouchers = vouchersFiltrados.reduce((acc, v) => acc + v.quantidade, 0);
   const qtdAtivos = totalVouchers - qtdAdquiridos;
-
-  const handleAbrirModal = () => {
-    setTipo('');
-    setProdutos([]);
-    setQuantidade('');
-    setDataValidade('');
-    setErros({});
-    setModalVisible(true);
-  };
-
 
   return (
     <View style={styles.container}>
@@ -112,8 +171,9 @@ export default function CatalogoRecompensaPJ() {
         <View style={styles.boxResumo}>
           <Text style={styles.titulo}>Histórico de Vouchers Emitidos</Text>
           <Text style={styles.subtitulo}>
-           🧾 Lotes: {totalLotes} · ✅ Ativos: {qtdAtivos} · 🔁 Adquiridos: {qtdAdquiridos}
+            🧾 Lotes: {totalLotes} · ✅ Ativos: {qtdAtivos} · 🔁 Adquiridos: {qtdAdquiridos}
           </Text>
+
           <View style={styles.filtrosLinha}>
             {['todos', 'validos', 'expirados'].map((value) => (
               <View key={value} style={styles.botaoFiltroBox}>
@@ -124,7 +184,7 @@ export default function CatalogoRecompensaPJ() {
                 />
               </View>
             ))}
-            <TouchableOpacity onPress={() => setModalInfo(true)} style={{ marginLeft: spacing.sm }}>
+            <TouchableOpacity onPress={() => setModalInfo(true)}>
               <Ionicons name="information-circle-outline" size={20} color={colors.verdeEscuro} />
             </TouchableOpacity>
           </View>
@@ -136,22 +196,22 @@ export default function CatalogoRecompensaPJ() {
                 selectedValue={criterioOrdenacao}
                 onValueChange={setCriterioOrdenacao}
                 options={[
-                  { label: 'Validade (mais próximas primeiro)', value: 'validade' },
-                  { label: 'Tipo de voucher (A-Z)', value: 'tipo' },
+                  { label: 'Validade (mais próximas)', value: 'validade' },
+                  { label: 'Tipo (A-Z)', value: 'tipo' },
                   { label: 'Mais utilizados', value: 'uso' },
                 ]}
               />
             </View>
 
             <TouchableOpacity style={styles.botaoCadastrar} onPress={handleAbrirModal}>
-              <Ionicons name="add-circle" size={20} color={colors.branco} style={{ marginRight: 6 }} />
+              <Ionicons name="add-circle" size={20} color={colors.branco} />
               <Text style={styles.textoCadastrar}>Cadastrar novo voucher</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         <FlatList
-          data={verMais ? vouchersGerados : vouchersGerados.slice(0, 5)}
+          data={mostrarTodos ? vouchersFiltrados : vouchersFiltrados.slice(0, itensPorPagina)}
           keyExtractor={(_, i) => i.toString()}
           scrollEnabled={false}
           renderItem={({ item }) => {
@@ -160,88 +220,83 @@ export default function CatalogoRecompensaPJ() {
             const percentual = total > 0 ? (usados / total) * 100 : 0;
             const corFundo = percentual === 100 ? '#f5f5f5' : percentual > 0 ? '#fffbe5' : '#e6ffed';
             const corBorda = percentual === 100 ? '#ccc' : percentual > 0 ? '#f0c674' : '#6acc8b';
+
             return (
               <View style={[styles.card, { backgroundColor: corFundo, borderLeftColor: corBorda }]}>
                 <Text style={styles.cardTitulo}>{item.tipo}</Text>
                 <Text style={styles.cardInfo}>🧾 Produtos: {item.produtos.join(', ')}</Text>
-                <Text
-                  style={[
-                    styles.cardInfo,
-                    new Date(item.dataValidade) < new Date(Date.now() + 5 * 24 * 60 * 60 * 1000) && {
-                      color: colors.erro,
-                    },
-                  ]}
-                >
+                <Text style={styles.cardInfo}>
                   📅 Validade: {new Date(item.dataValidade).toLocaleDateString('pt-BR')}
                 </Text>
                 <Text style={styles.cardInfo}>🏢 Empresa: {item.empresa}</Text>
                 <Text style={styles.cardInfo}>📍 Endereço: {item.endereco}</Text>
-                <Text style={styles.cardInfo}>🔁 Adquiridos: {usados} de {total}</Text>
-                <Text style={styles.cardInfo}>🔑 Último código: {item.codigos[item.codigos.length - 1] || '---'}</Text>
+                <Text style={styles.cardInfo}>
+                  🔁 Adquiridos: {usados} de {total}
+                </Text>
+                <Text style={styles.cardInfo}>
+                  🔑 Último código: {item.codigos[item.codigos.length - 1] || '---'}
+                </Text>
               </View>
             );
           }}
         />
-        {vouchersGerados.length > 5 && (
-            <View style={styles.verMaisBox}>
-              <BotaoVerde
-                texto={verMais ? 'Ver menos ▲' : 'Ver mais ▼'}
-                onPress={() => setVerMais(!verMais)}
-              />
-            </View>
-          )}
 
-        <View style={{ height: 100 }}/>
+        {vouchersFiltrados.length > itensPorPagina && (
+          <VerMaisMenos
+            temMais={vouchersFiltrados.length > itensPorPagina}
+            mostrarTodos={mostrarTodos}
+            onVerMais={() => setMostrarTodos(true)}
+            onVerMenos={() => setMostrarTodos(false)}
+          />
+        )}
       </View>
+<Modal visible={modalVisible} animationType="slide">
+  <KeyboardAvoidingView
+    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    style={{ flex: 1 }}
+  >
+    <ScrollView contentContainerStyle={styles.modalContent}>
+      <View style={styles.modalBox}>
+        <Text style={styles.modalTitulo}>Gerar Voucher</Text>
 
-    {/* Modal de Cadastro */}
-    <Modal visible={modalVisible} animationType="slide">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
-         <ScrollView
-      contentContainerStyle={styles.modalContent}
-      keyboardShouldPersistTaps="handled"
-    >
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitulo}>Gerar Voucher</Text>
-
-            <SelectField
-              label="Tipo de voucher"
-              selectedValue={tipo}
-              onValueChange={(valor) => {
-                setTipo(valor);
-                setErros((prev) => ({ ...prev, tipo: undefined }));
-              }}
-              options={[
-                { label: 'Alimentação', value: 'Alimentacao' },
-                { label: 'Higiene', value: 'Higiene' },
-                { label: 'Transporte', value: 'Transporte' },
-              ]}
-              error={erros.tipo}
-            />
-
-            {tipo && produtosPorTipo[tipo] && (
-              <View style={styles.produtosContainer}>
-                {produtosPorTipo[tipo].map((prod) => (
-                  <TouchableOpacity
-                    key={prod}
-                    onPress={() => {
-                      const atualizados = produtos.includes(prod)
-                        ? produtos.filter((p) => p !== prod)
-                        : [...produtos, prod];
-                      setProdutos(atualizados);
-                      setErros((prev) => ({ ...prev, produtos: undefined }));
-                    }}
-                    style={[styles.produtoItem, produtos.includes(prod) && styles.produtoSelecionado]}
-                  >
-                    <Text style={produtos.includes(prod) && { fontWeight: 'bold' }}>{prod}</Text>
-                  </TouchableOpacity>
-                ))}
-                {erros.produtos && <Text style={styles.erroTexto}>{erros.produtos}</Text>}
-              </View>
-            )}
+        <SelectField
+          label="Tipo de voucher"
+          selectedValue={tipo}
+          onValueChange={(valor) => {
+            setTipo(valor);
+            setProdutos([]);
+            setErros((prev) => ({ ...prev, tipo: undefined, produtos: undefined }));
+          }}
+          options={[
+            { label: 'Alimentação', value: 'Alimentacao' },
+            { label: 'Higiene', value: 'Higiene' },
+            { label: 'Transporte', value: 'Transporte' },
+          ]}
+          error={erros.tipo}
+        />
+        {tipo && produtosPorTipo[tipo] && (
+          <View style={styles.produtosContainer}>
+            {produtosPorTipo[tipo].map((prod) => (
+              <TouchableOpacity
+                key={prod}
+                onPress={() => {
+                  const atualizados = produtos.includes(prod)
+                    ? produtos.filter((p) => p !== prod)
+                    : [...produtos, prod];
+                  setProdutos(atualizados);
+                  setErros((prev) => ({ ...prev, produtos: undefined }));
+                }}
+                style={[
+                  styles.produtoItem,
+                  produtos.includes(prod) && styles.produtoSelecionado,
+                ]}
+              >
+                <Text style={produtos.includes(prod) && { fontWeight: 'bold' }}>{prod}</Text>
+              </TouchableOpacity>
+            ))}
+            {erros.produtos && <Text style={styles.erroTexto}>{erros.produtos}</Text>}
+          </View>
+        )}
 
             <InputField
               label="Quantidade"
@@ -270,55 +325,9 @@ export default function CatalogoRecompensaPJ() {
             <View style={styles.botoesBox}>
               <BotaoVerde
                 texto={gerandoVoucher ? "Gerando..." : "Gerar Voucher"}
-                onPress={async () => {
-                  if (gerandoVoucher) return; // proteção extra
-
-                  const [dia, mes, ano] = dataValidade.split('/');
-                  const dataFormatada = new Date(`${ano}-${mes}-${dia}T00:00:00`);
-
-                  const dados = {
-                    tipo,
-                    produtos,
-                    quantidade,
-                    dataValidade: dataFormatada,
-                  };
-
-                  const errosValidacao = validarCamposObrigatorios(dados, ['tipo', 'produtos', 'quantidade', 'dataValidade']);
-                  if (Object.keys(errosValidacao).length > 0) {
-                    setErros(errosValidacao);
-                    return;
-                  }
-
-                  setGerandoVoucher(true);
-                  try {
-                    // 🔄 FUTURA API REAL
-                    // Substituir chamada ao mock por:
-                     // const resposta = await api.post('/vouchers', { ...dados, cnpj: usuario.cnpj });
-                    // resposta.data incluirá: { id, codigo, status, ... }
-                    await apiMock.gerarVouchersPJ(usuario.cnpj, {
-                      tipo,
-                      produtos,
-                      quantidade: parseInt(quantidade),
-                      dataValidade: dataFormatada.toISOString(),
-                    });
-
-                    setModalVisible(false);
-                    setModalSucesso(true);
-                    setTipo('');
-                    setProdutos([]);
-                    setQuantidade('');
-                    setDataValidade('');
-                    setErros({});
-                    carregarVouchers();
-                  } catch (error) {
-                    setErros({ tipo: 'Erro ao gerar voucher' });
-                  } finally {
-                    setGerandoVoucher(false);
-                  }
-                }}
+                onPress={handleGerarVoucher}
                 disabled={gerandoVoucher}
               />
-
 
               <BotaoVerde
                 texto="Cancelar"
@@ -329,51 +338,44 @@ export default function CatalogoRecompensaPJ() {
             </View>
           </View>
         </ScrollView>
-        </KeyboardAvoidingView>
-      </Modal>
+      </KeyboardAvoidingView>
+    </Modal>
+
+      <ModalErro
+        visivel={erroVisivel}
+        mensagem={mensagemErro}
+        onClose={() => setErroVisivel(false)}
+      />
 
       <ModalSucesso
         visivel={modalSucesso}
         onFechar={() => setModalSucesso(false)}
         mensagem="Voucher gerado com sucesso."
-     />
-     <Modal visible={modalInfo} transparent animationType="fade">
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' }}>
-            <View style={{ backgroundColor:colors.branco, padding: 20, borderRadius: 12 }}>
-              <Text style={{ fontWeight: 'bold', marginBottom: 10 }}>Legenda de cores dos lotes:</Text>
-              <Text style={{ color:colors.cinza }}>🟩 Verde: Nenhum voucher usado</Text>
-              <Text style={{color:colors.cinza }}>🟨 Amarelo: Parcialmente usado</Text>
-              <Text style={{ color:colors.cinza }}>⬜ Cinza: Todos utilizados</Text>
-              <TouchableOpacity onPress={() => setModalInfo(false)} style={{ marginTop: 10 }}>
-                <Text style={{ color: colors.verde, fontWeight: 'bold' }}>Fechar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-      </View>
+      />
+    </View>
   );
 }
- 
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingBottom: spacing.xl,
     minHeight: height,
-    alignItems:'center',
+    alignItems: 'center',
   },
   contentBox: {
     width: width > 700 ? '60%' : '100%',
   },
   boxResumo: {
-  backgroundColor: colors.branco,
-  borderRadius: 16,
-  padding: spacing.sm,
-  marginBottom: spacing.md,
-  shadowColor: '#000',
-  shadowOpacity: 0.05,
-  shadowRadius: 3,
-  elevation: 2,
-},
+    backgroundColor: colors.branco,
+    borderRadius: 16,
+    padding: spacing.sm,
+    marginBottom: spacing.md,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
   titulo: {
     fontSize: fonts.size.xl,
     fontWeight: fonts.weight.bold,
@@ -389,17 +391,16 @@ const styles = StyleSheet.create({
     color: colors.verdeEscuro,
     marginBottom: spacing.lg,
   },
- filtrosLinha: {
-  flexDirection: 'row',
-  flexWrap: 'wrap',      
-  justifyContent: 'center',
-  gap: spacing.sm,       
-  marginBottom: spacing.sm,
-},
-
-botaoFiltroBox: {
-  marginBottom: spacing.xs,
-},
+  filtrosLinha: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  botaoFiltroBox: {
+    marginBottom: spacing.xs,
+  },
   linhaAcao: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -424,6 +425,7 @@ botaoFiltroBox: {
     color: colors.branco,
     fontWeight: 'bold',
     fontSize: fonts.size.sm,
+    marginLeft: 6,
   },
   card: {
     padding: spacing.md,
@@ -446,13 +448,14 @@ botaoFiltroBox: {
     fontSize: fonts.size.sm,
     color: colors.textDark,
   },
-  modalContent: {
+    modalContent: {
     backgroundColor: colors.fundo,
     alignItems: 'center',
     paddingVertical: spacing.lg,
+    minHeight: height,
   },
   modalBox: {
-    backgroundColor: colors.fundo,
+    backgroundColor: colors.branco,
     borderRadius: 12,
     padding: spacing.lg,
     width: width > 600 ? '60%' : '90%',
@@ -472,8 +475,8 @@ botaoFiltroBox: {
   produtosContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginVertical: spacing.sm,
     justifyContent: 'center',
+    marginVertical: spacing.sm,
   },
   produtoItem: {
     paddingVertical: 8,
@@ -487,7 +490,6 @@ botaoFiltroBox: {
   produtoSelecionado: {
     backgroundColor: colors.verdeClaro,
     borderColor: colors.verde,
-  
   },
   erroTexto: {
     color: colors.erro,
@@ -501,11 +503,6 @@ botaoFiltroBox: {
     justifyContent: 'center',
     gap: spacing.md,
     flexWrap: 'wrap',
-
   },
-  verMaisBox: {
-  alignItems: 'center',
-  marginVertical: spacing.md,
-},
 
 });

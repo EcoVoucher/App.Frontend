@@ -11,8 +11,9 @@ import api from '../../services/apiMock';// 🔄 Substituir por api real futuram
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { fonts } from '../../theme/fonts';
-import BotaoVerde from '../../components/BotaoVerde';
 import BotaoVerdePequeno from '../../components/BotaoVerdePequeno';
+import VerMaisMenos from '../../components/VerMaisMenos';
+
 
 export default function HistoricoPontos() {
   const { usuario } = useAuth();
@@ -178,18 +179,13 @@ export default function HistoricoPontos() {
             <View key={index}>{renderItem({ item })}</View>
           ))
         )}
-
-        {!carregando && historico.length > 3 && (
-          <View style={styles.botaoContainer}>
-          {!mostrarTodos && temMais && (
-              <BotaoVerde texto="Ver mais ▼" onPress={carregarMais} carregando={carregandoMais} />
-            )}
-
-            {(mostrarTodos || (!temMais && historico.length > itensPorPagina)) && (
-              <BotaoVerde texto="Ver menos ▲" onPress={verMenos} carregando={carregandoMais} />
-            )}
-          </View>
-        )}
+      <VerMaisMenos
+        mostrarTodos={mostrarTodos}
+        temMais={temMais}
+        onVerMais={carregarMais}
+        onVerMenos={verMenos}
+        carregando={carregandoMais}
+      />
       </View>
     </View>
   );
@@ -306,10 +302,5 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     marginBottom: spacing.sm,
     width: '100%',
-  },
-  botaoContainer: {
-    alignItems: 'center',
-    paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
   },
 });

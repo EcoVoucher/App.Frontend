@@ -1,27 +1,29 @@
-// CatalogoVouchersPF.js com fundo branco e sem ScrollView duplicado (ajustado para PrivateLayout)
-
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   Dimensions,
   FlatList,
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useCarrinho } from '../../context/CarrinhoContext';
+import { useAuth } from '../../context/AuthContext';
+import { useModalCarrinho } from '../../context/ModalCarrinhoContext';
+import api from '../../services/apiMock';
 import BotaoVerde from '../../components/BotaoVerde';
 import BotaoVerdePequeno from '../../components/BotaoVerdePequeno';
 import ModalSucesso from '../../components/ModalSucesso';
-import { useAuth } from '../../context/AuthContext';
-import api from '../../services/apiMock';
+import ModalErro from '../../components/ModalErro';
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
+import VerMaisMenos from '../../components/VerMaisMenos';
+
+
 
 const { width, height } = Dimensions.get('window');
 const tipos = ['Alimentacao', 'Transporte', 'Higiene'];
@@ -29,77 +31,63 @@ const tipos = ['Alimentacao', 'Transporte', 'Higiene'];
 export default function CatalogoVouchersPF() {
   const { usuario } = useAuth();
   const router = useRouter();
+  const { mostrarResumo, abrirResumo, fecharResumo } = useModalCarrinho();
+
   const [vouchers, setVouchers] = useState([]);
-  const [selecionados, setSelecionados] = useState([]);
-  const [modalVisivel, setModalVisivel] = useState(false);
-  const [modalMensagem, setModalMensagem] = useState(null);
   const [modalSucesso, setModalSucesso] = useState(false);
+  const [modalErro, setModalErro] = useState('');
   const [tipoSelecionado, setTipoSelecionado] = useState('Alimentacao');
   const [saldoAtual, setSaldoAtual] = useState(0);
   const [comprando, setComprando] = useState(false);
+  const [mostrarTodos, setMostrarTodos] = useState(false);
+  const itensPorPagina = 4;
 
+  const {
+    selecionados,
+    alternarSelecao,
+    limparCarrinho,
+    totalPontos,
+  } = useCarrinho();
 
-
-useEffect(() => {
-  carregarVouchers();
-  carregarSaldoAtualizado();
-}, []);
-
+  useEffect(() => {
+    carregarVouchers();
+    carregarSaldoAtualizado();
+  }, []);
 
   const carregarSaldoAtualizado = async () => {
-  const user = await api.obterUsuarioPorCPF(usuario.cpf);
-  setSaldoAtual(user.pontos || 0);
-};
-
-
-  const carregarVouchers = async () => {
-  const lista = await api.obterVouchersDisponiveisPF();
-  setVouchers(lista);
-
-  const atual = await api.obterUsuarioPorCPF(usuario.cpf);
-  setSaldoAtual(atual.pontos || 0);
-};
-
-
-  const alternarSelecao = (lote) => {
-    const id = lote.codigos[0];
-    const existe = selecionados.find((v) => v.loteId === id);
-
-    if (existe) {
-      setSelecionados(selecionados.filter((v) => v.loteId !== id));
-    } else {
-      setSelecionados([
-        ...selecionados,
-        {
-          loteId: id,
-          codigo: id,
-          tipo: lote.tipo,
-          produtos: lote.produtos,
-          empresa: lote.empresa,
-          endereco: lote.endereco,
-          validade: lote.validade,
-          pontos: lote.pontos,
-          quantidade: 1,
-          codigos: lote.codigos,
-        },
-      ]);
-    }
+    const user = await api.obterUsuarioPorCPF(usuario.cpf);
+    setSaldoAtual(user.pontos || 0);
   };
 
-  const totalPontos = selecionados.reduce(
-    (acc, item) => acc + item.pontos * item.quantidade,
-    0
-  );
+  const carregarVouchers = async () => {
+    const lista = await api.obterVouchersDisponiveisPF();
+    setVouchers(lista);
+    const atual = await api.obterUsuarioPorCPF(usuario.cpf);
+    setSaldoAtual(atual.pontos || 0);
+  };
 
-const finalizarCompra = async () => {
-  if (comprando) return;
+  const abrirModalResumo = () => {
+    if (selecionados.length === 0) {
+      setModalErro('Selecione ao menos um voucher para continuar.');
+      return;
+    }
+    abrirResumo();
+  };
 
-  setComprando(true);
-  try {
-    const listaFinal = selecionados.flatMap((item) => {
-      const codigosUsados = item.codigos.slice(0, item.quantidade);
-      return codigosUsados.map((codigo) => ({
-        codigo,
+  const finalizarCompra = async () => {
+    if (comprando) return;
+
+    if (totalPontos > saldoAtual) {
+      setModalErro('Você não possui pontos suficientes para essa compra.');
+      limparCarrinho();
+      fecharResumo();
+      return;
+    }
+
+    setComprando(true);
+    try {
+      const listaFinal = selecionados.map((item) => ({
+        codigo: item.codigos[0],
         tipo: item.tipo,
         produtos: item.produtos,
         empresa: item.empresa,
@@ -107,77 +95,78 @@ const finalizarCompra = async () => {
         validade: item.validade,
         pontos: item.pontos,
       }));
-    });
 
-    await api.comprarVouchersPF(usuario.cpf, listaFinal);
-
-    setTimeout(async () => {
+      await api.comprarVouchersPF(usuario.cpf, listaFinal);
       await carregarVouchers();
+      await carregarSaldoAtualizado();
 
-      const atual = await api.obterUsuarioPorCPF(usuario.cpf);
-      const novoSaldo = atual.pontos;
-      setSaldoAtual(novoSaldo);
+      limparCarrinho();
+      fecharResumo();
+      setComprando(false);
 
-      setSelecionados([]);
-      setModalVisivel(false);
-      setComprando(false); 
-
-      setModalMensagem({
+      setModalSucesso({
         titulo: 'Compra realizada com sucesso! 🎉',
         conteudo: (
-          <ScrollView>
-            <Text style={{ fontWeight: 'bold', marginBottom: 8 }}>Vouchers adquiridos:</Text>
+          <>
+            <Text style={{ fontWeight: 'bold', marginBottom: 8 }}>
+              Vouchers adquiridos:
+            </Text>
             {listaFinal.map((v, idx) => (
-              <Text key={idx}>• {v.tipo} – {v.codigo}</Text>
+              <Text key={idx}>
+                • {v.tipo} – {v.codigo}
+              </Text>
             ))}
             <Text style={{ fontWeight: 'bold', marginTop: 12 }}>
-              Novo saldo: {novoSaldo} pontos
+              Novo saldo: {saldoAtual - totalPontos} pontos
             </Text>
             <Text style={{ marginTop: 10 }}>
               Vá até o histórico de pontos para ver os vouchers adquiridos.
             </Text>
-            <TouchableOpacity
-              style={{
-                backgroundColor: '#4CAF50',
-                padding: 10,
-                borderRadius: 8,
-                marginTop: 16,
-                alignItems: 'center',
+            <BotaoVerde
+              texto="Ir para o Histórico"
+              onPress={() => {
+                setModalSucesso(false);
+                router.push('/(private)/historicopontos');
               }}
-              onPress={() => router.push('/(private)/historicopontos')}
-            >
-              <Text style={{ color: 'white', fontWeight: 'bold' }}>Ir para o Histórico</Text>
-            </TouchableOpacity>
-          </ScrollView>
+              style={{ backgroundColor: '#66BB6A', marginTop: 16 }}
+            />
+          </>
         ),
       });
-    }, 300);
+    } catch (error) {
+      fecharResumo();
+      limparCarrinho();
+      setComprando(false);
+      setModalErro(
+        'Ocorreu um erro na compra. Tente novamente ou verifique seus pontos.'
+      );
+    }
+  };
 
-  } catch (error) {
-    setModalVisivel(false);
-    setSelecionados([]);
-    setComprando(false); 
-    setModalMensagem({
-      titulo: 'Pontos insuficientes',
-      conteudo: (
-        <Text>
-          Você não possui pontos suficientes para realizar esta compra.
-          Faça novos depósitos de materiais para acumular mais pontos.
-        </Text>
-      ),
-    });
-  }
+const filtrarPorTipo = () => {
+  const filtrados = vouchers.filter((v) => v.tipo === tipoSelecionado);
+  return mostrarTodos ? filtrados : filtrados.slice(0, itensPorPagina);
 };
 
 
-  const limparSelecao = () => setSelecionados([]);
-  const filtrarPorTipo = () => tipoSelecionado === 'Todos' ? vouchers : vouchers.filter((v) => v.tipo === tipoSelecionado);
+const temMais = () => {
+  const total = tipoSelecionado === 'Todos'
+    ? vouchers.length
+    : vouchers.filter((v) => v.tipo === tipoSelecionado).length;
+
+  return filtrarPorTipo().length < total;
+};
+
   const corFundoPorTipo = (tipo) => {
     switch (tipo) {
-      case 'Alimentacao': return '#fffbe6';
-      case 'Higiene': return '#e6f7ff';
-      case 'Transporte': return '#e6ffe6';
-      default: return colors.branco;
+      case 'Alimentacao':
+        return '#fffbe6';
+      case 'Higiene':
+        return '#e6f7ff';
+      case 'Transporte':
+        return '#e6ffe6';
+      default:
+        return colors.branco;
     }
   };
 
@@ -186,8 +175,12 @@ const finalizarCompra = async () => {
       <View style={styles.contentBox}>
         <View style={styles.boxResumo}>
           <Text style={styles.titulo}>Catálogo de Vouchers</Text>
-          <Text style={styles.subtitulo}>Troque seus pontos por produtos!</Text>
-          <Text style={styles.saldo}>🥇 Saldo atual: {saldoAtual} pontos</Text>
+          <Text style={styles.subtitulo}>
+            Troque seus pontos por produtos!
+          </Text>
+          <Text style={styles.saldo}>
+            🥇 Saldo atual: {saldoAtual} pontos
+          </Text>
 
           <View style={styles.filtrosLinha}>
             {tipos.map((tipo) => (
@@ -206,89 +199,175 @@ const finalizarCompra = async () => {
           keyExtractor={(item) => item.codigos[0]}
           scrollEnabled={false}
           renderItem={({ item }) => {
-            const selecionado = selecionados.find((v) => v.loteId === item.codigos[0]);
+            const selecionado = selecionados.find(
+              (v) => v.loteId === item.codigos[0]
+            );
+            const saldoInsuficiente = saldoAtual < item.pontos;
+
             return (
               <TouchableOpacity
-                onPress={() => alternarSelecao(item)}
-                style={[styles.card, { backgroundColor: corFundoPorTipo(item.tipo) }, selecionado && styles.cardSelecionado]}
+                onPress={() => {
+                  if (saldoInsuficiente) {
+                    setModalErro(
+                      'Saldo insuficiente para selecionar este voucher.'
+                    );
+                  } else {
+                    alternarSelecao(item);
+                  }
+                }}
+                style={[
+                  styles.card,
+                  { backgroundColor: corFundoPorTipo(item.tipo) },
+                  selecionado && styles.cardSelecionado,
+                ]}
               >
                 <Text style={styles.cardTitulo}>{item.tipo}</Text>
-                <Text style={styles.cardInfo}>🥫 Produtos: {item.produtos.join(', ')}</Text>
-                <Text style={styles.cardInfo}>🏢 Empresa: {item.empresa}</Text>
-                <Text style={styles.cardInfo}>📍 Endereço: {item.endereco}</Text>
-                <Text style={styles.cardInfo}>📅 Validade: {new Date(item.validade).toLocaleDateString('pt-BR')}</Text>
+                <Text style={styles.cardInfo}>
+                  🥫 Produtos: {item.produtos.join(', ')}
+                </Text>
+                <Text style={styles.cardInfo}>
+                  🏢 Empresa: {item.empresa}
+                </Text>
+                <Text style={styles.cardInfo}>
+                  📍 Endereço: {item.endereco}
+                </Text>
+                <Text style={styles.cardInfo}>
+                  📅 Validade:{' '}
+                  {new Date(item.validade).toLocaleDateString('pt-BR')}
+                </Text>
                 <Text style={styles.cardInfo}>🎯 Pontos: {item.pontos}</Text>
-                <Text style={styles.cardInfo}>🔢 Disponíveis: {item.codigos.length}</Text>
+                <Text style={styles.cardInfo}>
+                  🔢 Disponíveis: {item.codigos.length}
+                </Text>
+                {saldoInsuficiente && (
+                  <Text
+                    style={{
+                      color: colors.erro,
+                      fontWeight: 'bold',
+                      marginTop: 4,
+                    }}
+                  >
+                    ⚠️ Saldo insuficiente
+                  </Text>
+                )}
                 {selecionado && (
-                  <Text style={styles.cardSelecionadoTexto}>✅ Selecionado: {selecionado.quantidade}x</Text>
+                  <Text style={styles.cardSelecionadoTexto}>
+                    ✅ Selecionado
+                  </Text>
                 )}
               </TouchableOpacity>
             );
           }}
         />
-
-        {selecionados.length > 0 && (
-          <View style={styles.rodapeBox}>
-            <Text style={styles.totalTexto}>Total: {totalPontos} pontos</Text>
-            <View style={styles.botoesBox}>
-              <BotaoVerde texto="Finalizar Compra" onPress={() => setModalVisivel(true)} />
-              <BotaoVerde texto="Limpar Seleção" onPress={limparSelecao} style={{ backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.erro }} textoStyle={{ color: colors.erro }} />
-            </View>
-          </View>
-        )}
-
+ {vouchers.length > itensPorPagina && (
+  <VerMaisMenos
+    temMais={temMais()}
+    mostrarTodos={mostrarTodos}
+    onVerMais={() => setMostrarTodos(true)}
+    onVerMenos={() => setMostrarTodos(false)}
+  />
+)}
         <View style={{ height: 100 }} />
       </View>
 
-      {/* Modais mantidos conforme o original */}
-      <Modal visible={modalVisivel} animationType="fade" transparent>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
+      {/* 🔥 Modal de Resumo */}
+      <Modal
+        visible={mostrarResumo}
+        transparent
+        animationType="fade"
+        onRequestClose={fecharResumo}
+      >
+        <View style={styles.modalContainer}>
           <View style={styles.modalBox}>
-            <Text style={styles.modalTitulo}>Confirmação da Compra</Text>
-            <ScrollView style={{ maxHeight: 300 }} keyboardShouldPersistTaps="handled">
+            <Text style={styles.modalTitulo}>Resumo da Compra</Text>
+
+            <ScrollView style={{ maxHeight: 300 }}>
               {selecionados.map((item) => (
                 <View key={item.loteId} style={styles.cardResumo}>
-                  <Text style={styles.cardInfo}>Tipo: {item.tipo}</Text>
-                  <Text style={styles.cardInfo}>Produtos: {item.produtos.join(', ')}</Text>
-                  <Text style={styles.cardInfo}>Empresa: {item.empresa}</Text>
-                  <Text style={styles.cardInfo}>Endereço: {item.endereco}</Text>
-                  <Text style={styles.cardInfo}>Validade: {new Date(item.validade).toLocaleDateString('pt-BR')}</Text>
-                  <Text style={styles.cardInfo}>Quantidade: {item.quantidade}</Text>
-                  <Text style={styles.cardInfo}>Pontos: {item.pontos * item.quantidade}</Text>
+                  <Text>
+                    <Text style={styles.labelNegrito}>Tipo:</Text> {item.tipo}
+                  </Text>
+                  <Text>
+                    <Text style={styles.labelNegrito}>Produtos:</Text>{' '}
+                    {item.produtos.join(', ')}
+                  </Text>
+                  <Text>
+                    <Text style={styles.labelNegrito}>Empresa:</Text>{' '}
+                    {item.empresa}
+                  </Text>
+                  <Text>
+                    <Text style={styles.labelNegrito}>Endereço:</Text>{' '}
+                    {item.endereco}
+                  </Text>
+                  <Text>
+                    <Text style={styles.labelNegrito}>Validade:</Text>{' '}
+                    {new Date(item.validade).toLocaleDateString('pt-BR')}
+                  </Text>
+                  <Text>
+                    <Text style={styles.labelNegrito}>Pontos:</Text>{' '}
+                    {item.pontos}
+                  </Text>
                 </View>
               ))}
-              <Text style={styles.totalTexto}>Total: {totalPontos} pontos</Text>
             </ScrollView>
+
+            <Text style={styles.totalTexto}>
+              Total: {totalPontos} pontos
+            </Text>
+
             <View style={styles.botoesBox}>
-            <BotaoVerde
-              texto={comprando ? 'Comprando...' : 'Confirmar'}
-              onPress={finalizarCompra}
-              disabled={comprando}
-            />
-
-              <BotaoVerde texto="Cancelar" onPress={() => setModalVisivel(false)} style={{ backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.erro }} textoStyle={{ color: colors.erro }} />
+              <BotaoVerde
+                texto={comprando ? 'Comprando...' : 'Finalizar Compra'}
+                onPress={finalizarCompra}
+                disabled={comprando}
+              />
+              <BotaoVerde
+                texto="Cancelar"
+                onPress={fecharResumo}
+                style={{
+                  backgroundColor: 'transparent',
+                  borderWidth: 1,
+                  borderColor: colors.erro,
+                }}
+                textoStyle={{ color: colors.erro }}
+              />
+              <BotaoVerde
+                texto="Limpar Seleção"
+                onPress={() => {
+                  limparCarrinho();
+                  fecharResumo();
+                }}
+                style={{
+                  backgroundColor: 'transparent',
+                  borderWidth: 1,
+                  borderColor: colors.vermelho,
+                }}
+                textoStyle={{ color: colors.vermelho }}
+              />
             </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
-
-      <ModalSucesso visivel={modalSucesso} onFechar={() => setModalSucesso(false)} mensagem="Compra realizada com sucesso!" />
-
-      <Modal visible={!!modalMensagem} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitulo}>{modalMensagem?.titulo}</Text>
-            <ScrollView style={{ maxHeight: height * 0.45, marginVertical: spacing.sm }}>
-              {modalMensagem?.conteudo}
-            </ScrollView>
-            <BotaoVerde texto="Fechar" onPress={() => setModalMensagem(null)} />
           </View>
         </View>
       </Modal>
+
+      {/* 🔥 Modais de feedback */}
+      <ModalSucesso
+        visivel={!!modalSucesso}
+        onFechar={() => setModalSucesso(false)}
+        mensagem={modalSucesso.conteudo}
+      />
+      <ModalErro
+        visivel={!!modalErro}
+        onClose={() => setModalErro('')}
+        mensagem={modalErro}
+      />
     </View>
   );
 }
+
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   contentBox: {
     width: width > 700 ? '70%' : '100%',
     alignSelf: 'center',
@@ -297,9 +376,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.branco,
     borderRadius: 12,
     marginBottom: spacing.lg,
+    padding: spacing.md,
   },
   titulo: {
-    marginTop:spacing.md,
     fontSize: fonts.size.xl,
     fontWeight: fonts.weight.bold,
     color: colors.verde,
@@ -309,18 +388,16 @@ const styles = StyleSheet.create({
   subtitulo: {
     fontSize: fonts.size.md,
     fontWeight: fonts.weight.bold,
-    textAlign: 'center',
     color: colors.verde,
+    textAlign: 'center',
     marginBottom: spacing.md,
   },
   saldo: {
-  textAlign: 'center',
-  fontSize: fonts.size.md,
-  fontWeight: fonts.weight.regular,
-  color: colors.verde,
-  marginBottom: spacing.md,
-},
-
+    textAlign: 'center',
+    fontSize: fonts.size.md,
+    color: colors.verde,
+    marginBottom: spacing.md,
+  },
   filtrosLinha: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -355,52 +432,29 @@ const styles = StyleSheet.create({
   cardInfo: {
     fontSize: fonts.size.sm,
     color: colors.textDark,
-    flexWrap: 'wrap',
+    marginBottom: 4,
   },
   cardSelecionadoTexto: {
     marginTop: spacing.xs,
     color: colors.verdeEscuro,
     fontWeight: 'bold',
   },
-  rodapeBox: {
-    marginTop: spacing.lg,
-    padding: spacing.md,
-    backgroundColor: colors.branco,
-    borderTopWidth: 1,
-    borderColor: colors.cinzaClaro,
-    alignItems: 'center',
-  },
-  botoesBox: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-    flexWrap: 'wrap',
-  },
-  totalTexto: {
-    fontSize: fonts.size.md,
-    fontWeight: fonts.weight.medium,
-    color: colors.textDark,
-    textAlign: 'center',
-  },
-  modalOverlay: {
+  modalContainer: {
     flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingHorizontal: 16,
   },
   modalBox: {
     backgroundColor: colors.branco,
-    borderRadius: 12,
+    borderRadius: 20,
     padding: spacing.lg,
     width: width > 600 ? '60%' : '90%',
     maxHeight: height * 0.75,
-    elevation: 4,
-    justifyContent: 'center',
+    elevation: 5,
   },
   modalTitulo: {
-    fontSize: fonts.size.lg,
+    fontSize: fonts.size.xl,
     fontWeight: fonts.weight.bold,
     textAlign: 'center',
     marginBottom: spacing.md,
@@ -408,5 +462,26 @@ const styles = StyleSheet.create({
   },
   cardResumo: {
     marginBottom: spacing.sm,
+    paddingBottom: spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.cinzaClaro,
+  },
+  labelNegrito: {
+    fontWeight: 'bold',
+    color: colors.verde,
+  },
+  totalTexto: {
+    fontSize: fonts.size.md,
+    fontWeight: fonts.weight.bold,
+    color: colors.textDark,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+  },
+  botoesBox: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    flexWrap: 'wrap',
   },
 });

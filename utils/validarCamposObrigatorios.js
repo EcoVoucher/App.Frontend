@@ -102,7 +102,8 @@ export const validarCamposObrigatorios = (dados, campos, tipoPessoa) => {
         break;
 
       case 'dataValidade':
-        const validade = new Date(valor);
+        const [diaV, mesV, anoV] = valor.split('/');
+        const validade = new Date(`${anoV}-${mesV}-${diaV}T00:00:00`);
         const hojeValidade = new Date();
         const dataMinima = new Date();
         const dataMaxima = new Date();

@@ -6,9 +6,6 @@ import {
   ScrollView,
   Dimensions,
   ActivityIndicator,
-  LayoutAnimation,
-  Platform,
-  UIManager,
   useWindowDimensions,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
@@ -18,39 +15,25 @@ import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
 import PegadaTermometro from '../../components/PegadaTermometro';
-import BotaoVerde from '../../components/BotaoVerde';
-import { formatarDataBR, obterComparativoPegada} from '../../utils/formatadores';
-
-
+import { formatarDataBR, obterComparativoPegada } from '../../utils/formatadores';
+import VerMaisMenos from '../../components/VerMaisMenos';
 
 const { height } = Dimensions.get('window');
 
-
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
-
 export default function HistoricoPegada() {
-  const router = useRouter(); 
+  const router = useRouter();
   const { width } = useWindowDimensions();
   const { usuario } = useAuth();
   const [historico, setHistorico] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [mostrarTodos, setMostrarTodos] = useState(false);
-  const [pagina, setPagina] = useState(1);
-  const itensPorPagina = 3;
-  const [carregandoMais, setCarregandoMais] = useState(false);
-
-
+  const itensPorPagina = 2;
 
   useEffect(() => {
     const carregarHistorico = async () => {
       setCarregando(true);
       try {
         const dados = await apiMock.obterHistoricoPegada(usuario?.cpf);
-        // 🔄 Substituir por chamada real de API futuramente:
-        // const response = await api.get(`/pegada/historico/${usuario?.cpf}`);
-        // const dados = response.data;
         const ordenado = dados.sort((a, b) => new Date(b.data) - new Date(a.data));
         setHistorico(ordenado);
       } catch (error) {
@@ -65,23 +48,15 @@ export default function HistoricoPegada() {
 
   const historicoVisivel = mostrarTodos
     ? historico
-    : historico.slice(0, pagina * itensPorPagina);
+    : historico.slice(0, itensPorPagina);
 
-  const temMais = historicoVisivel.length < historico.length;
-
-const carregarMais = () => {
-  if (carregandoMais) return; 
-
-  setCarregandoMais(true);
-  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-  setPagina((p) => p + 1);
-
-  // Simula um tempo de carregamento para resetar o estado
-  setTimeout(() => setCarregandoMais(false), 500);
-};
+  const temMais = historico.length > historicoVisivel.length;
 
   return (
-    <ScrollView contentContainerStyle={[styles.scrollContainer, { minHeight: height }]} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      contentContainerStyle={[styles.scrollContainer, { minHeight: height }]}
+      showsVerticalScrollIndicator={false}
+    >
       <View style={[styles.contentBox, { width: width > 700 ? '60%' : '110%' }]}>
         <View style={styles.headerBox}>
           <Text style={styles.titulo}>Histórico de Pegadas</Text>
@@ -96,27 +71,29 @@ const carregarMais = () => {
           <Text style={styles.vazio}>Nenhuma pegada registrada ainda.</Text>
         ) : (
           historicoVisivel.map((item, index) => (
-            <View key={index} style={[styles.card, item.data === historico[0].data && styles.cardUltimo]}>
+            <View
+              key={index}
+              style={[
+                styles.card,
+                item.data === historico[0].data && styles.cardUltimo,
+              ]}
+            >
               <Text style={styles.data}>📅 {formatarDataBR(item.data)}</Text>
               <Text style={styles.pontos}> {item.pontuacao} pontos</Text>
-              <Text style={styles.comparativo}>{obterComparativoPegada(item.pontuacao)}</Text>
+              <Text style={styles.comparativo}>
+                {obterComparativoPegada(item.pontuacao)}
+              </Text>
             </View>
           ))
         )}
 
-        {!carregando && historico.length > 3 && (
-          <View style={styles.botaoContainer}>
-            {!mostrarTodos && temMais && (
-             <BotaoVerde
-                texto="Ver mais ▼"
-                onPress={carregarMais}
-                carregando={carregandoMais} // se quiser mostrar o loader
-              />
-            )}
-            {(mostrarTodos || (!temMais && historico.length > itensPorPagina)) && (
-              <BotaoVerde texto="Ver menos ▲" onPress={verMenos} />
-            )}
-          </View>
+        {!carregando && historico.length > itensPorPagina && (
+          <VerMaisMenos
+            temMais={temMais}
+            mostrarTodos={mostrarTodos}
+            onVerMais={() => setMostrarTodos(true)}
+            onVerMenos={() => setMostrarTodos(false)}
+          />
         )}
       </View>
     </ScrollView>
@@ -175,10 +152,5 @@ const styles = StyleSheet.create({
   comparativo: {
     fontSize: fonts.size.sm,
     color: colors.verde,
-  },
-  botaoContainer: {
-    alignItems: 'center',
-    marginTop: spacing.md,
-    marginBottom: spacing.xl,
   },
 });

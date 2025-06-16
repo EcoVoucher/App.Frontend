@@ -140,7 +140,12 @@ const mensagem = error?.message || 'Não foi possível acessar sua conta.';
 };
 
   return (
+    
     <View style={styles.contentBox}>
+      <TouchableOpacity onPress={() => router.push('/(public)/admin')}>
+      <Text>Ir para Admin</Text>
+    </TouchableOpacity>
+
       <Text style={styles.titulo}>Bem-vindo ao EcoVoucher</Text>
       <Text style={styles.subtitulo}>Acesse sua conta</Text>
 

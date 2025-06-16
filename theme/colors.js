@@ -4,7 +4,7 @@ export const colors = {
   cinza: '#757575',
   branco: '#FFFFFF',
   preto: '#1c1c1c',
-  fundo: '#',
+  fundo: '#F5F5F5',
   borda: '#DDDDDD',
   erro: '#D32F2F',
   sucesso: '#388E3C',

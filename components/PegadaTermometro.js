@@ -3,18 +3,12 @@ import { View, Text, StyleSheet } from 'react-native';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { spacing } from '../theme/spacing';
+import { obterFaixasPegada } from '../utils/formatadores';
 
 export default function PegadaTermometro({ pontuacao }) {
-  const faixas = [
-    { label: '✅ Sustentável (até 1.6 gha)', limite: 160, cor: '#2E7D32' },
-    { label: '🟢 Abaixo da média (~2.7 gha)', limite: 270, cor: '#66BB6A' },
-    { label: '🟠 Média brasileira (~3.0 gha)', limite: 400, cor: '#FFB74D' },
-    { label: '🟡 Alta (~4.6–6.0 gha)', limite: 600, cor: '#FFD54F' },
-    { label: '🔵 Muito alta (~6.0 gha)', limite: 800, cor: '#64B5F6' },
-    { label: '🔴 Extremamente alta (~8.0 gha)', limite: Infinity, cor: '#EF5350' },
-  ];
-
+  const faixas = obterFaixasPegada();
   const faixaAtual = faixas.find(f => pontuacao <= f.limite);
+
 
   return (
     <View style={styles.termometroBox}>

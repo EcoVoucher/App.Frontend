@@ -17,6 +17,7 @@ import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
 import { validarCamposObrigatorios } from '../../utils/validarCamposObrigatorios';
 import { formatarCadastro } from '../../utils/formatarenvio';
+import ModalSucesso from '../../components/ModalSucesso';
 
 const { width } = Dimensions.get('window');
 
@@ -230,39 +231,50 @@ export default function Cadastro() {
       </View>
     </Modal>
 
-  {/* Modal sucesso */}
-<Modal visible={modalSucesso} transparent animationType="fade">
-  <View style={styles.modalContainer}>
-    <View style={styles.modalBox}>
-      <Text style={styles.modalTitulo}>
-        {tipoPessoa === 'pj'
-          ? 'Cadastro realizado com sucesso!\nAguarde a aprovação do administrador.\n Entraremos em contato.'
-          : 'Cadastro realizado com sucesso!'}
-      </Text>
-
-        <BotaoVerde
-      texto={tipoPessoa === 'pj' ? 'Concluir' : 'Ir para Login'}
-      onPress={() => {
-        setModalSucesso(false);
-        setDados(ESTADO_INICIAL);
-        setErros({});
-
-        if (tipoPessoa === 'pf') {
-          setTipoPessoa(null);
-          router.replace('/(public)/login');
-        } else {
-          // Exibe o formulário novamente
-          setTipoPessoa('pj');
-          setModalTipoVisivel(false);
-        }
-      }}
-    />
-
-    </View>
-  </View>
-</Modal>
-
-
+<ModalSucesso
+  visivel={modalSucesso}
+  titulo="Cadastro realizado com sucesso!"
+  mensagem={
+    tipoPessoa === 'pj' 
+      ? (
+        <>
+          <Text style={{ textAlign: 'center', marginBottom: 8 }}>
+            Seu cadastro foi realizado com sucesso.
+          </Text>
+          <Text style={{ textAlign: 'center', marginBottom: 8 }}>
+            Aguarde a aprovação do administrador. Entraremos em contato.
+          </Text>
+          <BotaoVerde
+            texto="Concluir"
+            onPress={() => {
+              setModalSucesso(false);
+              setDados(ESTADO_INICIAL);
+              setErros({});
+              setTipoPessoa('pj');
+              setModalTipoVisivel(false);
+            }}
+          />
+        </>
+      )
+      : (
+        <>
+          <Text style={{ textAlign: 'center', marginBottom: 8 }}>
+            Seu cadastro foi realizado com sucesso.
+          </Text>
+          <BotaoVerde
+            texto="Ir para Login"
+            onPress={() => {
+              setModalSucesso(false);
+              setDados(ESTADO_INICIAL);
+              setErros({});
+              setTipoPessoa(null);
+              router.replace('/(public)/login');
+            }}
+          />
+        </>
+      )
+  }
+/>
     <ModalErro
       visivel={erroVisivel}
       mensagem={mensagemErro}

@@ -1,5 +1,19 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Produtos válidos por tipo de voucher
+const produtosPorTipo = {
+ Alimentacao: ['Marmitex', 'Arroz 5kg', 'Feijão 1kg', 'Leite integral', 'Cesta básica'],
+  Higiene: ['Pasta dental Colgate', 'Sabonete Dove', 'Papel higiênico', 'Shampoo', 'Sabão em barra'],
+  Transporte: ['Metrô', 'Ônibus'],  
+};
+
+// Função que valida se todos os produtos pertencem ao tipo informado
+const validarProdutosPorTipo = (tipo, produtos) => {
+  const produtosValidos = produtosPorTipo[tipo] || [];
+  return produtos.every(p => produtosValidos.includes(p));
+};
+
+
 const simularAtraso = (ms = 1000) => new Promise(res => setTimeout(res, ms));
 
 const CHAVE_USUARIOS = '@usuarios_mock';
@@ -303,8 +317,7 @@ const registrarMovimentacao = async (cpf, tipo, pontos, descricao, codigo = null
 
 // Gerador de códigos únicos para vouchers
 const gerarCodigosVoucher = async (quantidade) => {
-  const contadorChave = 'contador_vouchers_gerados';
-  const valorAtual = await AsyncStorage.getItem(contadorChave);
+  const valorAtual = await AsyncStorage.getItem(CHAVE_CONTADOR);
   let contador = valorAtual ? parseInt(valorAtual) : 0;
 
   const ano = new Date().getFullYear();
@@ -315,9 +328,10 @@ const gerarCodigosVoucher = async (quantidade) => {
     codigos.push(`VOUC-${ano}-${String(contador).padStart(3, '0')}`);
   }
 
-  await AsyncStorage.setItem(contadorChave, contador.toString());
+  await AsyncStorage.setItem(CHAVE_CONTADOR, contador.toString());
   return codigos;
 };
+
 
 // Geração de vouchers por PJ
 // 🔄 API REAL:
@@ -350,18 +364,23 @@ const gerarVouchersPJ = async (cnpj, dados) => {
 
   if (!usuario) throw new Error('Usuário PJ não encontrado.');
 
+  // 🔥 Validação dos produtos pelo tipo
+  if (!validarProdutosPorTipo(dados.tipo, dados.produtos)) {
+    throw new Error('Os produtos não correspondem ao tipo de voucher selecionado.');
+  }
+
   const codigos = await gerarCodigosVoucher(dados.quantidade);
 
   const e = usuario;
   const enderecoCompleto = `${e.bairro}-${e.numero}, ${e.cidade}, ${e.cep}`;
 
   const lote = {
-    idLote: codigos[0], // identificação do lote pelo 1º código
+    idLote: codigos[0],
     tipo: dados.tipo,
     produtos: dados.produtos,
     quantidade: dados.quantidade,
     dataValidade: dados.dataValidade,
-    codigos, // ainda disponíveis
+    codigos,
     empresa: usuario.nomeEmpresa || 'Empresa não encontrada',
     endereco: enderecoCompleto,
     cnpj: id

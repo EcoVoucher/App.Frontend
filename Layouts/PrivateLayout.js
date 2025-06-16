@@ -7,10 +7,15 @@ import {
   Platform,
   SafeAreaView,
   StatusBar,
+  TouchableOpacity,
+  Text,
 } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useCarrinho } from '../context/CarrinhoContext';
 import RodapeNavegacao from '../components/RodapeNavegacao';
 import { useAuth } from '../context/AuthContext';
 import { useRouter, Slot, usePathname } from 'expo-router';
+import { useModalCarrinho } from '../context/ModalCarrinhoContext';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 
@@ -19,20 +24,22 @@ export default function PrivateLayout() {
   const router = useRouter();
   const pathname = usePathname();
   const [isReady, setIsReady] = useState(false);
-  // Detecta se está na tela da pegada
-const estaNaPegada = pathname.includes('/pegada');
 
-// 🔥 Verifica se está exibindo o resultado da pegada no primeiro acesso
-const exibindoResultado = estaNaPegada && usuario?.primeiroAcesso && pathname.includes('/home') === false;
+  const { abrirResumo } = useModalCarrinho(); // 👉 Importante
+  const { selecionados } = useCarrinho();
+  const estaNoCatalogoPF = pathname.includes('/catalogovoucherspf');
 
-  // 🔥 Esconder rodapé somente na tela Pegada e no primeiro acesso
-const esconderRodape = pathname.includes('/pegada') && (usuario?.primeiroAcesso || exibindoResultado);
+  const estaNaPegada = pathname.includes('/pegada');
+  const exibindoResultado =
+    estaNaPegada && usuario?.primeiroAcesso && !pathname.includes('/home');
+  const esconderRodape =
+    pathname.includes('/pegada') &&
+    (usuario?.primeiroAcesso || exibindoResultado);
 
   useEffect(() => {
     setIsReady(true);
   }, []);
 
-  // 🔐 Controle de acesso por tipo de usuário
   useEffect(() => {
     if (!isReady || !usuario) return;
 
@@ -43,7 +50,6 @@ const esconderRodape = pathname.includes('/pegada') && (usuario?.primeiroAcesso 
 
     const rota = pathname.toLowerCase();
 
-    // 🔒 Bloqueia rotas específicas de PJ
     if (
       rota.includes('catalogorecompensapj') ||
       rota.includes('validarvoucherpj') ||
@@ -54,7 +60,6 @@ const esconderRodape = pathname.includes('/pegada') && (usuario?.primeiroAcesso 
       }
     }
 
-    // 🔒 Bloqueia rotas específicas de PF
     if (
       rota.includes('pegada') ||
       rota.includes('historicopontos') ||
@@ -87,7 +92,18 @@ const esconderRodape = pathname.includes('/pegada') && (usuario?.primeiroAcesso 
           </ScrollView>
         </View>
 
-        {/* 🔥 Rodapé aparece em tudo, menos se for primeiro acesso na pegada */}
+        {estaNoCatalogoPF && selecionados.length > 0 && (
+          <TouchableOpacity
+            onPress={abrirResumo} // 🔥 Aqui faz abrir o modal de resumo
+            style={styles.botaoCarrinho}
+          >
+            <MaterialCommunityIcons name="cart" size={28} color="#fff" />
+            <View style={styles.badge}>
+              <Text style={styles.badgeTexto}>{selecionados.length}</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
         {!esconderRodape && (
           <View style={styles.rodape}>
             <RodapeNavegacao ativo="menu" />
@@ -117,4 +133,35 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 48,
   },
+  botaoCarrinho: {
+    position: 'absolute',
+    bottom: Platform.OS === 'web' ? 100 : 110,
+    right: 20,
+    backgroundColor: colors.verde,
+    padding: 16,
+    borderRadius: 50,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    zIndex: 9999,
+  },
+  badge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: colors.vermelho,
+    borderRadius: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  badgeTexto: {
+    color: colors.branco,
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  rodape: {},
 });

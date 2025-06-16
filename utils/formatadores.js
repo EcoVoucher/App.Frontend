@@ -24,6 +24,15 @@ export const obterIconePegada = (ponto) => {
   if (ponto <= 600) return '🔵';
   return '🔴';
 };
+export const obterFaixasPegada = () => [
+  { label: '✅ Sustentável (até 1.6 gha)', limite: 160, cor: '#2E7D32' },
+  { label: '🟢 Abaixo da média (~2.7 gha)', limite: 270, cor: '#66BB6A' },
+  { label: '🟠 Média brasileira (~3.0 gha)', limite: 300, cor: '#FFB74D' },
+  { label: '🟡 Alta (~4.6 gha)', limite: 460, cor: '#FFD54F' },
+  { label: '🔵 Muito alta (~6.0 gha)', limite: 600, cor: '#64B5F6' },
+  { label: '🔴 Extremamente alta (~8.0 gha)', limite: Infinity, cor: '#EF5350' },
+];
+
 
 export const formatarDataBR = (dataISO) => {
   const data = new Date(dataISO);
