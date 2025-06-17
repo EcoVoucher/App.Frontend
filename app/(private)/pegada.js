@@ -97,7 +97,7 @@ export default function Pegada() {
 
   const calcularPegada = async () => {
   if (carregando) return;
-  setCarregando(true); // 🔥 PRIMEIRA COISA: trava o botão e a função!
+  setCarregando(true); 
 
   try {
     const todasRespondidas = perguntas.every((_, i) => {

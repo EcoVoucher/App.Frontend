@@ -6,16 +6,20 @@ export function CarrinhoProvider({ children }) {
   const [selecionados, setSelecionados] = useState([]);
 
   // ✅ Adiciona ou remove item do carrinho
-  const alternarSelecao = (lote) => {
-    const id = lote.codigos[0];
-    const existe = selecionados.find((v) => v.loteId === id);
+ const alternarSelecao = (lote) => {
+  const id = lote.idLote;
+  const existe = selecionados.find((v) => v.loteId === id);
+  console.log('Lote selecionado:', lote);
 
-    if (existe) {
-      setSelecionados(selecionados.filter((v) => v.loteId !== id));
-    } else {
-      const item = {
+
+  if (existe) {
+    // Se já existe no carrinho, remove
+    setSelecionados(selecionados.filter((v) => v.loteId !== id));
+
+  } else {
+    // Se não existe, adiciona com quantidade 1
+    const item = {
         loteId: id,
-        codigo: id,
         tipo: lote.tipo,
         produtos: lote.produtos,
         empresa: lote.empresa,
@@ -23,11 +27,12 @@ export function CarrinhoProvider({ children }) {
         validade: lote.validade,
         pontos: lote.pontos,
         quantidade: 1,
-        codigos: lote.codigos,
+        codigos: lote.codigos, // ← mais coerente com o restante do projeto
       };
-      setSelecionados([...selecionados, item]);
-    }
-  };
+    setSelecionados([...selecionados, item]);
+  }
+};
+
 
   // ✅ Limpa todo o carrinho
   const limparCarrinho = () => {

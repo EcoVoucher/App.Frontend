@@ -280,7 +280,6 @@ const registrarDeposito = async (cpf, materiais, totalPontos,codigo) => {
 };
 
 //movimentação de pontos-cnpj e cpf
-
 const registrarMovimentacao = async (cpf, tipo, pontos, descricao, codigo = null) => 
  {
   const usuarios = await obterUsuarios();
@@ -355,8 +354,18 @@ const gerarCodigosVoucher = async (quantidade) => {
 //   endereco: "Rua tal...",
 //   cnpj: "12345678000100"
 // }
+
+
+//usando dentro de gerar voucher
 const gerarVouchersPJ = async (cnpj, dados) => {
   await simularAtraso();
+
+  // 🔸 Definindo os pontos dentro da função
+  const pontosPorTipo = {
+    Alimentacao: 150,
+    Higiene: 100,
+    Transporte: 50,
+  };
 
   const usuarios = await obterUsuarios();
   const id = apenasNumeros(cnpj);
@@ -364,22 +373,24 @@ const gerarVouchersPJ = async (cnpj, dados) => {
 
   if (!usuario) throw new Error('Usuário PJ não encontrado.');
 
-  // 🔥 Validação dos produtos pelo tipo
+  // 🔥 Validação dos produtos conforme o tipo
   if (!validarProdutosPorTipo(dados.tipo, dados.produtos)) {
     throw new Error('Os produtos não correspondem ao tipo de voucher selecionado.');
   }
 
   const codigos = await gerarCodigosVoucher(dados.quantidade);
 
-  const e = usuario;
-  const enderecoCompleto = `${e.bairro}-${e.numero}, ${e.cidade}, ${e.cep}`;
+  const enderecoCompleto = `${usuario.bairro}-${usuario.numero}, ${usuario.cidade}, ${usuario.cep}`;
+  const validadeISO = `${dados.dataValidade}T00:00:00Z`;
 
   const lote = {
     idLote: codigos[0],
     tipo: dados.tipo,
     produtos: dados.produtos,
     quantidade: dados.quantidade,
-    dataValidade: dados.dataValidade,
+    dataValidade: validadeISO,
+
+    pontos: pontosPorTipo[dados.tipo] || 0, // ← pontos atribuídos aqui
     codigos,
     empresa: usuario.nomeEmpresa || 'Empresa não encontrada',
     endereco: enderecoCompleto,
@@ -397,7 +408,6 @@ const gerarVouchersPJ = async (cnpj, dados) => {
 };
 
 
-
 const obterVouchersPorCNPJ = async (cnpj) => {
   const chave = '@vouchersGerados';
   const json = await AsyncStorage.getItem(chave);
@@ -413,89 +423,113 @@ const obterVouchersDisponiveisPF = async () => {
   const hoje = new Date();
 
   return todos
-    .filter((lote) => 
+    .filter(
+      (lote) =>
         new Date(lote.dataValidade) >= hoje &&
         lote.quantidade > 0 &&
         lote.codigos?.length > 0
-      ).map((lote) => ({
+    )
+    .map((lote) => ({
+      idLote: lote.idLote,
       tipo: lote.tipo,
       produtos: lote.produtos,
-      pontos: lote.tipo === 'Alimentacao' ? 150 : lote.tipo === 'Higiene' ? 100 : 50,
+      pontos: lote.pontos, // 🔸 pontos já estão definidos no momento da geração
       empresa: lote.empresa,
       endereco: lote.endereco,
       validade: lote.dataValidade,
       quantidade: lote.quantidade,
-      codigos: lote.codigos.slice(0, lote.quantidade) 
+      codigos: lote.codigos.slice(0, lote.quantidade), // garante que só aparecem os códigos disponíveis
     }));
-};
+};;
+
 
 const comprarVouchersPF = async (cpf, listaVouchers) => {
   const usuarios = await obterUsuarios();
   const id = apenasNumeros(cpf);
   const index = usuarios.findIndex((u) => apenasNumeros(u.cpf) === id);
+  
   if (index === -1) throw new Error('Usuário não encontrado.');
 
   const usuario = usuarios[index];
+
   const totalPontos = listaVouchers.reduce((acc, v) => acc + v.pontos, 0);
-  if ((usuario.pontos || 0) < totalPontos) throw new Error('Pontos insuficientes.');
+  if ((usuario.pontos || 0) < totalPontos) {
+    throw new Error('Pontos insuficientes.');
+  }
 
   const agora = new Date();
   const dataFormatada = agora.toLocaleString('pt-BR');
   const timestamp = agora.toISOString();
 
-  const json = await AsyncStorage.getItem('@vouchersGerados');
-  const todos = json ? JSON.parse(json) : [];
+  const jsonVouchers = await AsyncStorage.getItem('@vouchersGerados');
+  const vouchersGerados = jsonVouchers ? JSON.parse(jsonVouchers) : [];
 
-  let vouchersConsumidos = [];
+  const vouchersConsumidos = [];
 
   for (const desejado of listaVouchers) {
-  const lote = todos.find(
-    (l) =>
-      l.tipo === desejado.tipo &&
-      l.empresa === desejado.empresa &&
-      l.endereco === desejado.endereco &&
-      l.produtos?.join(',') === desejado.produtos?.join(',') &&
-      l.dataValidade === desejado.validade &&
-      l.quantidade > 0
-  );
+    const lote = vouchersGerados.find(
+      (l) => l.idLote === desejado.idLote
+    );
 
-  if (!lote || !lote.codigos?.length) {
-    throw new Error(`Sem códigos disponíveis para: ${desejado.tipo}`);
+    if (!lote) {
+      throw new Error(`Lote não encontrado para: ${desejado.tipo}`);
+    }
+
+    if (!lote.codigos?.length) {
+      throw new Error(`Sem códigos disponíveis para: ${desejado.tipo}`);
+    }
+
+    // 🔒 Verificar se já comprou esse lote
+    const jaComprou = (usuario.movimentacoes || []).find(
+      (m) =>
+        m.idLote === desejado.idLote &&
+        m.tipo === 'saida' &&
+        ['valido', 'utilizado'].includes(m.status)
+    );
+
+    if (jaComprou) {
+      throw new Error(`Você já adquiriu um voucher do lote ${desejado.tipo}.`);
+    }
+
+    const cnpjEmpresa = lote.cnpj || '';
+    const codigoUsado = lote.codigos.shift();
+
+    // Adicionar movimentação
+    usuario.movimentacoes = usuario.movimentacoes || [];
+    usuario.movimentacoes.push({
+      tipo: 'saida',
+      descricao: `Troca por voucher de ${desejado.tipo}`,
+      tipoVoucher: desejado.tipo,
+      pontos: desejado.pontos,
+      data: dataFormatada,
+      timestamp,
+      codigo: codigoUsado,
+      produtos: desejado.produtos,
+      empresa: desejado.empresa,
+      endereco: desejado.endereco,
+      validade: desejado.validade,
+      status: 'valido',
+      cnpj: cnpjEmpresa,
+      quantidade: 1,
+      idLote: desejado.idLote,
+    });
+
+    // Descontar pontos
+    usuario.pontos = (usuario.pontos || 0) - desejado.pontos;
+
+    vouchersConsumidos.push(codigoUsado);
   }
 
-  const cnpjEmpresa = lote.cnpj || '';
-
-  // Pega um código único do lote
-  const codigoUsado = lote.codigos.shift();
-
-  // Adiciona movimentação com esse código
-  usuario.movimentacoes = usuario.movimentacoes || [];
- usuario.movimentacoes.push({
-  tipo: 'saida',
-  descricao: `Troca por voucher de ${desejado.tipo}`,
-  tipoVoucher: desejado.tipo,
-  pontos: desejado.pontos,
-  data: dataFormatada,
-  timestamp: timestamp,
-  codigo: codigoUsado,
-  produtos: desejado.produtos,
-  empresa: desejado.empresa,
-  endereco: desejado.endereco,
-  validade: desejado.validade,
-  status: 'valido',
-  cnpj: cnpjEmpresa,
-  quantidade: 1, 
-});
-
-  usuario.pontos = (usuario.pontos || 0) - desejado.pontos;
-  vouchersConsumidos.push(codigoUsado);
-}
-
   await salvarUsuarios(usuarios);
-  await AsyncStorage.setItem('@vouchersGerados', JSON.stringify(todos));
+  await AsyncStorage.setItem('@vouchersGerados', JSON.stringify(vouchersGerados));
 
-  return { status: 'ok', message: 'Compra realizada com sucesso.', codigos: vouchersConsumidos };
+  return {
+    status: 'ok',
+    message: 'Compra realizada com sucesso.',
+    codigos: vouchersConsumidos,
+  };
 };
+
 
 async function marcarVoucherComoUtilizado(codigoAlvo) {
   const usuarios = await obterUsuarios();

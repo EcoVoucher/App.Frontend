@@ -1,8 +1,10 @@
+const regexSenha = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{6,}$/;
+const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export const validarCamposObrigatorios = (dados, campos, tipoPessoa) => {
   const erros = {};
 
-  const regexSenha = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{6,}$/;
-  const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+ 
 
   campos.forEach((campo) => {
     const valor = dados[campo];
@@ -101,23 +103,33 @@ export const validarCamposObrigatorios = (dados, campos, tipoPessoa) => {
         }
         break;
 
-      case 'dataValidade':
+     case 'dataValidade':
+        if (!valor || !/^\d{2}\/\d{2}\/\d{4}$/.test(valor)) {
+          erros.dataValidade = 'Formato inválido. Use dd/mm/aaaa';
+          break;
+        }
+
         const [diaV, mesV, anoV] = valor.split('/');
         const validade = new Date(`${anoV}-${mesV}-${diaV}T00:00:00`);
-        const hojeValidade = new Date();
-        const dataMinima = new Date();
-        const dataMaxima = new Date();
-        dataMinima.setDate(hojeValidade.getDate() + 10);
-        dataMaxima.setDate(hojeValidade.getDate() + 365);
 
         if (isNaN(validade.getTime())) {
           erros.dataValidade = 'Data inválida';
-        } else if (validade < dataMinima) {
-          erros.dataValidade = 'Validade deve ser no mínimo 10 dias à frente';
+          break;
+        }
+
+        const hojeV = new Date();
+        const dataMinima = new Date(hojeV);
+        const dataMaxima = new Date(hojeV);
+        dataMinima.setDate(dataMinima.getDate() + 10);
+        dataMaxima.setDate(dataMaxima.getDate() + 365);
+
+        if (validade < dataMinima) {
+          erros.dataValidade = 'Validade deve ser no mínimo 10 dias no futuro';
         } else if (validade > dataMaxima) {
-          erros.dataValidade = 'Validade não pode ultrapassar 1 ano';
+          erros.dataValidade = 'Validade não pode passar de 1 ano';
         }
         break;
+
     }
   });
 

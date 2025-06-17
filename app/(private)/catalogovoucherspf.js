@@ -26,7 +26,8 @@ import VerMaisMenos from '../../components/VerMaisMenos';
 
 
 const { width, height } = Dimensions.get('window');
-const tipos = ['Alimentacao', 'Transporte', 'Higiene'];
+const tipos = ['Todos', 'Alimentacao', 'Transporte', 'Higiene'];
+
 
 export default function CatalogoVouchersPF() {
   const { usuario } = useAuth();
@@ -87,7 +88,8 @@ export default function CatalogoVouchersPF() {
     setComprando(true);
     try {
       const listaFinal = selecionados.map((item) => ({
-        codigo: item.codigos[0],
+      idLote: item.loteId, 
+
         tipo: item.tipo,
         produtos: item.produtos,
         empresa: item.empresa,
@@ -144,10 +146,13 @@ export default function CatalogoVouchersPF() {
   };
 
 const filtrarPorTipo = () => {
-  const filtrados = vouchers.filter((v) => v.tipo === tipoSelecionado);
+  const filtrados =
+    tipoSelecionado === 'Todos'
+      ? vouchers
+      : vouchers.filter((v) => v.tipo === tipoSelecionado);
+
   return mostrarTodos ? filtrados : filtrados.slice(0, itensPorPagina);
 };
-
 
 const temMais = () => {
   const total = tipoSelecionado === 'Todos'
@@ -196,11 +201,11 @@ const temMais = () => {
 
         <FlatList
           data={filtrarPorTipo()}
-          keyExtractor={(item) => item.codigos[0]}
+          keyExtractor={(item) => item.idLote}
           scrollEnabled={false}
           renderItem={({ item }) => {
             const selecionado = selecionados.find(
-              (v) => v.loteId === item.codigos[0]
+            (v) => v.idLote === item.idLote
             );
             const saldoInsuficiente = saldoAtual < item.pontos;
 
