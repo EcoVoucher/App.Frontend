@@ -22,6 +22,7 @@ import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
 import VerMaisMenos from '../../components/VerMaisMenos';
+import Badge from '../../components/Badge';
 
 
 
@@ -75,75 +76,79 @@ export default function CatalogoVouchersPF() {
     abrirResumo();
   };
 
+
+
+
   const finalizarCompra = async () => {
-    if (comprando) return;
+  if (comprando) return;
 
-    if (totalPontos > saldoAtual) {
-      setModalErro('Você não possui pontos suficientes para essa compra.');
-      limparCarrinho();
-      fecharResumo();
-      return;
-    }
+  if (totalPontos > saldoAtual) {
+    setModalErro('Você não possui pontos suficientes para essa compra.');
+    limparCarrinho();
+    fecharResumo();
+    return;
+  }
 
-    setComprando(true);
-    try {
-      const listaFinal = selecionados.map((item) => ({
-      idLote: item.loteId, 
+  setComprando(true);
+  try {
+    const listaFinal = selecionados.map((item) => ({
+      idLote: item.idLote,
+      tipo: item.tipo,
+      produtos: item.produtos,
+      empresa: item.empresa,
+      endereco: item.endereco,
+      validade: item.validade,
+      pontos: item.pontos,
+    }));
 
-        tipo: item.tipo,
-        produtos: item.produtos,
-        empresa: item.empresa,
-        endereco: item.endereco,
-        validade: item.validade,
-        pontos: item.pontos,
-      }));
+    const resultado = await api.comprarVouchersPF(usuario.cpf, listaFinal); 
 
-      await api.comprarVouchersPF(usuario.cpf, listaFinal);
-      await carregarVouchers();
-      await carregarSaldoAtualizado();
+    await carregarVouchers();
+    await carregarSaldoAtualizado();
 
-      limparCarrinho();
-      fecharResumo();
-      setComprando(false);
+    limparCarrinho();
+    fecharResumo();
+    setComprando(false);
 
-      setModalSucesso({
-        titulo: 'Compra realizada com sucesso! 🎉',
-        conteudo: (
-          <>
-            <Text style={{ fontWeight: 'bold', marginBottom: 8 }}>
-              Vouchers adquiridos:
-            </Text>
-            {listaFinal.map((v, idx) => (
+    setModalSucesso({
+      titulo: 'Compra realizada com sucesso! 🎉',
+      conteudo: (
+        <>
+          <Text style={{ fontWeight: 'bold', marginBottom: 8 }}>
+            Vouchers adquiridos:
+          </Text>
+         {listaFinal.map((v, idx) => (
               <Text key={idx}>
-                • {v.tipo} – {v.codigo}
+                • {v.tipo} – {resultado.codigos?.[idx] || 'Sem código'}
               </Text>
             ))}
-            <Text style={{ fontWeight: 'bold', marginTop: 12 }}>
-              Novo saldo: {saldoAtual - totalPontos} pontos
-            </Text>
-            <Text style={{ marginTop: 10 }}>
-              Vá até o histórico de pontos para ver os vouchers adquiridos.
-            </Text>
-            <BotaoVerde
-              texto="Ir para o Histórico"
-              onPress={() => {
-                setModalSucesso(false);
-                router.push('/(private)/historicopontos');
-              }}
-              style={{ backgroundColor: '#66BB6A', marginTop: 16 }}
-            />
-          </>
-        ),
-      });
-    } catch (error) {
-      fecharResumo();
-      limparCarrinho();
-      setComprando(false);
-      setModalErro(
-        'Ocorreu um erro na compra. Tente novamente ou verifique seus pontos.'
-      );
-    }
-  };
+          <Text style={{ fontWeight: 'bold', marginTop: 12 }}>
+            Novo saldo: {saldoAtual - totalPontos} pontos
+          </Text>
+          <Text style={{ marginTop: 10 }}>
+            Vá até o histórico de pontos para ver os vouchers adquiridos.
+          </Text>
+          <BotaoVerde
+            texto="Ir para o Histórico"
+            onPress={() => {
+              setModalSucesso(false);
+              router.push('/(private)/historicopontos');
+            }}
+            style={{ backgroundColor: '#66BB6A', marginTop: 16 }}
+          />
+        </>
+      ),
+    });
+  } catch (error) {
+    fecharResumo();
+    limparCarrinho();
+    setComprando(false);
+    setModalErro(
+      'Ocorreu um erro na compra. Tente novamente ou verifique seus pontos.'
+    );
+  }
+};
+
 
 const filtrarPorTipo = () => {
   const filtrados =
@@ -226,6 +231,7 @@ const temMais = () => {
                   selecionado && styles.cardSelecionado,
                 ]}
               >
+                 {selecionado && <Badge texto="Selecionado" />}
                 <Text style={styles.cardTitulo}>{item.tipo}</Text>
                 <Text style={styles.cardInfo}>
                   🥫 Produtos: {item.produtos.join(', ')}

@@ -5,21 +5,17 @@ const CarrinhoContext = createContext();
 export function CarrinhoProvider({ children }) {
   const [selecionados, setSelecionados] = useState([]);
 
-  // ✅ Adiciona ou remove item do carrinho
- const alternarSelecao = (lote) => {
-  const id = lote.idLote;
-  const existe = selecionados.find((v) => v.loteId === id);
-  console.log('Lote selecionado:', lote);
+  const alternarSelecao = (lote) => {
+    const id = lote.idLote;
+    const existe = selecionados.find((v) => v.idLote === id);
 
-
-  if (existe) {
-    // Se já existe no carrinho, remove
-    setSelecionados(selecionados.filter((v) => v.loteId !== id));
-
-  } else {
-    // Se não existe, adiciona com quantidade 1
-    const item = {
-        loteId: id,
+    if (existe) {
+      // 🔄 Remove se já está selecionado
+      setSelecionados(selecionados.filter((v) => v.idLote !== id));
+    } else {
+      // ✅ Adiciona ao carrinho
+      const item = {
+        idLote: id,
         tipo: lote.tipo,
         produtos: lote.produtos,
         empresa: lote.empresa,
@@ -27,19 +23,16 @@ export function CarrinhoProvider({ children }) {
         validade: lote.validade,
         pontos: lote.pontos,
         quantidade: 1,
-        codigos: lote.codigos, // ← mais coerente com o restante do projeto
+        codigos: lote.codigos,
       };
-    setSelecionados([...selecionados, item]);
-  }
-};
+      setSelecionados([...selecionados, item]);
+    }
+  };
 
-
-  // ✅ Limpa todo o carrinho
   const limparCarrinho = () => {
     setSelecionados([]);
   };
 
-  // ✅ Calcula o total de pontos dos itens selecionados
   const totalPontos = selecionados.reduce(
     (acc, item) => acc + item.pontos * item.quantidade,
     0
@@ -60,3 +53,4 @@ export function CarrinhoProvider({ children }) {
 }
 
 export const useCarrinho = () => useContext(CarrinhoContext);
+

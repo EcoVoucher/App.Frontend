@@ -493,6 +493,8 @@ const comprarVouchersPF = async (cpf, listaVouchers) => {
 
     const cnpjEmpresa = lote.cnpj || '';
     const codigoUsado = lote.codigos.shift();
+    lote.quantidade = lote.quantidade - 1;
+
 
     // Adicionar movimentação
     usuario.movimentacoes = usuario.movimentacoes || [];

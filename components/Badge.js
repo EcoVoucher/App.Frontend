@@ -1,15 +1,8 @@
-import { Text, View, StyleSheet } from 'react-native';
-import { corStatus, textoStatus } from '../utils/status'; // 🔗 Importando do status.js
-import { fonts } from '../theme/fonts';
-import { spacing } from '../theme/spacing';
+import { View, Text, StyleSheet } from 'react-native';
 import { colors } from '../theme/colors';
+import { fonts } from '../theme/fonts';
 
-
-
-export default function BadgeStatus({ status }) {
-  const corFundo = corStatus[status] ?? corStatus.indefinido;
-  const texto = textoStatus[status] ?? 'Indefinido';
-
+export default function Badge({ texto, corFundo = colors.verde }) {
   return (
     <View style={[styles.badge, { backgroundColor: corFundo }]}>
       <Text style={styles.texto}>{texto}</Text>
@@ -19,10 +12,12 @@ export default function BadgeStatus({ status }) {
 
 const styles = StyleSheet.create({
   badge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
   texto: {
     color: colors.branco,
