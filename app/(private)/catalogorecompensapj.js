@@ -13,7 +13,7 @@ import {
   View,
 } from 'react-native';
 import BotaoVerde from '../../components/BotaoVerde';
-import BadgeStatus from '../../components/Badge.js';
+import Badge from '../../components/Badge.js';
 import BotaoVerdePequeno from '../../components/BotaoVerdePequeno';
 import InputField from '../../components/InputField';
 import ModalSucesso from '../../components/ModalSucesso';
@@ -26,7 +26,7 @@ import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
 import { validarCamposObrigatorios } from '../../utils/validarCamposObrigatorios';
 import VerMaisMenos from '../../components/VerMaisMenos';
-import { obterStatus, textoStatus } from '../../utils/status';
+import { obterStatus, textoStatus,corStatus } from '../../utils/status';
 
 const { width, height } = Dimensions.get('window');
 
@@ -55,6 +55,8 @@ export default function CatalogoRecompensaPJ() {
   const [erros, setErros] = useState({});
   const [vouchersGerados, setVouchersGerados] = useState([]);
   const [qtdAdquiridos, setQtdAdquiridos] = useState(0);
+  const [adquiridosPorLote, setAdquiridosPorLote] = useState({});
+
 
   const [mostrarTodos, setMostrarTodos] = useState(false);
   const [erroVisivel, setErroVisivel] = useState(false);
@@ -92,13 +94,23 @@ export default function CatalogoRecompensaPJ() {
     carregarVouchers();
   }, []);
 
-  useEffect(() => {
-    const buscarAdquiridos = async () => {
-      const total = await api.contarVouchersCompradosPorCNPJ(usuario.cnpj);
-      setQtdAdquiridos(total);
-    };
-    if (usuario?.cnpj) buscarAdquiridos();
-  }, [usuario, vouchersGerados]);
+ useEffect(() => {
+  const buscarAdquiridos = async () => {
+    try {
+      const { totalGeral, porLote } = await api.contarVouchersCompradosPorCNPJ(usuario.cnpj);
+      setQtdAdquiridos(totalGeral);   // valor numérico
+      setAdquiridosPorLote(porLote);  // objeto por lote
+    } catch (error) {
+      console.error('Erro ao buscar adquiridos:', error);
+    }
+  };
+
+  if (usuario?.cnpj) {
+    buscarAdquiridos();
+  }
+  if (usuario?.cnpj) buscarAdquiridos();
+}, [usuario, vouchersGerados]);
+
 
   const handleAbrirModal = () => {
     setTipo('');
@@ -157,7 +169,7 @@ export default function CatalogoRecompensaPJ() {
       carregarVouchers();
     } catch (error) {
       const mensagem = error?.message || 'Erro ao gerar voucher.';
-      setMensagemErro(mensagem);
+      setMensagemErro(JSON.stringify(resultado, null, 2)); 
       setErroVisivel(true);
     } finally {
       setGerandoVoucher(false);
@@ -194,12 +206,12 @@ export default function CatalogoRecompensaPJ() {
     <View style={styles.container}>
       <View style={styles.contentBox}>
         <View style={styles.boxResumo}>
-          <Text style={styles.titulo}>Histórico de Vouchers Emitidos</Text>
-          <Text style={styles.subtitulo}>
-            🧾 Lotes: {totalLotes} · ✅ Ativos: {qtdAtivos} · 🔁 Adquiridos: {qtdAdquiridos}
-          </Text>
+            <Text style={styles.titulo}>Histórico de Vouchers Emitidos</Text>
+            <Text style={styles.subtitulo}>
+              🧾 Lotes: {totalLotes} · ✅ Ativos: {qtdAtivos} · 🔁 Adquiridos: {qtdAdquiridos}
+            </Text>
 
-          <View style={styles.filtrosLinha}>
+            <View style={styles.filtrosLinha}>
              {['todos', 'validos', 'expirado'].map((value) => (
             <View key={value} style={styles.botaoFiltroBox}>
               <BotaoVerdePequeno
@@ -238,11 +250,12 @@ export default function CatalogoRecompensaPJ() {
 
         <FlatList
           data={mostrarTodos ? vouchersFiltrados : vouchersFiltrados.slice(0, itensPorPagina)}
-          keyExtractor={(_, i) => i.toString()}
+          keyExtractor={(item) => item.idLote}
           scrollEnabled={false}
           renderItem={({ item }) => {
             const total = item.quantidade;
-            const usados = total - item.codigos.length;
+            const usados = adquiridosPorLote[item.idLote] || 0;
+
             const percentual = total > 0 ? (usados / total) * 100 : 0;
             const corFundo = percentual === 100 ? '#f5f5f5' : percentual > 0 ? '#fffbe5' : '#e6ffed';
             const corBorda = percentual === 100 ? '#ccc' : percentual > 0 ? '#f0c674' : '#6acc8b';
@@ -253,7 +266,10 @@ export default function CatalogoRecompensaPJ() {
               <View style={[styles.card, { backgroundColor: corFundo, borderLeftColor: corBorda }]}>
                 <View style={styles.headerCard}>
                   <Text style={styles.cardTitulo}>{item.tipo}</Text>
-                  <BadgeStatus status={status} />
+                  <Badge
+                    texto={textoStatus[obterStatus(item)]}
+                    corFundo={corStatus[obterStatus(item)]}
+                  />
                 </View>
                 <Text style={styles.cardInfo}>🧾 Produtos: {item.produtos.join(', ')}</Text>
                 <Text style={styles.cardInfo}>
@@ -262,8 +278,9 @@ export default function CatalogoRecompensaPJ() {
                 <Text style={styles.cardInfo}>🏢 Empresa: {item.empresa}</Text>
                 <Text style={styles.cardInfo}>📍 Endereço: {item.endereco}</Text>
                 <Text style={styles.cardInfo}>
-                  🔁 Adquiridos: {usados} de {total}
+                  🔁 Adquiridos: {adquiridosPorLote[item.idLote] || 0} de {item.quantidade}
                 </Text>
+
                 <Text style={styles.cardInfo}>
                   🔑 Último código: {item.codigos[item.codigos.length - 1] || '---'}
                 </Text>

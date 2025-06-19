@@ -76,7 +76,7 @@ export default function Home() {
         setQtdVouchers(totalGerados);
 
         const utilizados = await api.contarVouchersCompradosPorCNPJ(u.cnpj); // 🔄 Substituir por GET /vouchers/comprados?cnpj=...
-        setVouchersUtilizados(utilizados);
+        setVouchersUtilizados(utilizados.totalGeral);
 
         setIcones([
           { imagem: require('../../assets/imagensEco/gerarVoucherIcon.png'), rota: '/(private)/catalogorecompensapj', label: 'Gerar Voucher' },

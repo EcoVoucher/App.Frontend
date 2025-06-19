@@ -38,11 +38,13 @@ export const validarCamposObrigatorios = (dados, campos, tipoPessoa) => {
         }
         break;
 
-      case 'confirmarSenha':
-        if (valor !== dados.senha) {
+      case 'confirmarSenha': {
+        const senhaReferencia = dados.senha ?? dados.novaSenha;
+        if (valor !== senhaReferencia) {
           erros.confirmarSenha = 'As senhas não coincidem';
         }
         break;
+      }
 
       case 'cpf':
         const numeros = valor.trim().replace(/\D/g, '');

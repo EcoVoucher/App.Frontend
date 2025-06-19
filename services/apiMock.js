@@ -563,7 +563,8 @@ const contarVouchersCompradosPorCNPJ = async (cnpj) => {
   const cnpjLimpo = apenasNumeros(cnpj);
   const usuarios = await obterUsuarios();
 
-  let total = 0;
+  let totalGeral = 0;
+  const porLote = {};
 
   for (const user of usuarios) {
     if (user.tipo === 'pf' && Array.isArray(user.movimentacoes)) {
@@ -571,17 +572,23 @@ const contarVouchersCompradosPorCNPJ = async (cnpj) => {
         if (
           mov.tipo === 'saida' &&
           ['valido', 'utilizado'].includes(mov.status) &&
-         mov.cnpj && apenasNumeros(mov.cnpj) === cnpjLimpo
-
+          mov.cnpj &&
+          apenasNumeros(mov.cnpj) === cnpjLimpo
         ) {
-          total += mov.quantidade || 1;
+          const qtd = mov.quantidade || 1;
+          totalGeral += qtd;
+
+          if (mov.idLote) {
+            porLote[mov.idLote] = (porLote[mov.idLote] || 0) + qtd;
+          }
         }
       }
     }
   }
 
-  return total;
+  return { totalGeral, porLote };
 };
+
 const obterVouchersPorCpfTipoECNPJ = async (cpf, tipo, cnpj) => {
   const usuarios = await obterUsuarios();
   const usuario = usuarios.find((u) => apenasNumeros(u.cpf) === apenasNumeros(cpf));
@@ -616,6 +623,41 @@ const obterVoucherPorCodigoECNPJ = async (codigo, cnpj) => {
 };
 
 
+///daqui para baixo funçoes tela perfil
+const alterarSenha = async (identificador, senhaAtual, novaSenha) => {
+  const usuarios = await obterUsuarios();
+  const id = apenasNumeros(identificador);
+
+  const index = usuarios.findIndex(
+    (u) => apenasNumeros(u.cpf || u.cnpj) === id
+  );
+
+  if (index === -1) throw new Error('Usuário não encontrado.');
+
+  const usuario = usuarios[index];
+
+  if (usuario.senha !== senhaAtual) {
+    throw new Error('Senha atual incorreta.');
+  }
+
+  const regexSenha = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{6,}$/;
+  if (!regexSenha.test(novaSenha)) {
+    throw new Error('Senha inválida. A senha deve ter letras, números e caractere especial.');
+  }
+
+  usuario.senha = novaSenha;
+  await salvarUsuarios(usuarios);
+
+  return { status: 'ok', message: 'Senha alterada com sucesso.' };
+};
+
+const obterUsuarioPorCNPJ = async (cnpj) => {
+  const usuarios = await obterUsuarios();
+  const id = apenasNumeros(cnpj);
+  return usuarios.find((u) => apenasNumeros(u.cnpj) === id);
+};
+
+
 export default {
   login,
   cadastroPF,
@@ -643,5 +685,6 @@ export default {
   contarVouchersCompradosPorCNPJ,
   obterVouchersPorCpfTipoECNPJ,
   obterVoucherPorCodigoECNPJ,
-
+  alterarSenha,
+  obterUsuarioPorCNPJ,
 };

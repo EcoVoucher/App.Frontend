@@ -2,6 +2,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 
+
 export default function Badge({ texto, corFundo = colors.verde }) {
   return (
     <View style={[styles.badge, { backgroundColor: corFundo }]}>

@@ -23,6 +23,9 @@ import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
 import VerMaisMenos from '../../components/VerMaisMenos';
 import Badge from '../../components/Badge';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
+
 
 
 
@@ -30,7 +33,7 @@ const { width, height } = Dimensions.get('window');
 const tipos = ['Todos', 'Alimentacao', 'Transporte', 'Higiene'];
 
 
-export default function CatalogoVouchersPF() {
+export default function CatalogoVouchersPF() {  
   const { usuario } = useAuth();
   const router = useRouter();
   const { mostrarResumo, abrirResumo, fecharResumo } = useModalCarrinho();
@@ -51,11 +54,6 @@ export default function CatalogoVouchersPF() {
     totalPontos,
   } = useCarrinho();
 
-  useEffect(() => {
-    carregarVouchers();
-    carregarSaldoAtualizado();
-  }, []);
-
   const carregarSaldoAtualizado = async () => {
     const user = await api.obterUsuarioPorCPF(usuario.cpf);
     setSaldoAtual(user.pontos || 0);
@@ -75,9 +73,17 @@ export default function CatalogoVouchersPF() {
     }
     abrirResumo();
   };
+  useFocusEffect(
+    useCallback(() => {
+      const atualizar = async () => {
+        await carregarSaldoAtualizado();
+        await carregarVouchers();
+      };
 
-
-
+      atualizar();
+    }, [])
+  );
+  
 
   const finalizarCompra = async () => {
   if (comprando) return;
@@ -140,14 +146,25 @@ export default function CatalogoVouchersPF() {
       ),
     });
   } catch (error) {
-    fecharResumo();
-    limparCarrinho();
-    setComprando(false);
+  fecharResumo();
+  limparCarrinho();
+  setComprando(false);
+
+  const mensagem = error?.message || '';
+
+  if (mensagem.includes('já adquiriu um voucher')) {
+    setModalErro('Você já adquiriu este voucher. Só é permitido 1 unidade por lote.');
+  } else if (mensagem.includes('Pontos insuficientes')) {
+    setModalErro('Você não possui pontos suficientes para essa compra.');
+  } else if (mensagem.includes('Sem códigos disponíveis')) {
+    setModalErro('Este voucher está esgotado no momento.');
+  } else {
     setModalErro(
       'Ocorreu um erro na compra. Tente novamente ou verifique seus pontos.'
     );
   }
-};
+}
+  };
 
 
 const filtrarPorTipo = () => {
@@ -294,7 +311,7 @@ const temMais = () => {
 
             <ScrollView style={{ maxHeight: 300 }}>
               {selecionados.map((item) => (
-                <View key={item.loteId} style={styles.cardResumo}>
+                <View key={item.idLote} style={styles.cardResumo}>
                   <Text>
                     <Text style={styles.labelNegrito}>Tipo:</Text> {item.tipo}
                   </Text>

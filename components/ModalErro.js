@@ -20,8 +20,16 @@ export default function ModalErro({ visivel, mensagem, onClose }) {
           <Text style={styles.titulo}>❌ Ocorreu um erro</Text>
 
           <View style={styles.scrollArea}>
-            <Text style={styles.mensagem}>{mensagem}</Text>
-          </View>
+              {typeof mensagem === 'object' ? (
+                Object.entries(mensagem).map(([chave, valor]) => (
+                  <Text key={chave} style={styles.mensagem}>
+                    {chave}: {JSON.stringify(valor)}
+                  </Text>
+                ))
+              ) : (
+                <Text style={styles.mensagem}>{mensagem}</Text>
+              )}
+            </View>
 
           <TouchableOpacity onPress={onClose} style={styles.botao}>
             <Text style={styles.botaoTexto}>OK</Text>
