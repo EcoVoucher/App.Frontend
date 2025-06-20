@@ -76,7 +76,7 @@ export default function Pegada() {
         Animated.timing(fadeAnim, {
           toValue: 0,
           duration: 200,
-          useNativeDriver: true,
+          useNativeDriver: true,  
         }),
         Animated.timing(fadeAnim, {
           toValue: 1,

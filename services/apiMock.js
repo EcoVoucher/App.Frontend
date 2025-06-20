@@ -624,6 +624,8 @@ const obterVoucherPorCodigoECNPJ = async (codigo, cnpj) => {
 
 
 ///daqui para baixo funçoes tela perfil
+
+
 const alterarSenha = async (identificador, senhaAtual, novaSenha) => {
   const usuarios = await obterUsuarios();
   const id = apenasNumeros(identificador);

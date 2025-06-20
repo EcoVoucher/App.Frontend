@@ -98,8 +98,8 @@ export default function CatalogoRecompensaPJ() {
   const buscarAdquiridos = async () => {
     try {
       const { totalGeral, porLote } = await api.contarVouchersCompradosPorCNPJ(usuario.cnpj);
-      setQtdAdquiridos(totalGeral);   // valor numérico
-      setAdquiridosPorLote(porLote);  // objeto por lote
+      setQtdAdquiridos(totalGeral);   
+      setAdquiridosPorLote(porLote);  
     } catch (error) {
       console.error('Erro ao buscar adquiridos:', error);
     }
@@ -223,7 +223,7 @@ export default function CatalogoRecompensaPJ() {
             ))}
              <TouchableOpacity onPress={() => setModalInfo(true)}>
               <Ionicons name="information-circle-outline" size={20} color={colors.verdeEscuro} />
-              <Text style={{color: colors.verdeEscuro, marginLeft: 4}}>Legenda</Text>
+              <Text style={{color: colors.verdeEscuro, marginLeft: 4}}></Text>
               </TouchableOpacity>
           </View>
 

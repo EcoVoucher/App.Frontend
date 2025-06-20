@@ -379,10 +379,12 @@ const temMais = () => {
 
       {/* 🔥 Modais de feedback */}
       <ModalSucesso
-        visivel={!!modalSucesso}
-        onFechar={() => setModalSucesso(false)}
-        mensagem={modalSucesso.conteudo}
-      />
+  visivel={!!modalSucesso}
+  onFechar={() => setModalSucesso(false)}
+  mensagem={modalSucesso.mensagem} // ✅ correto
+  titulo={modalSucesso.titulo}
+/>
+
       <ModalErro
         visivel={!!modalErro}
         onClose={() => setModalErro('')}

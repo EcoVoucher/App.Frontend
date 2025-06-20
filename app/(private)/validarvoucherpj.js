@@ -109,8 +109,10 @@ export default function ValidarVoucherPJ() {
         if (Object.keys(errosValidacao).length > 0 || !tipoBusca.trim()) {
           setMensagemErro(!tipoBusca.trim() ? 'Selecione um tipo de voucher.' : 'CPF inválido.');
           setErroVisivel(true);
-          return;
+          setBuscando(false); // 🔥 Destrava o botão
+          return;              // 🔥 Interrompe a busca
         }
+
         try {
         const resultado = await api.obterVouchersPorCpfTipoECNPJ(
           cpfBusca,
@@ -186,7 +188,7 @@ export default function ValidarVoucherPJ() {
           <InputField
             label="Código do voucher"
             value={codigo}
-            onChangeText={setCodigo}
+            onChangeText={(text) => setCodigo(text.toUpperCase())}
             placeholder="Digite o código"
           />
          <BotaoVerde

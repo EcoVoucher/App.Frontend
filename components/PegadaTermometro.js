@@ -7,12 +7,21 @@ import { obterFaixasPegada } from '../utils/formatadores';
 
 export default function PegadaTermometro({ pontuacao }) {
   const faixas = obterFaixasPegada();
-  const faixaAtual = faixas.find(f => pontuacao <= f.limite);
+  const faixaAtual = faixas.find(f => pontuacao <= f.limite) || faixas[faixas.length - 1];
 
+  // 🔥 Definir a altura das faixas conforme o impacto (mais alta se a pegada é pior)
+  const getAltura = (limite) => {
+    if (limite <= 160) return 12;
+    if (limite <= 270) return 14;
+    if (limite <= 300) return 16;
+    if (limite <= 460) return 18;
+    if (limite <= 600) return 20;
+    return 24; // 🔴 Extremamente alta
+  };
 
   return (
     <View style={styles.termometroBox}>
-      <Text style={styles.termometroTitulo}>Sua Pegada Atual</Text>
+      <Text style={styles.termometroTitulo}>🌎 Sua Pegada Atual</Text>
 
       <View style={styles.faixaContainer}>
         {faixas.map((f, i) => (
@@ -20,7 +29,10 @@ export default function PegadaTermometro({ pontuacao }) {
             key={i}
             style={[
               styles.faixa,
-              { backgroundColor: f.cor },
+              {
+                backgroundColor: f.cor,
+                height: getAltura(f.limite),
+              },
               f.limite === faixaAtual.limite && styles.faixaAtiva,
             ]}
           />
@@ -40,7 +52,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.branco,
     padding: spacing.md,
     borderRadius: 12,
-    elevation: 3,
+    elevation: 2,
     alignItems: 'center',
   },
   termometroTitulo: {
@@ -52,23 +64,26 @@ const styles = StyleSheet.create({
   faixaContainer: {
     flexDirection: 'row',
     width: '100%',
-    height: 20,
     borderRadius: 10,
     overflow: 'hidden',
     marginBottom: spacing.sm,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 2,
   },
   faixa: {
     flex: 1,
-    opacity: 0.3,
+    opacity: 1,
+    borderRadius: 8,
   },
   faixaAtiva: {
-    opacity: 1,
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: colors.preto,
   },
   pontuacaoTexto: {
     fontSize: fonts.size.sm,
     color: colors.preto,
     textAlign: 'center',
+    marginTop: 4,
   },
 });

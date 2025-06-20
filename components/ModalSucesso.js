@@ -72,10 +72,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   titulo: {
+    textAlign: 'center',
     fontSize: fonts.size.lg, // 🔥 Título maior
     fontWeight: fonts.weight.bold,
     color: colors.verde,
     marginBottom: spacing.md,
+
   },
   scrollArea: {
     maxHeight: height * 0.4,

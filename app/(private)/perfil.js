@@ -4,23 +4,21 @@ import {
   Text,
   StyleSheet,
   LayoutAnimation,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   Image,
   TouchableOpacity,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/apiMock';
+import FormSenhaPerfil from '../../components/forms/FormSenhaPerfil';
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
 import { validarCamposObrigatorios } from '../../utils/validarCamposObrigatorios';
-
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import ModalErro from '../../components/ModalErro';
 import ModalSucesso from '../../components/ModalSucesso';
-import InputText from '../../components/InputText';
-import BotaoVerde from '../../components/BotaoVerde';
+
 
 export default function Perfil() {
   const { usuario } = useAuth();
@@ -122,10 +120,13 @@ export default function Perfil() {
       : (usuario.nomeEmpresa || '').toUpperCase();
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+   <KeyboardAwareScrollView
+  contentContainerStyle={styles.container}
+  enableOnAndroid={true}
+  extraScrollHeight={20}
+  keyboardShouldPersistTaps="handled"
+>
+
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.header}>
           <Image
@@ -197,7 +198,8 @@ export default function Perfil() {
                   <Text style={styles.labelInfo}>Vouchers Gerados</Text>
                 </View>
                 <View style={styles.boxInfo}>
-                  <Text style={styles.valorInfo}>{vouchersAdquiridos}</Text>
+                  <Text style={styles.valorInfo}>{vouchersAdquiridos?.totalGeral ?? '0'}</Text>
+
                   <Text style={styles.labelInfo}>Adquiridos por PF</Text>
                 </View>
               </>
@@ -212,45 +214,26 @@ export default function Perfil() {
     </Text>
   </TouchableOpacity>
 
-  {senhaAberta && (
-    <>
-      <InputText
-        placeholder="Senha atual"
-        value={senhaAtual}
-        onChangeText={setSenhaAtual}
-        secureTextEntry={!mostrarSenhaAtual}
-        error={erros.senhaAtual}
-        mostrarSenha={mostrarSenhaAtual}
-        alternarSenha={() => setMostrarSenhaAtual(!mostrarSenhaAtual)}
-        containerStyle={{ marginBottom:spacing.md }}
+    {senhaAberta && (
+      <FormSenhaPerfil
+        senhaAtual={senhaAtual}
+        setSenhaAtual={setSenhaAtual}
+        novaSenha={novaSenha}
+        setNovaSenha={setNovaSenha}
+        confirmarNovaSenha={confirmarNovaSenha}
+        setConfirmarNovaSenha={setConfirmarNovaSenha}
+        erros={erros}
+        mostrarSenhaAtual={mostrarSenhaAtual}
+        setMostrarSenhaAtual={setMostrarSenhaAtual}
+        mostrarNovaSenha={mostrarNovaSenha}
+        setMostrarNovaSenha={setMostrarNovaSenha}
+        mostrarConfirmar={mostrarConfirmar}
+        setMostrarConfirmar={setMostrarConfirmar}
+        carregando={false}
+        onSubmit={handleAlterarSenha}
       />
+    )}
 
-      <InputText
-        placeholder="Nova senha"
-        value={novaSenha}
-        onChangeText={setNovaSenha}
-        secureTextEntry={!mostrarNovaSenha}
-        error={erros.novaSenha}
-        mostrarSenha={mostrarNovaSenha}
-        alternarSenha={() => setMostrarNovaSenha(!mostrarNovaSenha)}
-        containerStyle={{ marginBottom:spacing.md }}
-
-      />
-
-      <InputText
-        placeholder="Confirmar nova senha"
-        value={confirmarNovaSenha}
-        onChangeText={setConfirmarNovaSenha}
-        secureTextEntry={!mostrarConfirmar}
-        error={erros.confirmarSenha}
-        mostrarSenha={mostrarConfirmar}
-        alternarSenha={() => setMostrarConfirmar(!mostrarConfirmar)}
-        containerStyle={{ marginBottom:spacing.md }}
-      />
-
-      <BotaoVerde texto="Salvar nova senha" onPress={handleAlterarSenha} />
-    </>
-  )}
 </View>
         <ModalErro
           visivel={!!modalErro}
@@ -263,7 +246,7 @@ export default function Perfil() {
           onFechar={() => setModalSucesso('')}
         />
       </ScrollView>
-    </KeyboardAvoidingView>
+</KeyboardAwareScrollView>
   );
 }
 

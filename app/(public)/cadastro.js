@@ -148,8 +148,8 @@ export default function Cadastro() {
     return Object.keys(novoErros).length === 0;
   };
 
-  const handleCadastro = async () => {
-  if (carregando) return; 
+const handleCadastro = async () => {
+  if (carregando) return;
   if (!validarCampos()) return;
 
   setCarregando(true);
@@ -157,27 +157,29 @@ export default function Cadastro() {
     const dadosFormatados = formatarCadastro(dados);
 
     if (tipoPessoa === 'pf') {
-     // 🔄 Aqui usa a API mock - futuramente substituir por chamada real:
-        await apiMock.cadastroPF(dadosFormatados);
-        // 📝 Exemplo com API real:
-        // await api.cadastrarPF(dadosFormatados);
+      await apiMock.cadastroPF(dadosFormatados);
     } else {
-        await apiMock.cadastroPJ(dadosFormatados);
-      // 📝 Exemplo com API real:
-      // await api.cadastrarPJ(dadosFormatados);
+      await apiMock.cadastroPJ(dadosFormatados);
     }
-  
+
     setModalSucesso(true);
   } catch (error) {
     console.error(error);
-    setMensagemErro(
-      error?.message || error?.response?.data?.message || 'Não foi possível realizar o cadastro.'
-    );
-    setErroVisivel(true);
+    const mensagem = error?.message || error?.response?.data?.message || 'Não foi possível realizar o cadastro.';
+    
+    setMensagemErro(mensagem);
+    setErroVisivel(true); // 🔥 Continua mostrando o modal de erro como sempre fez
+
+    // ✅ Se for erro de CNPJ já cadastrado, além do modal, limpa o cadastro e volta para a escolha de tipo
+    if (mensagem.includes('CNPJ')) {
+      setDados(ESTADO_INICIAL);
+      setErros({}); 
+    }
   } finally {
     setCarregando(false);
   }
 };
+
 
 
   const limparCampos = () => {
@@ -233,14 +235,12 @@ export default function Cadastro() {
 
 <ModalSucesso
   visivel={modalSucesso}
+  exibirBotao={false}
   titulo="Cadastro realizado com sucesso!"
   mensagem={
     tipoPessoa === 'pj' 
       ? (
         <>
-          <Text style={{ textAlign: 'center', marginBottom: 8 }}>
-            Seu cadastro foi realizado com sucesso.
-          </Text>
           <Text style={{ textAlign: 'center', marginBottom: 8 }}>
             Aguarde a aprovação do administrador. Entraremos em contato.
           </Text>
