@@ -479,22 +479,9 @@ const comprarVouchersPF = async (cpf, listaVouchers) => {
       throw new Error(`Sem códigos disponíveis para: ${desejado.tipo}`);
     }
 
-    // 🔒 Verificar se já comprou esse lote
-    const jaComprou = (usuario.movimentacoes || []).find(
-      (m) =>
-        m.idLote === desejado.idLote &&
-        m.tipo === 'saida' &&
-        ['valido', 'utilizado'].includes(m.status)
-    );
-
-    if (jaComprou) {
-      throw new Error(`Você já adquiriu um voucher do lote ${desejado.tipo}.`);
-    }
-
     const cnpjEmpresa = lote.cnpj || '';
     const codigoUsado = lote.codigos.shift();
     lote.quantidade = lote.quantidade - 1;
-
 
     // Adicionar movimentação
     usuario.movimentacoes = usuario.movimentacoes || [];
@@ -624,7 +611,11 @@ const obterVoucherPorCodigoECNPJ = async (codigo, cnpj) => {
 
 
 ///daqui para baixo funçoes tela perfil
-
+const obterUsuarioPorCNPJ = async (cnpj) => {
+  const usuarios = await obterUsuarios();
+  const id = apenasNumeros(cnpj);
+  return usuarios.find((u) => apenasNumeros(u.cnpj) === id);
+};
 
 const alterarSenha = async (identificador, senhaAtual, novaSenha) => {
   const usuarios = await obterUsuarios();
@@ -653,11 +644,6 @@ const alterarSenha = async (identificador, senhaAtual, novaSenha) => {
   return { status: 'ok', message: 'Senha alterada com sucesso.' };
 };
 
-const obterUsuarioPorCNPJ = async (cnpj) => {
-  const usuarios = await obterUsuarios();
-  const id = apenasNumeros(cnpj);
-  return usuarios.find((u) => apenasNumeros(u.cnpj) === id);
-};
 
 
 export default {

@@ -39,7 +39,7 @@ export default function CatalogoVouchersPF() {
   const { mostrarResumo, abrirResumo, fecharResumo } = useModalCarrinho();
 
   const [vouchers, setVouchers] = useState([]);
-  const [modalSucesso, setModalSucesso] = useState(false);
+  const [modalSucesso, setModalSucesso] = useState({titulo: '', conteudo: null});
   const [modalErro, setModalErro] = useState('');
   const [tipoSelecionado, setTipoSelecionado] = useState('Alimentacao');
   const [saldoAtual, setSaldoAtual] = useState(0);
@@ -209,7 +209,11 @@ const temMais = () => {
             🥇 Saldo atual: {saldoAtual} pontos
           </Text>
 
-          <View style={styles.filtrosLinha}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filtrosLinha}
+          >
             {tipos.map((tipo) => (
               <BotaoVerdePequeno
                 key={tipo}
@@ -218,7 +222,8 @@ const temMais = () => {
                 ativo={tipo === tipoSelecionado}
               />
             ))}
-          </View>
+          </ScrollView>
+
         </View>
 
         <FlatList
@@ -378,13 +383,12 @@ const temMais = () => {
       </Modal>
 
       {/* 🔥 Modais de feedback */}
-      <ModalSucesso
-  visivel={!!modalSucesso}
-  onFechar={() => setModalSucesso(false)}
-  mensagem={modalSucesso.mensagem} // ✅ correto
+  <ModalSucesso
+  visivel={!!modalSucesso.titulo}
   titulo={modalSucesso.titulo}
+  mensagem={modalSucesso.conteudo}
+  onFechar={() => setModalSucesso({ titulo: '', conteudo: null })}
 />
-
       <ModalErro
         visivel={!!modalErro}
         onClose={() => setModalErro('')}
@@ -428,13 +432,12 @@ const styles = StyleSheet.create({
     color: colors.verde,
     marginBottom: spacing.md,
   },
-  filtrosLinha: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
-  },
+ filtrosLinha: {
+  flexDirection: 'row',
+  gap: spacing.sm,
+  paddingHorizontal: spacing.sm,
+},
+
   card: {
     padding: spacing.sm,
     borderRadius: 12,

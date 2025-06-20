@@ -126,23 +126,21 @@ export default function Perfil() {
   extraScrollHeight={20}
   keyboardShouldPersistTaps="handled"
 >
-
       <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.header}>
+        {/* Dados Cadastrais */}
+        <View style={styles.card}>
+          <View style={styles.header}>
           <Image
             source={require('../../assets/imagensEco/ecoVoucherIcon.png')}
             style={styles.logo}
           />
           <View>
-            <Text style={styles.titulo}>Olá, {nomeFormatado}</Text>
+            <Text style={styles.titulo}>Seu Perfil {nomeFormatado}</Text>
             <Text style={styles.subtitulo}>
               Transforme suas ações em benefícios
             </Text>
           </View>
         </View>
-
-        {/* Dados Cadastrais */}
-        <View style={styles.card}>
           <Text style={styles.cardTitle}>📄 Dados Cadastrais</Text>
           <View style={styles.linha}>
             <Text style={styles.label}>Nome:</Text>
@@ -251,15 +249,19 @@ export default function Perfil() {
 }
 
 const styles = StyleSheet.create({
+  container:{
+
+  },
   header: {
+    marginTop:spacing.xx,
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: spacing.lg,
     gap: 10,
   },
   logo: {
-    width: 60,
-    height: 60,
+    width: 80,
+    height: 80,
     resizeMode: 'contain',
   },
   titulo: {
