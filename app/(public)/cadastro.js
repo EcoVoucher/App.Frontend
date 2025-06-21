@@ -12,6 +12,8 @@ import ModalErro from '../../components/ModalErro';
 import BotaoVerde from '../../components/BotaoVerde';
 import FormCadastro from '../../components/forms/FormCadastro';
 import apiMock from '../../services/apiMock'; //substituir pela api.js
+// 🔥 Importe assim quando usar API real:
+import { cadastrarPF, cadastrarPJ } from '../../services/usuarioService';
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
@@ -156,6 +158,16 @@ const handleCadastro = async () => {
   try {
     const dadosFormatados = formatarCadastro(dados);
 
+    // ✅ === ATIVAR PARA API REAL ===
+    /*
+    if (tipoPessoa === 'pf') {
+      await cadastrarPF(dadosFormatados); // ← Importar de usuarioService.js
+    } else {
+      await cadastrarPJ(dadosFormatados); // ← Importar de usuarioService.js
+    }
+    */
+
+    // ✅ === ATIVAR PARA MOCK ===
     if (tipoPessoa === 'pf') {
       await apiMock.cadastroPF(dadosFormatados);
     } else {
@@ -165,22 +177,22 @@ const handleCadastro = async () => {
     setModalSucesso(true);
   } catch (error) {
     console.error(error);
-    const mensagem = error?.message || error?.response?.data?.message || 'Não foi possível realizar o cadastro.';
-    
-    setMensagemErro(mensagem);
-    setErroVisivel(true); // 🔥 Continua mostrando o modal de erro como sempre fez
+    const mensagem =
+      error?.response?.data?.message ||
+      error?.message ||
+      'Não foi possível realizar o cadastro.';
 
-    // ✅ Se for erro de CNPJ já cadastrado, além do modal, limpa o cadastro e volta para a escolha de tipo
+    setMensagemErro(mensagem);
+    setErroVisivel(true);
+
     if (mensagem.includes('CNPJ')) {
       setDados(ESTADO_INICIAL);
-      setErros({}); 
+      setErros({});
     }
   } finally {
     setCarregando(false);
   }
 };
-
-
 
   const limparCampos = () => {
     setDados(ESTADO_INICIAL);

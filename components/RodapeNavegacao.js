@@ -8,8 +8,9 @@ import {
   Modal,
   Pressable,
   Linking,
-  Platform
 } from 'react-native';
+// import apiMock from '../../services/apiMock';
+// import { AuthService } from '../../services/authService';
 import { useRouter, usePathname } from 'expo-router';
 import { FontAwesome, Entypo, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
@@ -67,13 +68,24 @@ export default function RodapeNavegacao() {
       icone: usuario ? 'sign-out' : 'user',
       texto: usuario ? 'Logout' : 'Login',
       acao: async () => {
-        if (usuario) {
-          await logout();
-          router.replace('/(public)/login');
-        } else {
-          router.push('/(public)/login');
-        }
-      },
+  if (usuario) {
+    try {
+      // 🔗 Chama o backend para invalidar o token (se o backend usar isso)
+      await AuthService.logout();
+    } catch (error) {
+      console.log('Erro ao fazer logout na API:', error);
+      // 🔥 Mesmo que a API falhe, ainda faz o logout local
+    }
+
+    // 🧹 Faz o logout local normalmente
+    await logout();
+
+    // 🚪 Redireciona para login
+    router.replace('/(public)/login');
+  } else {
+    router.push('/(public)/login');
+  }
+},
     },
   ];
 

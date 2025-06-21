@@ -7,12 +7,15 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import apiMock from '../../services/apiMock'; // 🔄 Trocar por `api.js` no futuro
+import { AuthService } from '../../services/authService';// ✅ Atualmente rodando no MOCK.
 import { Masks } from 'react-native-mask-input';
 import ModalErro from '../../components/ModalErro';
-import ModalSucesso from '../../components/ModalSucesso'; // ✅ Adicionado para uso futuro
+import ModalSucesso from '../../components/ModalSucesso'; 
 import FormRecuperarSenha from '../../components/forms/FormRecuperarSenha';
 import { validarCamposObrigatorios } from '../../utils/validarCamposObrigatorios';
-import apiMock from '../../services/apiMock'; // 🔄 Trocar por `api.js` no futuro
+
+
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
@@ -50,8 +53,6 @@ export default function RecuperarSenha() {
 
     setCarregando(true);
     try {
-      // 🔄 Substituir por chamada real no futuro:
-      // const resposta = await api.recuperarSenha(dadosValidacao);
       const resposta = await apiMock.recuperarSenha({
         cpf: tipoPessoa === 'pf' ? dados.cpf : undefined,
         cnpj: tipoPessoa === 'pj' ? dados.cpf : undefined,
@@ -64,14 +65,19 @@ export default function RecuperarSenha() {
         throw new Error('Não foi possível gerar o token.');
       }
 
-      /* ✅ MODO FUTURO (com API real):
-      if (resposta?.sucesso) {
-        setModalSucessoVisivel(true);
-      } else {
-        throw new Error(resposta?.mensagem || 'Erro ao recuperar senha.');
-      }
-      */
+    /* 
+    🔗 === MODO API REAL (ativar no futuro) ===
+    const resposta = await AuthService.recuperarSenha({
+      cpf: tipoPessoa === 'pf' ? dados.cpf : undefined,
+      cnpj: tipoPessoa === 'pj' ? dados.cpf : undefined,
+    });
 
+    if (resposta?.sucesso) {
+      setModalSucessoVisivel(true); // ✔️ Exibe que foi enviado para o e-mail
+    } else {
+      throw new Error(resposta?.erro || 'Erro ao recuperar senha.');
+    }
+    */
     } catch (error) {
       console.error(error);
       setMensagemErro(error?.message || 'Erro ao recuperar senha.');

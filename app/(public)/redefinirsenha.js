@@ -8,6 +8,8 @@ import {
   Platform,
   Dimensions,
 } from 'react-native';
+import apiMock from '../../services/apiMock'; // 🔄 Trocar por `api.js` no futuro
+import { AuthService } from '../../services/authService';//
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import InputField from '../../components/InputField';
 import BotaoVerde from '../../components/BotaoVerde';
@@ -17,7 +19,7 @@ import { validarCamposObrigatorios } from '../../utils/validarCamposObrigatorios
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
-import apiMock from '../../services/apiMock'; // 🔄 Trocar futuramente por api.js
+
 
 const { width } = Dimensions.get('window');
 
@@ -49,17 +51,20 @@ export default function RedefinirSenha() {
   /*
   // 🔄 FUTURO: validação do token com API real
   useEffect(() => {
-    const verificarToken = async () => {
-      try {
-        await api.validarToken(token); // ex: GET /auth/validar-token?token=XYZ
-      } catch (error) {
-        setMensagemErro('Token inválido ou expirado.');
-        setErroVisivel(true);
+  const verificarToken = async () => {
+    try {
+      const resposta = await AuthService.validarToken(token);
+      if (!resposta?.valido) {
+        throw new Error(resposta?.erro || 'Token inválido ou expirado.');
       }
-    };
+    } catch (error) {
+      setMensagemErro(error.message);
+      setErroVisivel(true);
+    }
+  };
 
-    verificarToken();
-  }, [token]);
+  verificarToken();
+}, [token]);
   */
 
   const handleSalvar = async () => {
@@ -80,7 +85,8 @@ export default function RedefinirSenha() {
       await apiMock.redefinirSenhaComToken({ token, novaSenha });
 
       // 🔄 FUTURO: chamada real à API
-      // await api.redefinirSenha({ token, senha: novaSenha });
+      //await AuthService.redefinirSenha({ token, senha: novaSenha });
+
 
       setModalSucesso(true);
     } catch (error) {

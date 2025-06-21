@@ -11,7 +11,8 @@ import ModalErro from '../../components/ModalErro';
 import BotaoVerde from '../../components/BotaoVerde';
 import FormLogin from '../../components/forms/FormLogin';
 import { useAuth } from '../../context/AuthContext';
-import apiMock from '../../services/apiMock';// import api from '../../services/api'; // 🔄 Substituir apiMock pela API real no futuro
+import apiMock from '../../services/apiMock';
+//import { AuthService } from '../../services/authService';
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
@@ -52,7 +53,7 @@ export default function Login() {
     return Object.keys(novoErros).length === 0;
   };
 
-  const handleLogin = async () => {
+ const handleLogin = async () => {
   if (carregando || bloqueado) return;
 
   if (!validarCampos()) {
@@ -78,9 +79,17 @@ export default function Login() {
   setCarregando(true);
 
   try {
-    // 🔄 Quando for usar a API real, descomente a linha abaixo e comente a do mock
-// const { token, usuario } = await api.login(cpfOuCnpj, senha, tipoPessoa);
-    const { token, usuario } = await apiMock.login(cpfOuCnpj, senha, tipoPessoa); // ✅ uso atual com mock
+    // ✅ Código atual com MOCK funcionando:
+    const { token, usuario } = await apiMock.login(cpfOuCnpj, senha, tipoPessoa);
+
+    /*
+    🔄 Código já pronto para API real — quando quiser usar:
+    const { token, usuario } = await AuthService.login({
+      cpfOuCnpj,
+      senha,
+      tipo: tipoPessoa,
+    });
+    */
 
     await login({ token, usuario });
 
@@ -92,50 +101,55 @@ export default function Login() {
       router.replace('/(private)/home');
     }
   } catch (error) {
-  console.error('Erro ao fazer login:', error);
-  
-    // 🔄 Quando estiver usando a API real, substitua esse tratamento:
-const mensagem = error?.message || 'Não foi possível acessar sua conta.';
+    // 🔥 Tratamento de erros inteligente e preparado para API real
+    let mensagem = error?.message || 'Não foi possível acessar sua conta.';
 
-    // 🔄 Por este (com axios, por exemplo):
     /*
-    let mensagem = 'Não foi possível acessar sua conta.';
+    // 🔄 Tratamento de erro mais robusto para usar com API real:
     if (error.response) {
-      if (error.response.status === 403) {
-        mensagem = 'Cadastro ainda não aprovado.';
-      } else if (error.response.status === 401) {
+      const status = error.response.status;
+      if (status === 400) {
+        mensagem = 'CPF/CNPJ e senha são obrigatórios.';
+      } else if (status === 401) {
         mensagem = 'CPF/CNPJ ou senha incorretos.';
+      } else if (status === 403) {
+        mensagem = 'Cadastro ainda não aprovado.';
+      } else if (status === 404) {
+        mensagem = 'Usuário não encontrado.';
       } else {
-        mensagem = error.response.data?.erro || mensagem;
+        mensagem = error.response.data?.mensagem || mensagem;
       }
     }
     */
 
-  // 🔴 PJ não aprovado: encerra loading, mostra erro e limpa campos
-  if (mensagem.includes('não aprovado')) {
-    setMensagemErro(mensagem);
+    // 🔴 PJ não aprovado: encerra loading, mostra erro e limpa campos
+    if (mensagem.includes('não aprovado')) {
+      setMensagemErro(mensagem);
+      setErroVisivel(true);
+      setCpf('');
+      setSenha('');
+      setCarregando(false);
+      return;
+    }
+
+    setTentativas((prev) => prev + 1);
+
+    if (tentativas + 1 >= 5) {
+      setBloqueado(true);
+      setMensagemErro(
+        'Por segurança, sua conta foi temporariamente bloqueada. Tente novamente em 30 segundos.'
+      );
+      setTimeout(() => {
+        setTentativas(0);
+        setBloqueado(false);
+      }, 30000);
+    } else {
+      setMensagemErro(mensagem);
+    }
+
     setErroVisivel(true);
-    setCpf('');
-    setSenha('');
-    setCarregando(false);
-    return;
-  }
-  setTentativas(prev => prev + 1);
-
-  if (tentativas + 1 >= 5) {
-    setBloqueado(true);
-    setMensagemErro('Por segurança, sua conta foi temporariamente bloqueada. Tente novamente em 30 segundos.');
-    setTimeout(() => {
-      setTentativas(0);
-      setBloqueado(false);
-    }, 30000);
-  } else {
-    setMensagemErro(error?.message || 'Não foi possível acessar sua conta.');
-  }
-
-  setErroVisivel(true);
   } finally {
-    setCarregando(false); 
+    setCarregando(false);
   }
 };
 
