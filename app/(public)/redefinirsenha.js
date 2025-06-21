@@ -9,7 +9,7 @@ import {
   Dimensions,
 } from 'react-native';
 import apiMock from '../../services/apiMock'; // 🔄 Trocar por `api.js` no futuro
-import { AuthService } from '../../services/authService';//
+import { AuthService } from '../../services/authService';//api
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import InputField from '../../components/InputField';
 import BotaoVerde from '../../components/BotaoVerde';
@@ -19,6 +19,7 @@ import { validarCamposObrigatorios } from '../../utils/validarCamposObrigatorios
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
+import { obterMensagemErro } from '../../utils/obterMensagemErro';
 
 
 const { width } = Dimensions.get('window');
@@ -90,7 +91,7 @@ export default function RedefinirSenha() {
 
       setModalSucesso(true);
     } catch (error) {
-      setMensagemErro(error?.message || 'Erro ao redefinir senha.');
+      setMensagemErro(obterMensagemErro(error, 'Erro ao redefinir senha.'));
       setErroVisivel(true);
     } finally {
       setCarregando(false);

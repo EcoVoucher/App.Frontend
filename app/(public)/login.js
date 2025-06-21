@@ -11,12 +11,13 @@ import ModalErro from '../../components/ModalErro';
 import BotaoVerde from '../../components/BotaoVerde';
 import FormLogin from '../../components/forms/FormLogin';
 import { useAuth } from '../../context/AuthContext';
-import apiMock from '../../services/apiMock';
-//import { AuthService } from '../../services/authService';
+//import apiMock from '../../services/apiMock';
+import { AuthService } from '../../services/authService';
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
 import { validarCamposObrigatorios } from '../../utils/validarCamposObrigatorios';
+import { obterMensagemErro } from '../../utils/obterMensagemErro';
 
 export default function Login() {
   const router = useRouter();
@@ -80,16 +81,16 @@ export default function Login() {
 
   try {
     // ✅ Código atual com MOCK funcionando:
-    const { token, usuario } = await apiMock.login(cpfOuCnpj, senha, tipoPessoa);
+    //const { token, usuario } = await apiMock.login(cpfOuCnpj, senha, tipoPessoa);
 
-    /*
-    🔄 Código já pronto para API real — quando quiser usar:
+    
+    //🔄 Código já pronto para API real — quando quiser usar:
     const { token, usuario } = await AuthService.login({
       cpfOuCnpj,
       senha,
       tipo: tipoPessoa,
     });
-    */
+    
 
     await login({ token, usuario });
 
@@ -104,23 +105,25 @@ export default function Login() {
     // 🔥 Tratamento de erros inteligente e preparado para API real
     let mensagem = error?.message || 'Não foi possível acessar sua conta.';
 
-    /*
+    
     // 🔄 Tratamento de erro mais robusto para usar com API real:
-    if (error.response) {
-      const status = error.response.status;
-      if (status === 400) {
-        mensagem = 'CPF/CNPJ e senha são obrigatórios.';
-      } else if (status === 401) {
-        mensagem = 'CPF/CNPJ ou senha incorretos.';
-      } else if (status === 403) {
-        mensagem = 'Cadastro ainda não aprovado.';
-      } else if (status === 404) {
-        mensagem = 'Usuário não encontrado.';
-      } else {
-        mensagem = error.response.data?.mensagem || mensagem;
-      }
-    }
-    */
+   if (error.response) {
+  const status = error.response.status;
+  if (status === 400) {
+    mensagem = 'CPF/CNPJ e senha são obrigatórios.';
+  } else if (status === 401) {
+    mensagem = 'CPF/CNPJ ou senha incorretos.';
+  } else if (status === 403) {
+    mensagem = 'Cadastro ainda não aprovado.';
+  } else if (status === 404) {
+    mensagem = 'Usuário não encontrado.';
+  } else {
+    mensagem = obterMensagemErro(error, mensagem);
+  }
+} else {
+  mensagem = obterMensagemErro(error, mensagem);
+}
+  
 
     // 🔴 PJ não aprovado: encerra loading, mostra erro e limpa campos
     if (mensagem.includes('não aprovado')) {

@@ -7,6 +7,7 @@ import { spacing } from '../../theme/spacing';
 import AsyncStorage from '../../utils/storage';
 import { obterComparativoPegada, formatarDataBR } from '../../utils/formatadores';
 // import { useAuth } from '../../context/AuthContext'; // 🔐 No futuro para proteger com token
+import { obterMensagemErro } from '../../utils/obterMensagemErro';
 
 export default function AdminDevScreen() {
   const [usuarios, setUsuarios] = useState([]);
@@ -27,10 +28,14 @@ export default function AdminDevScreen() {
 
       setUsuarios(lista);
       setVisiveis(new Array(lista.length).fill(false));
-    } catch (err) {
-      Alert.alert('Erro ao carregar usuários');
-    }
-  };
+    } catch (error) {
+    console.error(error);
+
+    const mensagem = obterMensagemErro(error, 'Erro ao carregar usuários.');
+
+    Alert.alert('Erro', mensagem);
+  }
+};
 
   const aprovarPJ = async (cnpj) => {
     try {
@@ -40,8 +45,10 @@ export default function AdminDevScreen() {
 
       Alert.alert('Sucesso', 'Cadastro aprovado com sucesso!');
       carregarUsuarios(); // ✅ Recarrega a lista após aprovação
-    } catch (err) {
-      Alert.alert('Erro ao aprovar cadastro', err.message || 'Erro desconhecido');
+    } catch (error) {
+      
+      const mensagem = obterMensagemErro(error, 'Erro ao aprovar cadastro.');
+      Alert.alert('Erro', mensagem);
     }
   };
 
@@ -56,9 +63,12 @@ export default function AdminDevScreen() {
     await AsyncStorage.multiRemove(['@usuarios_mock', '@vouchersGerados', 'contador_vouchers_gerados']);
     setUsuarios([]);
     Alert.alert('Base de usuários mock foi resetada!');
-  } catch (error) {
-    console.log('Erro ao resetar usuários:', error);
-    Alert.alert('Erro ao resetar dados');
+  }  catch (error) {
+    console.error('Erro ao resetar usuários:', error);
+
+    const mensagem = obterMensagemErro(error, 'Erro ao resetar dados.');
+
+    Alert.alert('Erro', mensagem);
   }
 };
   

@@ -5,3 +5,4 @@ export const formatarCadastro = (dados) => ({
   telefone: dados.telefone ? dados.telefone.replace(/\D/g, '') : '',
   cep: dados.cep ? dados.cep.replace(/\D/g, '') : ''
 });
+export const apenasNumeros = (valor) => (valor || '').replace(/\D/g, '');

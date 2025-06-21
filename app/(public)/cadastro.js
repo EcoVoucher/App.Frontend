@@ -11,7 +11,7 @@ import {
 import ModalErro from '../../components/ModalErro';
 import BotaoVerde from '../../components/BotaoVerde';
 import FormCadastro from '../../components/forms/FormCadastro';
-import apiMock from '../../services/apiMock'; //substituir pela api.js
+//import apiMock from '../../services/apiMock'; //substituir pela api.js
 // 🔥 Importe assim quando usar API real:
 import { cadastrarPF, cadastrarPJ } from '../../services/usuarioService';
 import { colors } from '../../theme/colors';
@@ -20,7 +20,7 @@ import { spacing } from '../../theme/spacing';
 import { validarCamposObrigatorios } from '../../utils/validarCamposObrigatorios';
 import { formatarCadastro } from '../../utils/formatarenvio';
 import ModalSucesso from '../../components/ModalSucesso';
-
+import { obterMensagemErro } from '../../utils/obterMensagemErro';
 const { width } = Dimensions.get('window');
 
 const ESTADO_INICIAL = {
@@ -159,37 +159,52 @@ const handleCadastro = async () => {
     const dadosFormatados = formatarCadastro(dados);
 
     // ✅ === ATIVAR PARA API REAL ===
-    /*
+  
     if (tipoPessoa === 'pf') {
       await cadastrarPF(dadosFormatados); // ← Importar de usuarioService.js
     } else {
       await cadastrarPJ(dadosFormatados); // ← Importar de usuarioService.js
     }
-    */
+    
 
-    // ✅ === ATIVAR PARA MOCK ===
+    /*/ ✅ === ATIVAR PARA MOCK ===
     if (tipoPessoa === 'pf') {
       await apiMock.cadastroPF(dadosFormatados);
     } else {
       await apiMock.cadastroPJ(dadosFormatados);
-    }
+    }/*/
 
     setModalSucesso(true);
-  } catch (error) {
-    console.error(error);
-    const mensagem =
-      error?.response?.data?.message ||
-      error?.message ||
-      'Não foi possível realizar o cadastro.';
+ } catch (error) {
+  console.error(error);
+  let mensagem = error?.message || 'Não foi possível realizar o cadastro.';
 
-    setMensagemErro(mensagem);
-    setErroVisivel(true);
+  if (error.response) {
+    const status = error.response.status;
 
-    if (mensagem.includes('CNPJ')) {
-      setDados(ESTADO_INICIAL);
-      setErros({});
+    if (status === 400) {
+      mensagem = 'Preencha todos os campos obrigatórios.';
+    } else if (status === 409) {
+      mensagem = 'CPF ou CNPJ já cadastrado.';
+    } else if (status === 422) {
+      mensagem = 'Dados inválidos. Verifique e tente novamente.';
+    } else {
+      mensagem = obterMensagemErro(error, mensagem);
     }
-  } finally {
+  } else {
+    mensagem = obterMensagemErro(error, mensagem);
+  }
+
+  setMensagemErro(mensagem);
+  setErroVisivel(true);
+
+  // ✅ Reset específico — aqui é seguro manter
+  if (mensagem.includes('CNPJ')) {
+    setDados(ESTADO_INICIAL);
+    setErros({});
+  }
+}
+ finally {
     setCarregando(false);
   }
 };

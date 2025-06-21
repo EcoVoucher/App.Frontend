@@ -8,13 +8,15 @@ import {
   ScrollView
 } from 'react-native';
 
-import apiMock from '../../services/apiMock'; // 🔄 Mock funcionando hoje
+//import apiMock from '../../services/apiMock'; // 🔄 Mock funcionando hoje
 import { DepositoService } from '../../services/depositoService'; // 🔗 API real — pronto para ativar
-
+import { apenasNumeros } from '../../utils/formatarenvio'; 
 import { Masks } from 'react-native-mask-input';
 import InputField from '../../components/InputField';
 import ModalComprovante from '../../components/ModalComprovante';
 import ModalErro from '../../components/ModalErro';
+import { obterMensagemErro } from '../../utils/obterMensagemErro';
+
 
 import { validarCamposObrigatorios } from '../../utils/validarCamposObrigatorios';
 import { colors } from '../../theme/colors';
@@ -41,11 +43,11 @@ const gerarSimulacao = () => {
     }));
 };
 
-// 🔄 Gerador de código local — Só no mock (API gera automaticamente)
+/*/ 🔄 Gerador de código local — Só no mock (API gera automaticamente)
 const gerarCodigoDeposito = () => {
   const timestamp = Date.now();
   return `DEP-${timestamp}`;
-};
+};/*/
 
 export default function DepositoMaterial() {
   const [cpf, setCpf] = useState('');
@@ -66,13 +68,14 @@ export default function DepositoMaterial() {
       setErroVisivel(true);
       return;
     }
+    const cpfLimpo = apenasNumeros(cpf);
 
     try {
       // 🔄 MOCK — Validação de CPF no mock
-      const usuario = await apiMock.obterUsuarioPorCPF(cpf);
+      //const usuario = await apiMock.obterUsuarioPorCPF(cpf);
 
       // 🔗 API — Validação de CPF na API (ATIVAR no futuro)
-      // const usuario = await DepositoService.consultarUsuarioPorCPF(cpf);
+      const usuario = await DepositoService.consultarUsuarioPorCPF(cpfLimpo);
 
       if (!usuario) {
         setMensagemErro('CPF não cadastrado no sistema.');
@@ -86,22 +89,22 @@ export default function DepositoMaterial() {
         (acc, item) => acc + item.quantidade * item.pontos,
         0
       );
-      const dataHora = new Date().toLocaleString('pt-BR');
-      const codigo = gerarCodigoDeposito();
+     // const dataHora = new Date().toLocaleString('pt-BR');
+     // const codigo = gerarCodigoDeposito();/*/
 
       // 🔄 MOCK — Registrar depósito no mock (funcionando hoje)
-      await apiMock.registrarDeposito(cpf, simulados, total, codigo);
+      //await apiMock.registrarDeposito(cpf, simulados, total, codigo);
 
       // 🔗 API — Registrar depósito na API (ATIVAR no futuro)
-      /*
-      const comprovante = await DepositoService.realizarDeposito(cpf, simulados, total);
+  
+      const comprovante = await DepositoService.realizarDeposito(cpfLimpo, simulados, total);
 
       const codigo = comprovante.deposito?.codigo 
                   ?? comprovante.deposito?._id 
                   ?? '---';
 
       const dataHora = new Date(comprovante.deposito?.data).toLocaleString('pt-BR');
-      */
+
 
       // 🔸 Atualiza estado para exibir no modal de comprovante (funciona igual no mock e na API)
       setExtrato({
@@ -115,11 +118,8 @@ export default function DepositoMaterial() {
       setModalVisivel(true);
       setCpf('');
     } catch (error) {
-      setMensagemErro(
-        error.response?.data?.message ||
-        error.message ||
-        'Erro ao registrar o depósito.'
-      );
+      console.error(error);
+      setMensagemErro(obterMensagemErro(error, 'Erro ao registrar o depósito.'));
       setErroVisivel(true);
     }
   };

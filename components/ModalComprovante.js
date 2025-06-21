@@ -76,12 +76,7 @@ const gerarHtml = (logoBase64) => {
           <Image source={logoEcoApp} style={styles.logo} resizeMode="contain" />
 
           <Text style={styles.titulo}>✅ Depósito Registrado com Sucesso!</Text>
-        
-    
-    //🔄 Mock → vindo de gerarCodigoDeposito()
           <Text style={styles.codigo}>Código: {extrato.codigo ?? extrato._id ?? '---'}</Text>
-          //🔗 API → vem do backend: comprovante.deposito.codigo ou comprovante.deposito._id?? '---'
-
 
           <Text style={styles.info}>CPF: {extrato.cpf}</Text>
           <Text style={styles.info}>Data/Hora: {extrato.dataHora}</Text>

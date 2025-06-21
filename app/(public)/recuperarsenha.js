@@ -14,7 +14,7 @@ import ModalErro from '../../components/ModalErro';
 import ModalSucesso from '../../components/ModalSucesso'; 
 import FormRecuperarSenha from '../../components/forms/FormRecuperarSenha';
 import { validarCamposObrigatorios } from '../../utils/validarCamposObrigatorios';
-
+import { obterMensagemErro } from '../../utils/obterMensagemErro';
 
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
@@ -42,11 +42,18 @@ export default function RecuperarSenha() {
     if (carregando) return;
     setTentouEnviar(true);
 
+    //validação mock
     const campos = tipoPessoa === 'pj' ? ['cnpj'] : ['cpf'];
     const dadosValidacao = {
       ...(tipoPessoa === 'pj' ? { cnpj: dados.cpf } : { cpf: dados.cpf }),
     };
 
+    /*🔗 === Validação na API REAL (usar no futuro) ===
+  const campos = ['cpfOuCnpj'];
+  const dadosValidacao = {
+    cpfOuCnpj: dados.cpf,
+  };
+  */
     const novoErros = validarCamposObrigatorios(dadosValidacao, campos, tipoPessoa);
     setErros(novoErros);
     if (Object.keys(novoErros).length > 0) return;
@@ -65,22 +72,22 @@ export default function RecuperarSenha() {
         throw new Error('Não foi possível gerar o token.');
       }
 
-    /* 
-    🔗 === MODO API REAL (ativar no futuro) ===
-    const resposta = await AuthService.recuperarSenha({
-      cpf: tipoPessoa === 'pf' ? dados.cpf : undefined,
-      cnpj: tipoPessoa === 'pj' ? dados.cpf : undefined,
-    });
+ /* 
+🔗 === MODO API REAL (ativar no futuro) ===
+const resposta = await AuthService.recuperarSenha({
+   cpfOuCnpj: dados.cpf, // ✅ API espera campo unificado
+});
 
-    if (resposta?.sucesso) {
-      setModalSucessoVisivel(true); // ✔️ Exibe que foi enviado para o e-mail
-    } else {
-      throw new Error(resposta?.erro || 'Erro ao recuperar senha.');
-    }
-    */
+if (resposta?.sucesso) {
+  setModalSucessoVisivel(true); // ✔️ Exibe que foi enviado para o e-mail
+} else {
+  throw new Error(resposta?.erro || 'Erro ao recuperar senha.');
+}
+*/ // ✅ Fecha o comentário corretamente aqui!
+
     } catch (error) {
       console.error(error);
-      setMensagemErro(error?.message || 'Erro ao recuperar senha.');
+      setMensagemErro(obterMensagemErro(error,'Erro ao recuperar senha.'));
       setErroVisivel(true);
     } finally {
       setCarregando(false);

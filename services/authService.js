@@ -18,8 +18,7 @@ export const AuthService = {
   },
 
   /**
-   * Faz logout do usuário (opcional para o backend).
-   * Frontend remove token localmente.
+   * Faz logout do usuário.
    * @returns {Promise<{ sucesso: boolean, mensagem: string }>}
    */
   logout: async () => {
@@ -27,16 +26,32 @@ export const AuthService = {
     return response.data;
   },
 
-  recuperarSenha: async ({ cpf, cnpj }) => {
-    const response = await api.post('/auth/recuperar-senha', { cpf, cnpj });
+  /**
+   * Envia solicitação de recuperação de senha.
+   * @param {string} cpfOuCnpj - CPF ou CNPJ sem máscara.
+   * @returns {Promise<{ sucesso: boolean, mensagem: string }>}
+   */
+  recuperarSenha: async ({ cpfOuCnpj }) => {
+    const response = await api.post('/auth/recuperar-senha', { cpfOuCnpj });
     return response.data;
   },
 
+  /**
+   * Redefine a senha usando o token recebido.
+   * @param {string} token
+   * @param {string} senha
+   * @returns {Promise<{ sucesso: boolean, mensagem: string }>}
+   */
   redefinirSenha: async ({ token, senha }) => {
     const response = await api.post('/auth/redefinir-senha', { token, senha });
     return response.data;
   },
 
+  /**
+   * Valida o token de redefinição de senha.
+   * @param {string} token
+   * @returns {Promise<{ valido: boolean, mensagem: string }>}
+   */
   validarToken: async (token) => {
     const response = await api.get(`/auth/validar-token?token=${token}`);
     return response.data;
