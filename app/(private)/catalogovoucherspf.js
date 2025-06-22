@@ -13,7 +13,7 @@ import {
 import { useCarrinho } from '../../context/CarrinhoContext';
 import { useAuth } from '../../context/AuthContext';
 import { useModalCarrinho } from '../../context/ModalCarrinhoContext';
-import { VouchersService } from '../../services/vouchersService';
+import { VouchersService } from '../../services/voucherService';
 import { UsuarioService } from '../../services/usuarioService';
 import BotaoVerde from '../../components/BotaoVerde';
 import BotaoVerdePequeno from '../../components/BotaoVerdePequeno';

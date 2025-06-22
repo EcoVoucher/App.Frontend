@@ -18,7 +18,7 @@ import { obterMensagemErro } from '../../utils/obterMensagemErro';
 import { apenasNumeros } from '../../utils/formatarenvio';
 
 import { UsuarioService } from '../../services/usuarioService'; // 🔗 API real — ativar futuramente
-import { VouchersService } from '../../services/vouchersService'; // 🔗 API real — ativar futuramente
+import { VouchersService } from '../../services/voucherService'; // 🔗 API real — ativar futuramente
 import { PegadaService } from '../../services/pegadaService'; // 🔗 API real — ativar futuramente
 
 
@@ -57,8 +57,8 @@ useEffect(() => {
       setPontos(usuarioAtualizado.pontos ?? 0);
 
       if (usuario.tipo === 'pf') {
-        const ultima = await PegadaService.obterUltimaPontuacao(documento);
-        setPegada(ultima?.pontuacao ?? 0);
+       // const ultima = await PegadaService.obterUltimaPontuacao(documento);
+        setPegada(usuarioAtualizado?.pontuacao ?? 0);
 
         setIcones([
           { imagem: require('../../assets/imagensEco/historicoIcon.png'), rota: '/(private)/historicopontos', label: 'Histórico \nde Pontos' },

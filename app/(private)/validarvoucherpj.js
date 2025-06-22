@@ -19,7 +19,7 @@ import ModalErro from '../../components/ModalErro';
 import { obterMensagemErro } from '../../utils/obterMensagemErro';
 import { validarCamposObrigatorios } from '../../utils/validarCamposObrigatorios';
 
-import { VouchersService } from '../../services/vouchersService';
+import { VouchersService } from '../../services/voucherService';
 
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';

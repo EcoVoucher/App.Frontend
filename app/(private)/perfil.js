@@ -9,9 +9,9 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
-
+import { voucherService } from '../../services/voucherService';
 import { UsuarioService } from '../../services/usuarioService';
-import { VouchersService } from '../../services/vouchersService';
+import { VouchersService } from '../../services/voucherService';
 import { PegadaService } from '../../services/pegadaService';
 import { obterMensagemErro } from '../../utils/obterMensagemErro';
 

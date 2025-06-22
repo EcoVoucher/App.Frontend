@@ -20,7 +20,7 @@ import ModalSucesso from '../../components/ModalSucesso';
 import ModalErro from '../../components/ModalErro';
 import SelectField from '../../components/SelectField';
 import { useAuth } from '../../context/AuthContext';
-import { VouchersService } from '../../services/vouchersService';
+import { VouchersService } from '../../services/voucherService';
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
