@@ -13,7 +13,8 @@ import {
 import { useCarrinho } from '../../context/CarrinhoContext';
 import { useAuth } from '../../context/AuthContext';
 import { useModalCarrinho } from '../../context/ModalCarrinhoContext';
-import api from '../../services/apiMock';
+import { VouchersService } from '../../services/vouchersService';
+import { UsuarioService } from '../../services/usuarioService';
 import BotaoVerde from '../../components/BotaoVerde';
 import BotaoVerdePequeno from '../../components/BotaoVerdePequeno';
 import ModalSucesso from '../../components/ModalSucesso';
@@ -25,6 +26,8 @@ import VerMaisMenos from '../../components/VerMaisMenos';
 import Badge from '../../components/Badge';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
+import { obterMensagemErro } from '../../utils/obterMensagemErro';
+
 
 
 
@@ -55,12 +58,12 @@ export default function CatalogoVouchersPF() {
   } = useCarrinho();
 
   const carregarSaldoAtualizado = async () => {
-    const user = await api.obterUsuarioPorCPF(usuario.cpf);
-    setSaldoAtual(user.pontos || 0);
+    const atual = await UsuarioService.obterUsuarioPorCPF(usuario.cpf);
+    setSaldoAtual(atual.pontos || 0);
   };
 
   const carregarVouchers = async () => {
-    const lista = await api.obterVouchersDisponiveisPF();
+    const lista = await VouchersService.listarVouchers();
     setVouchers(lista);
     const atual = await api.obterUsuarioPorCPF(usuario.cpf);
     setSaldoAtual(atual.pontos || 0);
@@ -107,7 +110,8 @@ export default function CatalogoVouchersPF() {
       pontos: item.pontos,
     }));
 
-    const resultado = await api.comprarVouchersPF(usuario.cpf, listaFinal); 
+    const resultado = await VouchersService.comprarVouchers(usuario.cpf, listaFinal);
+
 
     await carregarVouchers();
     await carregarSaldoAtualizado();
@@ -145,27 +149,29 @@ export default function CatalogoVouchersPF() {
         </>
       ),
     });
-  } catch (error) {
+ } catch (error) {
   fecharResumo();
   limparCarrinho();
   setComprando(false);
 
-  const mensagem = error?.message || '';
+  const mensagemApi = error?.message || '';
 
-  if (mensagem.includes('já adquiriu um voucher')) {
+  if (mensagemApi.includes('já adquiriu')) {
     setModalErro('Você já adquiriu este voucher. Só é permitido 1 unidade por lote.');
-  } else if (mensagem.includes('Pontos insuficientes')) {
+  } else if (mensagemApi.includes('Pontos insuficientes')) {
     setModalErro('Você não possui pontos suficientes para essa compra.');
-  } else if (mensagem.includes('Sem códigos disponíveis')) {
+  } else if (mensagemApi.includes('Sem códigos disponíveis')) {
     setModalErro('Este voucher está esgotado no momento.');
   } else {
-    setModalErro(
+    // 🟢 Fallback seguro e elegante
+    const mensagem = obterMensagemErro(
+      error,
       'Ocorreu um erro na compra. Tente novamente ou verifique seus pontos.'
     );
+    setModalErro(mensagem);
   }
 }
-  };
-
+};
 
 const filtrarPorTipo = () => {
   const filtrados =

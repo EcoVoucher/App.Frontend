@@ -17,4 +17,6 @@ export const UsuarioService = {
     const response = await api.get(`/usuarios/${cpfOuCnpj}`);
     return response.data;
   },
+
+  
 };

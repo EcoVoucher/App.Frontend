@@ -45,6 +45,21 @@ export default function Pegada() {
   }
 }, [resultado]);
 
+useEffect(() => {
+  const carregarUltimaPegada = async () => {
+    try {
+      const documento = apenasNumeros(usuario?.cpf);
+      const ultima = await PegadaService.obterUltimaPontuacao(documento);
+      setUltimaPontuacao(ultima?.pontuacao ?? null);
+    } catch (error) {
+      console.error('Erro ao carregar última pegada:', error);
+    }
+  };
+
+  carregarUltimaPegada();
+}, []);
+
+
   const perguntaAtual = perguntas[indiceAtual];
   const chaveAtual = `q${indiceAtual + 1}`;
 
@@ -111,7 +126,7 @@ export default function Pegada() {
       0
     );
 
-    if (soma === ultimaPontuacao) {
+   if (ultimaPontuacao !== null && soma === ultimaPontuacao) {
       Alert.alert('Pegada já salva', 'Você já salvou essa pegada.');
       setCarregando(false);
       return;

@@ -20,13 +20,13 @@ import ModalSucesso from '../../components/ModalSucesso';
 import ModalErro from '../../components/ModalErro';
 import SelectField from '../../components/SelectField';
 import { useAuth } from '../../context/AuthContext';
-import api from '../../services/apiMock';
+import { VouchersService } from '../../services/vouchersService';
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
 import { validarCamposObrigatorios } from '../../utils/validarCamposObrigatorios';
 import VerMaisMenos from '../../components/VerMaisMenos';
-import { obterStatus, textoStatus,corStatus } from '../../utils/status';
+import { obterStatus, textoStatus,corStatus,obterMensagemErro } from '../../utils/status';
 
 const { width, height } = Dimensions.get('window');
 
@@ -85,31 +85,25 @@ export default function CatalogoRecompensaPJ() {
 };
 
 
-  const carregarVouchers = async () => {
-    const lista = await api.obterVouchersPorCNPJ(usuario.cnpj);
-    setVouchersGerados(lista);
-  };
-
-  useEffect(() => {
-    carregarVouchers();
-  }, []);
-
- useEffect(() => {
-  const buscarAdquiridos = async () => {
-    try {
-      const { totalGeral, porLote } = await api.contarVouchersCompradosPorCNPJ(usuario.cnpj);
-      setQtdAdquiridos(totalGeral);   
-      setAdquiridosPorLote(porLote);  
-    } catch (error) {
-      console.error('Erro ao buscar adquiridos:', error);
-    }
-  };
-
-  if (usuario?.cnpj) {
-    buscarAdquiridos();
+const carregarDados = async () => {
+  try {
+    const [vouchers, estatisticas] = await Promise.all([
+      VouchersService.listarVouchers(),
+      VouchersService.obterEstatisticas(),
+    ]);
+    setVouchersGerados(vouchers);
+    setQtdAdquiridos(estatisticas.totalComprados);
+    setAdquiridosPorLote(estatisticas.porLote);
+  } catch (error) {
+    const mensagem = obterMensagemErro(error, 'Erro ao carregar dados.');
+    setMensagemErro(mensagem);
+    setErroVisivel(true);
   }
-  if (usuario?.cnpj) buscarAdquiridos();
-}, [usuario, vouchersGerados]);
+};
+
+useEffect(() => {
+  if (usuario) carregarDados();
+}, [usuario]);
 
 
   const handleAbrirModal = () => {
@@ -153,12 +147,13 @@ export default function CatalogoRecompensaPJ() {
     setGerandoVoucher(true);
 
     try {
-      await api.gerarVouchersPJ(usuario.cnpj, {
+      await VouchersService.gerarVoucher({
         tipo,
         produtos,
         quantidade: parseInt(quantidade),
-        dataValidade:validadeFormatada,
+        dataValidade: validadeFormatada,
       });
+
       setModalVisible(false);
       setModalSucesso(true);
       setTipo('');
@@ -166,12 +161,13 @@ export default function CatalogoRecompensaPJ() {
       setQuantidade('');
       setDataValidade('');
       setErros({});
-      carregarVouchers();
+     carregarDados();
     } catch (error) {
-      const mensagem = error?.message || 'Erro ao gerar voucher.';
-      setMensagemErro(JSON.stringify(resultado, null, 2)); 
+      const mensagem = obterMensagemErro(error, 'Erro ao gerar voucher.');
+      setMensagemErro(mensagem);
       setErroVisivel(true);
-    } finally {
+    }
+ finally {
       setGerandoVoucher(false);
     }
   };

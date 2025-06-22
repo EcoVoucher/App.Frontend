@@ -18,6 +18,9 @@ import PegadaTermometro from '../../components/PegadaTermometro';
 import { formatarDataBR, obterComparativoPegada } from '../../utils/formatadores';
 import VerMaisMenos from '../../components/VerMaisMenos';
 import { obterMensagemErro } from '../../utils/obterMensagemErro';
+import { apenasNumeros } from '../../utils/formatadores';
+
+
 const { height } = Dimensions.get('window');
 
 export default function HistoricoPegada() {

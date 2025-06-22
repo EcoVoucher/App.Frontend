@@ -644,7 +644,7 @@ const alterarSenha = async (identificador, senhaAtual, novaSenha) => {
   return { status: 'ok', message: 'Senha alterada com sucesso.' };
 };
 
-
+  
 
 export default {
   login,

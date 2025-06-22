@@ -7,7 +7,8 @@ import {
   ScrollView,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
-import api from '../../services/apiMock';// 🔄 Substituir por api real futuramente
+import { UsuarioService } from '../../services/usuarioService';
+import { obterMensagemErro } from '../../utils/obterMensagemErro';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { fonts } from '../../theme/fonts';
@@ -17,6 +18,7 @@ import VerMaisMenos from '../../components/VerMaisMenos';
 
 export default function HistoricoPontos() {
   const { usuario } = useAuth();
+
   const [historico, setHistorico] = useState([]);
   const [pontos, setPontos] = useState(0);
   const [filtro, setFiltro] = useState('todos');
@@ -26,8 +28,47 @@ export default function HistoricoPontos() {
   const [itensPorPagina] = useState(5);
   const [carregandoMais, setCarregandoMais] = useState(false);
 
+  const [erroVisivel, setErroVisivel] = useState(false);
+  const [mensagemErro, setMensagemErro] = useState('');
 
- const carregarMais = () => {
+ 
+
+
+  const opcoesFiltro = [
+    'todos',
+    'entrada',
+    'vouchers adquiridos',
+    'vouchers utilizados',
+    'vouchers expirados',
+  ];
+
+
+    const carregarDados = async () => {
+    try {
+      setCarregando(true);
+      const dados = await UsuarioService.obterPorId(usuario.cpf);
+      const movimentacoesOrdenadas = (dados.movimentacoes || []).sort(
+        (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+      );
+      setHistorico(movimentacoesOrdenadas);
+      setPontos(dados.pontos || 0);
+    } catch (error) {
+      const mensagem = obterMensagemErro(error, 'Erro ao carregar histórico.');
+      setMensagemErro(mensagem);
+      setErroVisivel(true);
+    } finally {
+      setCarregando(false);
+    }
+  };
+   
+    useEffect(() => {
+    if (usuario?.cpf) {
+      carregarDados();
+    }
+  }, [usuario]);
+
+
+  const carregarMais = () => {
   if (carregandoMais) return; 
   setCarregandoMais(true);
   setTimeout(() => {
@@ -44,38 +85,6 @@ export default function HistoricoPontos() {
     setCarregandoMais(false);
   }, 300);
 };
-
-
-  const opcoesFiltro = [
-    'todos',
-    'entrada',
-    'vouchers adquiridos',
-    'vouchers utilizados',
-    'vouchers expirados',
-  ];
-
-  useEffect(() => {
-    if (!usuario?.cpf) return;
-
-    const carregar = async () => {
-      try {
-        setCarregando(true);
-        // 🔄 Substituir por chamada à API real: GET /usuarios/:cpf/historico
-        const user = await api.obterUsuarioPorCPF(usuario.cpf);
-        const movs = (user.movimentacoes || []).sort(
-          (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
-        );
-        setHistorico(movs);
-        setPontos(user.pontos || 0);
-      } catch (error) {
-        console.error('Erro ao carregar histórico:', error);
-      } finally {
-        setCarregando(false);
-      }
-    };
-
-    carregar();
-  }, [usuario]);
 
   const totalEntradas = historico.filter((h) => h.tipo === 'entrada').length;
   const totalSaidas = historico.filter((h) => h.tipo === 'saida' && h.status === 'valido').length;
@@ -187,6 +196,13 @@ export default function HistoricoPontos() {
         carregando={carregandoMais}
       />
       </View>
+      
+    {/* 🚩 Modal de erro */}
+    <ModalErro
+      visivel={erroVisivel}
+      mensagem={mensagemErro}
+      onClose={() => setErroVisivel(false)}
+    />
     </View>
   );
 }

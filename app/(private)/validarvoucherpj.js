@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -9,16 +9,22 @@ import {
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
+
 import InputField from '../../components/InputField';
 import BotaoVerde from '../../components/BotaoVerde';
 import BotaoVerdePequeno from '../../components/BotaoVerdePequeno';
 import ModalSucesso from '../../components/ModalSucesso';
 import ModalErro from '../../components/ModalErro';
+
+import { obterMensagemErro } from '../../utils/obterMensagemErro';
 import { validarCamposObrigatorios } from '../../utils/validarCamposObrigatorios';
-import api from '../../services/apiMock';
+
+import { VouchersService } from '../../services/vouchersService';
+
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
+
 import logoEcoApp from '../../assets/imagensEco/eco-novo.jpeg';
 import { Masks } from 'react-native-mask-input';
 import { useAuth } from '../../context/AuthContext';
@@ -27,6 +33,7 @@ import { useAuth } from '../../context/AuthContext';
 
 export default function ValidarVoucherPJ() {
   const { usuario } = useAuth();
+
   const [codigo, setCodigo] = useState('');
   const [voucher, setVoucher] = useState(null);
   const [status, setStatus] = useState('');
@@ -34,10 +41,12 @@ export default function ValidarVoucherPJ() {
   const [cpfBusca, setCpfBusca] = useState('');
   const [tipoBusca, setTipoBusca] = useState('');
   const [vouchersEncontrados, setVouchersEncontrados] = useState([]);
+
   const [erros, setErros] = useState({});
   const [modalVisivel, setModalVisivel] = useState(false);
   const [erroVisivel, setErroVisivel] = useState(false);
   const [mensagemErro, setMensagemErro] = useState('');
+
   const [validando, setValidando] = useState(false);
   const [buscando, setBuscando] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
@@ -60,7 +69,10 @@ export default function ValidarVoucherPJ() {
       setValidando(true);
 
     try {
-      const resultado = await api.obterVoucherPorCodigoECNPJ(codigo, usuario.cnpj);
+       const resultado = await VouchersService.validarVoucherPorCodigo(
+        codigo.trim().toUpperCase(),
+        usuario.cnpj
+      );
 
       if (!resultado) {
         setMensagemErro('Voucher não localizado.');
@@ -68,15 +80,17 @@ export default function ValidarVoucherPJ() {
         setVoucher(null);
         return;
       }
-        setVoucher({ ...resultado, nome: resultado.nome || 'Usuário' });
-        setStatus(determinarStatus(resultado));
-      } catch (erro) {
-        setMensagemErro(erro.message || 'Erro ao validar voucher.');
-        setErroVisivel(true);
-      } finally {
-        setValidando(false);
-      }
-    };
+          setVoucher({ ...resultado });
+      setStatus(determinarStatus(resultado));
+    } catch (erro) {
+      const mensagem = obterMensagemErro(erro, 'Erro ao validar voucher.');
+      setMensagemErro(mensagem);
+      setErroVisivel(true);
+    } finally {
+      setValidando(false);
+    }
+  };
+
 
       const confirmarUso = async (codigoConfirmar = null) => {
         if (confirmando) return; 
@@ -84,19 +98,23 @@ export default function ValidarVoucherPJ() {
 
         try {
           const codigoAlvo = codigoConfirmar || voucher.codigo;
-          await api.marcarVoucherComoUtilizado(codigoAlvo);
 
-          setVoucher(null);
-          setCodigo('');
-          setVouchersEncontrados(vouchersEncontrados.filter(v => v.codigo !== codigoAlvo));
-          setModalVisivel(true);
-        } catch (error) {
-          setMensagemErro(error.message);
-          setErroVisivel(true);
-        } finally {
-          setConfirmando(false);
-        }
-    };
+         await VouchersService.utilizarVoucher(codigoAlvo, usuario.cnpj);
+
+      setVoucher(null);
+      setCodigo('');
+      setVouchersEncontrados(
+        vouchersEncontrados.filter((v) => v.codigo !== codigoAlvo)
+      );
+      setModalVisivel(true);
+    } catch (error) {
+      const mensagem = obterMensagemErro(error, 'Erro ao confirmar uso.');
+      setMensagemErro(mensagem);
+      setErroVisivel(true);
+    } finally {
+      setConfirmando(false);
+    }
+  };
         const buscarPorCpfETipo = async () => {
           if (buscando) return;
           setBuscando(true); 
@@ -114,24 +132,24 @@ export default function ValidarVoucherPJ() {
         }
 
         try {
-        const resultado = await api.obterVouchersPorCpfTipoECNPJ(
+        const resultado = await VouchersService.buscarVouchersPorCpfETipo(
           cpfBusca,
           tipoBusca,
           usuario.cnpj
         );
 
-        if (resultado.length === 0) {
-          setMensagemErro('Nenhum voucher válido encontrado.');
-          setErroVisivel(true);
-        }
-
-        setVouchersEncontrados(resultado);
-      } catch (error) {
-        setMensagemErro(error.message);
+         if (!resultado || resultado.length === 0) {
+        setMensagemErro('Nenhum voucher válido encontrado.');
         setErroVisivel(true);
-      } finally {
-        setBuscando(false);
       }
+        setVouchersEncontrados(resultado);
+       } catch (error) {
+      const mensagem = obterMensagemErro(error, 'Erro ao buscar vouchers.');
+      setMensagemErro(mensagem);
+      setErroVisivel(true);
+    } finally {
+      setBuscando(false);
+    }
     };
 
       const StatusBadge = ({ status }) => {

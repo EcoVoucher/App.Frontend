@@ -50,7 +50,7 @@ useEffect(() => {
 
   const carregarDados = async () => {
     try {
-      setCarregando(true); // 🔥 Começa carregando
+      setCarregando(true); //Começa carregando
       const documento = apenasNumeros(usuario.cpf || usuario.cnpj)
 
       const usuarioAtualizado = await UsuarioService.obterPorId(documento);
