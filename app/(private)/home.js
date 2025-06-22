@@ -9,20 +9,27 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Carousel from 'react-native-reanimated-carousel';
+import { useAuth } from '../../context/AuthContext'; 
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { fonts } from '../../theme/fonts';
 import AnimatedCard from '../../components/AnimatedCard';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import api from '../../services/apiMock';//🔄 Substituir por api.js real
+import { obterMensagemErro } from '../../utils/obterMensagemErro';
+import { apenasNumeros } from '../../utils/formatarenvio';
+
+import { UsuarioService } from '../../services/usuarioService'; // 🔗 API real — ativar futuramente
+import { VouchersService } from '../../services/vouchersService'; // 🔗 API real — ativar futuramente
+import { PegadaService } from '../../services/pegadaService'; // 🔗 API real — ativar futuramente
+
+
 import { obterComparativoPegada } from '../../utils/formatadores';
 
 export default function Home() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isLargeScreen = width > 500;
+  const { usuario } = useAuth();
 
-  const [usuario, setUsuario] = useState(null);
   const [pegada, setPegada] = useState(null);
   const [pontos, setPontos] = useState(0);
   const [qtdVouchers, setQtdVouchers] = useState(0);
@@ -36,32 +43,22 @@ export default function Home() {
     { texto: '🌍 Contribua com os ODS da ONU.' },
   ];
 
- useEffect(() => {
+useEffect(() => {
+  if (!usuario) return;
+
   let intervalo;
 
   const carregarDados = async () => {
     try {
-      const json = await AsyncStorage.getItem('usuario');// 🔄 Substituir por chamada autenticada na API real
-        if (!json) return;
-      if (!json) return;
+      setCarregando(true); // 🔥 Começa carregando
+      const documento = apenasNumeros(usuario.cpf || usuario.cnpj)
 
-      const u = JSON.parse(json);
-      const usuarios = await api.obterUsuarios();// 🔄 Substituir por GET /usuarios/:id
-      const usuarioAtualizado = usuarios.find(us => (us.cpf || us.cnpj) === (u.cpf || u.cnpj));
-      if (!usuarioAtualizado) return;
+      const usuarioAtualizado = await UsuarioService.obterPorId(documento);
+      setPontos(usuarioAtualizado.pontos ?? 0);
 
-      setUsuario(usuarioAtualizado);
-      setPontos(usuarioAtualizado.pontos || 0);
-
-      if (u.tipo === 'pf') {
-        // Apenas PF pode acessar histórico de pegada
-        if (u.cpf) {
-          const historico = await api.obterHistoricoPegada(u.cpf);// 🔄 Substituir por GET /pegada/:cpf
-          if (historico.length > 0) {
-            const ultima = historico[historico.length - 1];
-            setPegada(ultima.pontuacao);
-          }
-        }
+      if (usuario.tipo === 'pf') {
+        const ultima = await PegadaService.obterUltimaPontuacao(documento);
+        setPegada(ultima?.pontuacao ?? 0);
 
         setIcones([
           { imagem: require('../../assets/imagensEco/historicoIcon.png'), rota: '/(private)/historicopontos', label: 'Histórico \nde Pontos' },
@@ -70,13 +67,13 @@ export default function Home() {
         ]);
       }
 
-      if (u.tipo === 'pj') {
-        const vouchers = await api.obterVouchersPorCNPJ(u.cnpj);// 🔄 Substituir por GET /vouchers?cnpj=...
-        const totalGerados = vouchers.reduce((acc, v) => acc + (v.quantidade || 0), 0);
+      if (usuario.tipo === 'pj') {
+        const vouchers = await VouchersService.obterVouchersPorCNPJ(documento);
+        const totalGerados = vouchers?.reduce((acc, v) => acc + (v.quantidade || 0), 0) ?? 0;
         setQtdVouchers(totalGerados);
 
-        const utilizados = await api.contarVouchersCompradosPorCNPJ(u.cnpj); // 🔄 Substituir por GET /vouchers/comprados?cnpj=...
-        setVouchersUtilizados(utilizados.totalGeral);
+        const utilizados = await VouchersService.contarVouchersCompradosPorCNPJ(documento);
+        setVouchersUtilizados(utilizados?.total ?? 0);
 
         setIcones([
           { imagem: require('../../assets/imagensEco/gerarVoucherIcon.png'), rota: '/(private)/catalogorecompensapj', label: 'Gerar Voucher' },
@@ -84,20 +81,29 @@ export default function Home() {
           { imagem: require('../../assets/imagensEco/faleConoscoIcon.png'), rota: '(private)/faleconosco', label: 'Contato' },
         ]);
       }
-
-    } catch (erro) {
-      console.error('Erro ao carregar dados da Home:', erro);
+    } catch (error) {
+      const mensagem = obterMensagemErro(error, 'Erro ao carregar dados da Home.');
+      console.warn('⚠️ Erro na Home:', mensagem);
     } finally {
       setCarregando(false);
     }
   };
 
   carregarDados();
-  intervalo = setInterval(carregarDados, 10000);
-  return () => clearInterval(intervalo);
-}, []);
 
-obterComparativoPegada(pegada)
+  intervalo = setInterval(() => {
+    carregarDados();
+  }, 10000);
+
+  return () => {
+    clearInterval(intervalo);
+    setPontos(0);
+    setPegada(null);
+    setQtdVouchers(0);
+    setVouchersUtilizados(0);
+    setIcones([]);
+  };
+}, [usuario]);
 
   return (
     <View style={styles.container}>

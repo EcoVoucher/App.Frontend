@@ -12,13 +12,15 @@ import {
 import ModalSucesso from '../../components/ModalSucesso';
 import BotaoVerde from '../../components/BotaoVerde';
 import { useAuth } from '../../context/AuthContext';
-import apiMock from '../../services/apiMock';
+import { PegadaService } from '../../services/pegadaService';
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
 import { perguntas } from '../../components/forms/FormPegada';
 import { obterComparativoPegada, apenasNumeros } from '../../utils/formatadores';
 import { useRouter } from 'expo-router';
+import { obterMensagemErro } from '../../utils/obterMensagemErro';
+
 
 export default function Pegada() {
   const router = useRouter();
@@ -33,22 +35,15 @@ export default function Pegada() {
   const [indiceAtual, setIndiceAtual] = useState(0);
   const [mostrarModal, setMostrarModal] = useState(false);
 
-  useEffect(() => {
-    if (resultado) {
-      setMostrarModal(true);
-      setTimeout(() => {
-        setMostrarModal(false);
-
-        if (usuario?.primeiroAcesso) {
-          login({
-            token: 'mock-token-pegada',
-            usuario: { ...usuario, primeiroAcesso: false },
-          });
-        }
-        router.replace('/(private)/home');
-      }, 4000);
-    }
-  }, [resultado]);
+ useEffect(() => {
+  if (resultado) {
+    setMostrarModal(true);
+    setTimeout(() => {
+      setMostrarModal(false);
+      router.replace('/(private)/home');
+    }, 4000);
+  }
+}, [resultado]);
 
   const perguntaAtual = perguntas[indiceAtual];
   const chaveAtual = `q${indiceAtual + 1}`;
@@ -125,14 +120,18 @@ export default function Pegada() {
     const comparativo = obterComparativoPegada(soma);
     const documento = apenasNumeros(usuario?.cpf || usuario?.cnpj);
 
-    await apiMock.salvarPegada(documento, soma);
+
+    // 🔗 API real — ativar no futuro
+    await PegadaService.salvarPontuacao({ documento, pontuacao: soma });
+
 
     setResultado({ pontos: soma, comparativo });
     setUltimaPontuacao(soma);
 
   } catch (error) {
     console.error(error);
-    Alert.alert('Erro', 'Erro ao salvar pegada.');
+   Alert.alert('Erro', obterMensagemErro(error, 'Erro ao salvar pegada.'));
+
   } finally {
     setCarregando(false);
   } 

@@ -9,7 +9,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
-import apiMock from '../../services/apiMock';
+import { PegadaService } from '../../services/pegadaService';
 import { useRouter } from 'expo-router';
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
@@ -17,7 +17,7 @@ import { spacing } from '../../theme/spacing';
 import PegadaTermometro from '../../components/PegadaTermometro';
 import { formatarDataBR, obterComparativoPegada } from '../../utils/formatadores';
 import VerMaisMenos from '../../components/VerMaisMenos';
-
+import { obterMensagemErro } from '../../utils/obterMensagemErro';
 const { height } = Dimensions.get('window');
 
 export default function HistoricoPegada() {
@@ -33,12 +33,16 @@ export default function HistoricoPegada() {
     const carregarHistorico = async () => {
       setCarregando(true);
       try {
-        const dados = await apiMock.obterHistoricoPegada(usuario?.cpf);
+        const documento = apenasNumeros(usuario?.cpf);
+        const dados = await PegadaService.obterHistorico(documento);
+
         const ordenado = dados.sort((a, b) => new Date(b.data) - new Date(a.data));
         setHistorico(ordenado);
-      } catch (error) {
-        console.error('Erro ao carregar histórico:', error);
-      } finally {
+      }catch (error) {
+  console.error(error);
+  Alert.alert('Erro', obterMensagemErro(error, 'Erro ao carregar histórico.'));
+}
+ finally {
         setCarregando(false);
       }
     };
