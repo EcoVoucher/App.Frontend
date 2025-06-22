@@ -9,7 +9,12 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
-import api from '../../services/apiMock';
+
+import { UsuarioService } from '../../services/usuarioService';
+import { VouchersService } from '../../services/vouchersService';
+import { PegadaService } from '../../services/pegadaService';
+import { obterMensagemErro } from '../../utils/obterMensagemErro';
+
 import FormSenhaPerfil from '../../components/forms/FormSenhaPerfil';
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
@@ -50,36 +55,34 @@ export default function Perfil() {
     try {
       const user =
         usuario.tipo === 'pf'
-          ? await api.obterUsuarioPorCPF(usuario.cpf)
-          : await api.obterUsuarioPorCNPJ(usuario.cnpj);
+        ? await UsuarioService.obterPorId(usuario.cpf)
+        : await UsuarioService.obterPorId(usuario.cnpj);
 
       setPontos(user.pontos || 0);
       setDepositos(user.depositos?.length || 0);
 
       if (usuario.tipo === 'pf') {
-        const historico = await api.obterHistoricoPegada(usuario.cpf);
+        const historico = await PegadaService.obterHistorico(usuario.cpf);
         if (historico.length > 0) {
           setPegada(historico[historico.length - 1].pontuacao);
         }
       }
 
       if (usuario.tipo === 'pj') {
-        const vouchers = await api.obterVouchersPorCNPJ(usuario.cnpj);
-        const totalGerados = vouchers.reduce(
-          (acc, v) => acc + (v.quantidade || 0),
-          0
-        );
-        setQtdVouchers(totalGerados);
+       const totalGerados = await VouchersService.contarVouchersGerados(usuario.cnpj);
+      setQtdVouchers(totalGerados);
 
-        const adquiridos = await api.contarVouchersCompradosPorCNPJ(
-          usuario.cnpj
-        );
+      const adquiridos = await VouchersService.contarVouchersComprados(
+        usuario.cnpj
+      );
+
         setVouchersAdquiridos(adquiridos);
       }
-    } catch (error) {
-      setModalErro(error.message);
-    }
-  };
+    }  catch (error) {
+    const mensagem = obterMensagemErro(error, 'Erro ao carregar dados.');
+    setModalErro(mensagem);
+  }
+};
 
   const handleAlterarSenha = async () => {
     const dados = {
@@ -94,7 +97,7 @@ export default function Perfil() {
     if (Object.keys(errosValidacao).length > 0) return;
 
     try {
-      await api.alterarSenha(
+      await UsuarioService.alterarSenha(
         usuario.cpf || usuario.cnpj,
         senhaAtual,
         novaSenha
@@ -105,9 +108,10 @@ export default function Perfil() {
       setConfirmarNovaSenha('');
       setSenhaAberta(false);
     } catch (error) {
-      setModalErro(error.message);
-    }
-  };
+    const mensagem = obterMensagemErro(error, 'Erro ao alterar senha.');
+    setModalErro(mensagem);
+  }
+};
 
   const toggleSenha = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);

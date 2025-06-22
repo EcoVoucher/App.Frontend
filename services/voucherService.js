@@ -79,4 +79,17 @@ async utilizarVoucher(codigo, cnpj) {
   return response.data;
 },
 
+/** 📊 Contar vouchers adquiridos por CPF de um CNPJ (Perfil PJ) */
+async contarVouchersComprados(cnpj) {
+  const response = await api.get(`/api/vouchers/compras/${cnpj}`);
+  return response.data;
+},
+
+/** 📊 Contar vouchers gerados por CNPJ (Perfil PJ) */
+async contarVouchersGerados(cnpj) {
+  const response = await api.get(`/api/vouchers/${cnpj}/gerados`);
+  return response.data;
+},
+
+
 };

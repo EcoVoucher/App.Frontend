@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import apiMock from '../../services/apiMock'; // 🔄 Trocar por `api.js` no futuro
 import { AuthService } from '../../services/authService';// ✅ Atualmente rodando no MOCK.
 import { Masks } from 'react-native-mask-input';
 import ModalErro from '../../components/ModalErro';
@@ -42,38 +41,20 @@ export default function RecuperarSenha() {
     if (carregando) return;
     setTentouEnviar(true);
 
-    //validação mock
-    const campos = tipoPessoa === 'pj' ? ['cnpj'] : ['cpf'];
-    const dadosValidacao = {
-      ...(tipoPessoa === 'pj' ? { cnpj: dados.cpf } : { cpf: dados.cpf }),
-    };
-
-    /*🔗 === Validação na API REAL (usar no futuro) ===
+    //🔗 === Validação na API REAL (usar no futuro) ===
   const campos = ['cpfOuCnpj'];
   const dadosValidacao = {
     cpfOuCnpj: dados.cpf,
   };
-  */
+
     const novoErros = validarCamposObrigatorios(dadosValidacao, campos, tipoPessoa);
     setErros(novoErros);
     if (Object.keys(novoErros).length > 0) return;
 
     setCarregando(true);
     try {
-      const resposta = await apiMock.recuperarSenha({
-        cpf: tipoPessoa === 'pf' ? dados.cpf : undefined,
-        cnpj: tipoPessoa === 'pj' ? dados.cpf : undefined,
-      });
-
-      // ✅ MODO ATUAL (mock): redireciona direto
-      if (resposta?.token) {
-        router.replace(`/(public)/redefinirsenha?token=${resposta.token}`);
-      } else {
-        throw new Error('Não foi possível gerar o token.');
-      }
-
- /* 
-🔗 === MODO API REAL (ativar no futuro) ===
+    
+//🔗 === MODO API REAL (ativar no futuro) ===
 const resposta = await AuthService.recuperarSenha({
    cpfOuCnpj: dados.cpf, // ✅ API espera campo unificado
 });
@@ -83,8 +64,6 @@ if (resposta?.sucesso) {
 } else {
   throw new Error(resposta?.erro || 'Erro ao recuperar senha.');
 }
-*/ // ✅ Fecha o comentário corretamente aqui!
-
     } catch (error) {
       console.error(error);
       setMensagemErro(obterMensagemErro(error,'Erro ao recuperar senha.'));

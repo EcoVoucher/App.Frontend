@@ -8,8 +8,7 @@ import {
   Platform,
   Dimensions,
 } from 'react-native';
-import apiMock from '../../services/apiMock'; // 🔄 Trocar por `api.js` no futuro
-import { AuthService } from '../../services/authService';//api
+import { AuthService } from '../../services/authService';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import InputField from '../../components/InputField';
 import BotaoVerde from '../../components/BotaoVerde';
@@ -38,18 +37,7 @@ export default function RedefinirSenha() {
   const [mensagemErro, setMensagemErro] = useState('');
   const [carregando, setCarregando] = useState(false);
 
-  // 🔒 Bloqueio imediato se token ausente
-  if (!token) {
-    return (
-      <View style={styles.erroBox}>
-        <Text style={styles.erroTexto}>
-          Link inválido ou expirado. Acesse "Esqueci minha senha" novamente.
-        </Text>
-      </View>
-    );
-  }
-
-  /*
+  
   // 🔄 FUTURO: validação do token com API real
   useEffect(() => {
   const verificarToken = async () => {
@@ -66,7 +54,7 @@ export default function RedefinirSenha() {
 
   verificarToken();
 }, [token]);
-  */
+
 
   const handleSalvar = async () => {
     const campos = ['senha', 'confirmarSenha'];
@@ -82,12 +70,8 @@ export default function RedefinirSenha() {
     setCarregando(true);
 
     try {
-      // ✅ Funciona com mock atual
-      await apiMock.redefinirSenhaComToken({ token, novaSenha });
-
-      // 🔄 FUTURO: chamada real à API
-      //await AuthService.redefinirSenha({ token, senha: novaSenha });
-
+          // 🔄 FUTURO: chamada real à API
+      await AuthService.redefinirSenha({ token, senha: novaSenha });
 
       setModalSucesso(true);
     } catch (error) {

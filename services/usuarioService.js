@@ -18,5 +18,13 @@ export const UsuarioService = {
     return response.data;
   },
 
+  async alterarSenha(identificador, senhaAtual, novaSenha) {
+    const response = await api.post('/usuarios/alterar-senha', {
+      cpfOuCnpj: identificador,
+      senhaAtual,
+      novaSenha,
+    });
+    return response.data;
+  },
   
 };
