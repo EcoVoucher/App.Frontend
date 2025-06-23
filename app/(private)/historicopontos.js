@@ -14,6 +14,7 @@ import { spacing } from '../../theme/spacing';
 import { fonts } from '../../theme/fonts';
 import BotaoVerdePequeno from '../../components/BotaoVerdePequeno';
 import VerMaisMenos from '../../components/VerMaisMenos';
+import ModalErro from '../../components/ModalErro';
 
 
 export default function HistoricoPontos() {
