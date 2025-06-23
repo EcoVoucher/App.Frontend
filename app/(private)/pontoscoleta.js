@@ -29,9 +29,14 @@ export default function BuscarPontosColeta() {
   const [resultados, setResultados] = useState([]);
   const [visivelErro, setVisivelErro] = useState(false);
   const [modalResultado, setModalResultado] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-
-
+    const handleFecharModal = () => {
+      setModalResultado(false); 
+      setCep('');              
+      setErro('');              
+      setResultados([]);       
+};
   const handleBuscar = async () => {
      const erros = validarCamposObrigatorios({ cep }, ['cep']);
 
@@ -40,6 +45,9 @@ export default function BuscarPontosColeta() {
     return;
   }
   setErro('');
+
+   if (isLoading) return; 
+  setIsLoading(true);
 
     try {
       // 🔗 Quando estiver usando API real, descomenta abaixo:
@@ -76,6 +84,10 @@ export default function BuscarPontosColeta() {
     } catch (e) {
       setVisivelErro(true);
     }
+    finally {
+    setIsLoading(false); 
+  }
+  
   };
 
   return (
@@ -99,23 +111,27 @@ export default function BuscarPontosColeta() {
           error={erro}
         />
 
-        <BotaoVerde texto="Buscar Pontos de Coleta" onPress={handleBuscar} />
-
+        <BotaoVerde
+            texto={isLoading ? "Buscando..." : "Buscar Pontos de Coleta"}
+            onPress={handleBuscar}
+            disabled={isLoading}
+          />
         <Modal
           transparent
           animationType="fade"
           visible={modalResultado}
-          onRequestClose={() => setModalResultado(false)}>
+          onRequestClose={handleFecharModal}>
           <View style={styles.overlay}>
             <View style={styles.modalBox}>
               <View style={styles.modalHeader}>
               <Text style={styles.modalTitulo}>Pontos de Coleta Encontrados</Text>
-              <TouchableOpacity 
-                  onPress={() => setModalResultado(false)} 
-                  style={styles.botaoFechar}
+             <TouchableOpacity 
+                  onPress={handleFecharModal} 
+                  style={styles.botaoFechar} 
                 >
                   <Ionicons name="close" size={28} color={colors.verde} />
                 </TouchableOpacity>
+
             </View>
 
               <ScrollView style={{ width: '100%' }}
