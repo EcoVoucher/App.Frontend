@@ -29,9 +29,6 @@ import { useCallback } from 'react';
 import { obterMensagemErro } from '../../utils/obterMensagemErro';
 
 
-
-
-
 const { width, height } = Dimensions.get('window');
 const tipos = ['Todos', 'Alimentacao', 'Transporte', 'Higiene'];
 
@@ -58,15 +55,13 @@ export default function CatalogoVouchersPF() {
   } = useCarrinho();
 
   const carregarSaldoAtualizado = async () => {
-    const atual = await UsuarioService.obterUsuarioPorCPF(usuario.cpf);
-    setSaldoAtual(atual.pontos || 0);
+    const atual = await UsuarioService.obterPorId(usuario.cpf);
+setSaldoAtual(atual.pontos || 0);
   };
 
   const carregarVouchers = async () => {
-    const lista = await VouchersService.listarVouchers();
+    const lista = await VouchersService.listarVouchersDisponiveisPF();
     setVouchers(lista);
-    const atual = await api.obterUsuarioPorCPF(usuario.cpf);
-    setSaldoAtual(atual.pontos || 0);
   };
 
   const abrirModalResumo = () => {
@@ -79,8 +74,10 @@ export default function CatalogoVouchersPF() {
   useFocusEffect(
     useCallback(() => {
       const atualizar = async () => {
-        await carregarSaldoAtualizado();
-        await carregarVouchers();
+        await Promise.all([
+          carregarVouchers(),
+          carregarSaldoAtualizado(),
+        ]);
       };
 
       atualizar();

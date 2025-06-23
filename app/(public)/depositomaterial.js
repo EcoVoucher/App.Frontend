@@ -71,8 +71,7 @@ export default function DepositoMaterial() {
     const cpfLimpo = apenasNumeros(cpf);
 
     try {
-      // 🔄 MOCK — Validação de CPF no mock
-      //const usuario = await apiMock.obterUsuarioPorCPF(cpf);
+     
 
       // 🔗 API — Validação de CPF na API (ATIVAR no futuro)
       const usuario = await DepositoService.consultarUsuarioPorCPF(cpfLimpo);

@@ -1,30 +1,35 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import api from '../../services/apiMock'; // 🔄 Substituir futuramente por: import api from '../../services/api';
+import { AdminService } from '../../services/serviceAdmin';
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
 import AsyncStorage from '../../utils/storage';
 import { obterComparativoPegada, formatarDataBR } from '../../utils/formatadores';
-// import { useAuth } from '../../context/AuthContext'; // 🔐 No futuro para proteger com token
+import { useAuth } from '../../context/AuthContext'; 
 import { obterMensagemErro } from '../../utils/obterMensagemErro';
+ import { useRouter } from 'expo-router';
 
 export default function AdminDevScreen() {
   const [usuarios, setUsuarios] = useState([]);
   const [visiveis, setVisiveis] = useState([]);
+  const { usuario, token } = useAuth();
 
-  // 🔐 Proteger rota futuramente:
-  // const { usuario, token } = useAuth();
-  // useEffect(() => {
-  //   if (!usuario?.isAdmin) router.replace('/(public)/login');
-  // }, []);
+  const router = useRouter();
+
+
+ useEffect(() => {
+  if (!usuario?.isAdmin || !token) {
+    router.replace('/(public)/login');
+  } else {
+    carregarUsuarios();
+  }
+}, [usuario, token]);
+
 
   const carregarUsuarios = async () => {
     try {
-      const lista = await api.obterUsuarios(); 
-      // 🔄 Substituir por API real:
-      // const response = await api.get('/usuarios');
-      // const lista = response.data;
+     const lista = await AdminService.listarUsuarios();
 
       setUsuarios(lista);
       setVisiveis(new Array(lista.length).fill(false));
@@ -39,9 +44,7 @@ export default function AdminDevScreen() {
 
   const aprovarPJ = async (cnpj) => {
     try {
-      await api.aprovarCadastroPJ(cnpj);
-      // 🔄 Substituir por:
-      // await api.patch('/admin/aprovar-pj', { cnpj });
+      await AdminService.aprovarPJ(cnpj);
 
       Alert.alert('Sucesso', 'Cadastro aprovado com sucesso!');
       carregarUsuarios(); // ✅ Recarrega a lista após aprovação
@@ -73,9 +76,6 @@ export default function AdminDevScreen() {
 };
   
 
-  useEffect(() => {
-    carregarUsuarios();
-  }, []);
 
   return (
     <ScrollView contentContainerStyle={styles.container}>

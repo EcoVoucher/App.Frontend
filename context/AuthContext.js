@@ -6,12 +6,15 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [usuario, setUsuario] = useState(null);
   const [carregando, setCarregando] = useState(true);
+  
 
   useEffect(() => {
     const carregarUsuario = async () => {
       const tokenSalvo = await AsyncStorage.getItem('token');
       const usuarioSalvo = await AsyncStorage.getItem('usuario');
-
+      console.log(usuarioSalvo)
+      let user = JSON.parse(usuarioSalvo);
+      console.log(user.tipo)
       if (tokenSalvo && usuarioSalvo) {
         setUsuario(JSON.parse(usuarioSalvo));
       }
@@ -22,11 +25,18 @@ export const AuthProvider = ({ children }) => {
     carregarUsuario();
   }, []);
 
-  const login = async ({ token, usuario }) => {
-    await AsyncStorage.setItem('token', token);
-    await AsyncStorage.setItem('usuario', JSON.stringify(usuario));
-    setUsuario(usuario);
+  const login = async ({ token, usuario, tipo }) => {
+  const usuarioComTipo = {
+    ...usuario,
+    
   };
+
+  await AsyncStorage.setItem('token', token);
+  await AsyncStorage.setItem('usuario', JSON.stringify(usuarioComTipo));
+  setUsuario(usuarioComTipo);
+  console.log('🟢 TOKEN RECEBIDO NO LOGIN:', token);
+
+};
 
   const logout = async () => {
     await AsyncStorage.removeItem('token');

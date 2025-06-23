@@ -38,9 +38,8 @@ export default function HistoricoPegada() {
       try {
         const documento = apenasNumeros(usuario?.cpf);
         const dados = await PegadaService.obterHistorico(documento);
-
-        const ordenado = dados.sort((a, b) => new Date(b.data) - new Date(a.data));
-        setHistorico(ordenado);
+        
+        setHistorico(dados);
       }catch (error) {
   console.error(error);
   Alert.alert('Erro', obterMensagemErro(error, 'Erro ao carregar histórico.'));

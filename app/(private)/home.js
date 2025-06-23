@@ -19,7 +19,7 @@ import { apenasNumeros } from '../../utils/formatarenvio';
 
 import { UsuarioService } from '../../services/usuarioService'; // 🔗 API real — ativar futuramente
 import { VouchersService } from '../../services/voucherService'; // 🔗 API real — ativar futuramente
-import { PegadaService } from '../../services/pegadaService'; // 🔗 API real — ativar futuramente
+
 
 
 import { obterComparativoPegada } from '../../utils/formatadores';
@@ -45,7 +45,7 @@ export default function Home() {
 
 useEffect(() => {
   if (!usuario) return;
-
+  console.log(usuario)
   let intervalo;
 
   const carregarDados = async () => {
@@ -55,8 +55,7 @@ useEffect(() => {
 
       const usuarioAtualizado = await UsuarioService.obterPorId(documento);
       setPontos(usuarioAtualizado.pontos ?? 0);
-
-      if (usuario.tipo === 'pf') {
+      if (usuario.tipo == 'pf') {
        // const ultima = await PegadaService.obterUltimaPontuacao(documento);
         setPegada(usuarioAtualizado?.pontuacao ?? 0);
 
@@ -67,13 +66,16 @@ useEffect(() => {
         ]);
       }
 
-      if (usuario.tipo === 'pj') {
-        const vouchers = await VouchersService.obterVouchersPorCNPJ(documento);
-        const totalGerados = vouchers?.reduce((acc, v) => acc + (v.quantidade || 0), 0) ?? 0;
-        setQtdVouchers(totalGerados);
+           if (usuario.tipo === 'pj') {
+          const [vouchers, estatisticas] = await Promise.all([
+            VouchersService.listarVouchers(),
+            VouchersService.obterEstatisticas(),
+          ]);
 
-        const utilizados = await VouchersService.contarVouchersCompradosPorCNPJ(documento);
-        setVouchersUtilizados(utilizados?.total ?? 0);
+          const totalGerados = vouchers?.reduce((acc, v) => acc + (v.quantidade || 0), 0) ?? 0;
+          setQtdVouchers(totalGerados);
+
+          setVouchersUtilizados(estatisticas?.totalComprados ?? 0);
 
         setIcones([
           { imagem: require('../../assets/imagensEco/gerarVoucherIcon.png'), rota: '/(private)/catalogorecompensapj', label: 'Gerar Voucher' },

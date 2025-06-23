@@ -165,14 +165,7 @@ const handleCadastro = async () => {
     } else {
       await cadastrarPJ(dadosFormatados); // ← Importar de usuarioService.js
     }
-    
-
-    /*/ ✅ === ATIVAR PARA MOCK ===
-    if (tipoPessoa === 'pf') {
-      await apiMock.cadastroPF(dadosFormatados);
-    } else {
-      await apiMock.cadastroPJ(dadosFormatados);
-    }/*/
+  
 
     setModalSucesso(true);
  } catch (error) {

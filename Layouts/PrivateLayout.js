@@ -64,7 +64,8 @@ export default function PrivateLayout() {
       rota.includes('pegada') ||
       rota.includes('historicopontos') ||
       rota.includes('catalogovoucherspf') ||
-      rota.includes('historicopegada')
+      rota.includes('historicopegada')||
+      rota.includes('pontoscoleta')
     ) {
       if (usuario.tipo !== 'pf') {
         router.replace('/(private)/home');

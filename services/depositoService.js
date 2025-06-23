@@ -14,7 +14,7 @@ export const DepositoService = {
       materiais,
       totalPontos,
     };
-    const response = await api.post('/api/depositos', payload);
+    const response = await api.post('/depositos', payload);
     return response.data;
   },
 
@@ -24,7 +24,7 @@ export const DepositoService = {
    * @returns {Promise<object>} - Dados do usuário
    */
   consultarUsuarioPorCPF: async (cpf) => {
-    const response = await api.get(`/api/usuarios/cpf/${cpf}`);
+    const response = await api.get(`/usuarios/cpf/${cpf}`);
     return response.data;
   },
 };

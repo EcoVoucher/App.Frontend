@@ -80,11 +80,6 @@ export default function Login() {
   setCarregando(true);
 
   try {
-    // ✅ Código atual com MOCK funcionando:
-    //const { token, usuario } = await apiMock.login(cpfOuCnpj, senha, tipoPessoa);
-
-    
-    //🔄 Código já pronto para API real — quando quiser usar:
     const { token, usuario } = await AuthService.login({
       cpfOuCnpj,
       senha,
@@ -92,15 +87,18 @@ export default function Login() {
     });
     
 
-    await login({ token, usuario });
+  await login({ token, usuario, tipo: tipoPessoa});
 
-    setTentativas(0); // limpa tentativas
+    setTentativas(0); 
 
-    if (usuario.primeiroAcesso && usuario.tipo === 'pf') {
+    if (usuario.isAdmin) {
+      router.replace('/(admin)/admin');
+    } else if (usuario.primeiroAcesso && usuario.tipo === 'pf') {
       router.replace('/(private)/pegada');
     } else {
       router.replace('/(private)/home');
     }
+
   } catch (error) {
     // 🔥 Tratamento de erros inteligente e preparado para API real
     let mensagem = error?.message || 'Não foi possível acessar sua conta.';
