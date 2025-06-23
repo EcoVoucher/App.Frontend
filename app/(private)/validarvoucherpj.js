@@ -69,10 +69,8 @@ export default function ValidarVoucherPJ() {
       setValidando(true);
 
     try {
-       const resultado = await VouchersService.validarVoucherPorCodigo(
-        codigo.trim().toUpperCase(),
-        usuario.cnpj
-      );
+       const resultado = await VouchersService.validarVoucherPorCodigo(codigo.trim().toUpperCase());
+
 
       if (!resultado) {
         setMensagemErro('Voucher não localizado.');
@@ -98,8 +96,13 @@ export default function ValidarVoucherPJ() {
 
         try {
           const codigoAlvo = codigoConfirmar || voucher.codigo;
-
-         await VouchersService.utilizarVoucher(codigoAlvo, usuario.cnpj);
+          if (!codigoAlvo) {
+              setMensagemErro('Código do voucher não encontrado.');
+              setErroVisivel(true);
+              setConfirmando(false);
+              return;
+            }
+         await VouchersService.utilizarVoucher(codigoAlvo);
 
       setVoucher(null);
       setCodigo('');
@@ -127,20 +130,23 @@ export default function ValidarVoucherPJ() {
         if (Object.keys(errosValidacao).length > 0 || !tipoBusca.trim()) {
           setMensagemErro(!tipoBusca.trim() ? 'Selecione um tipo de voucher.' : 'CPF inválido.');
           setErroVisivel(true);
-          setBuscando(false); // 🔥 Destrava o botão
-          return;              // 🔥 Interrompe a busca
+          setBuscando(false); 
+          return;              
         }
 
         try {
         const resultado = await VouchersService.buscarVouchersPorCpfETipo(
-          cpfBusca,
-          tipoBusca,
-          usuario.cnpj
-        );
+        cpfBusca,
+        tipoBusca
+      );
 
-         if (!resultado || resultado.length === 0) {
+
+        if (!resultado || resultado.length === 0) {
         setMensagemErro('Nenhum voucher válido encontrado.');
         setErroVisivel(true);
+        setBuscando(false);
+        return;
+
       }
         setVouchersEncontrados(resultado);
        } catch (error) {

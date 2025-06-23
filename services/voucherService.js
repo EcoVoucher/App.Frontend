@@ -16,10 +16,10 @@ export const VouchersService = {
    * - Quantidade disponível
    * - Data de validade
    * - Lista de códigos dos vouchers
-   * 📥 GET → /api/vouchers
+   * 📥 GET → /vouchers
    */
   async listarVouchers() {
-    const { data } = await api.get('/api/vouchers');
+    const { data } = await api.get('/vouchers');
     return data;
   },
 
@@ -28,12 +28,21 @@ export const VouchersService = {
    * 🔸 Retorna:
    * - Quantidade total de vouchers gerados por este CNPJ
    * - Quantidade total de vouchers adquiridos por usuários PF
-   * - Detalhamento por lote ou por tipo
+   * VouchersService.obterEstatisticas();
+    ✅ Correto.
+    ✔️ Retorna:
+
+    ====Total de vouchers adquiridos (totalComprados).
+
+    =====Adquiridos por lote (porLote).
+
+
+   * - Detalhamento por lote 
    * ✔️ Permite ao PJ visualizar seu desempenho na plataforma.
-   * 📥 GET → /api/vouchers/estatisticas
+   * 📥 GET → /vouchers/estatisticas
    */
   async obterEstatisticas() {
-    const { data } = await api.get('/api/vouchers/estatisticas');
+    const { data } = await api.get('/vouchers/estatisticas');
     return data;
   },
 
@@ -46,7 +55,7 @@ export const VouchersService = {
    * ✔️ Impacto no sistema:
    * - Cria um lote com os códigos.
    * - Esses códigos ficam disponíveis para que os usuários PF possam adquirir.
-   * 📤 POST → /api/vouchers
+   * 📤 POST → /vouchers
    * 🔸 Payload:
    * {
    *   tipo: 'Alimentacao' | 'Higiene' | 'Transporte',
@@ -56,7 +65,7 @@ export const VouchersService = {
    * }
    */
   async gerarVoucher({ tipo, produtos, quantidade, dataValidade }) {
-    const { data } = await api.post('/api/vouchers', {
+    const { data } = await api.post('/vouchers', {
       tipo,
       produtos,
       quantidade,
@@ -73,12 +82,23 @@ export const VouchersService = {
    * - Está com status válido, expirado ou utilizado.
    * ✔️ Retorna os detalhes completos do voucher, incluindo:
    * - Código, tipo, produtos, empresa, endereço, validade e status.
-   * 📥 GET → /api/vouchers/validar/{codigo}
+   * 📥 GET → /vouchers/validar/{codigo}
    */
   async validarVoucherPorCodigo(codigo) {
-    const { data } = await api.get(`/api/vouchers/validar/${codigo}`);
+    const { data } = await api.get(`/vouchers/validar/${codigo}`);
     return data;
   },
+
+ /* 🔍 Buscar vouchers adquiridos por um CPF e Tipo para o PJ logado
+ * 📥 GET → /vouchers/adquiridos?cpf=12345678900&tipo=Alimentacao
+ */
+async buscarVouchersPorCpfETipo(cpf, tipo) {
+  const { data } = await api.get('/vouchers/adquiridos', {
+    params: { cpf, tipo },
+  });
+  return data;
+},
+
 
   /**
    * ✅ Marcar voucher como utilizado (PJ).
@@ -86,14 +106,14 @@ export const VouchersService = {
    * - Alterar o status do voucher de 'valido' para 'utilizado'.
    * - Esse processo confirma que o voucher foi entregue, resgatado ou usado no mundo físico.
    * 🚫 NÃO afeta pontos, pois os pontos foram debitados no momento da compra (PF).
-   * 📤 POST → /api/vouchers/utilizar
+   * 📤 POST → /vouchers/utilizar
    * 🔸 Payload:
    * {
    *   codigo: 'VOUC-2025-001'
    * }
    */
   async utilizarVoucher(codigo) {
-    const { data } = await api.post('/api/vouchers/utilizar', { codigo });
+    const { data } = await api.post('/vouchers/utilizar', { codigo });
     return data;
   },
 
@@ -106,10 +126,10 @@ export const VouchersService = {
    * ✔️ Backend deve calcular automaticamente:
    * - Se a data de validade é maior ou igual à data atual.
    * - Se ainda há códigos disponíveis no lote.
-   * 📥 GET → /api/vouchers/disponiveis
+   * 📥 GET → /vouchers/disponiveis
    */
   async listarVouchersDisponiveisPF() {
-    const { data } = await api.get('/api/vouchers/disponiveis');
+    const { data } = await api.get('/vouchers/disponiveis');
     return data;
   },
 
@@ -122,7 +142,7 @@ export const VouchersService = {
    * - Cria uma movimentação de pontos do tipo 'saida'.
    * - Status do voucher fica como 'valido'.
    * 🔸 Ao utilizar futuramente, o status muda para 'utilizado'.
-   * 📤 POST → /api/vouchers/comprar
+   * 📤 POST →/vouchers/comprar
    * 🔸 Payload:
    * {
    *   cpf: '12345678900',
@@ -140,7 +160,7 @@ export const VouchersService = {
    * }
    */
   async comprarVouchers(cpf, lista) {
-    const { data } = await api.post('/api/vouchers/comprar', {
+    const { data } = await api.post('/vouchers/comprar', {
       cpf,
       vouchers: lista,
     });

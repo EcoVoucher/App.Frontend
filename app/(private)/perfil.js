@@ -9,7 +9,6 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
-import { voucherService } from '../../services/voucherService';
 import { UsuarioService } from '../../services/usuarioService';
 import { VouchersService } from '../../services/voucherService';
 import { PegadaService } from '../../services/pegadaService';
@@ -51,34 +50,31 @@ export default function Perfil() {
     carregarDados();
   }, []);
 
-  const carregarDados = async () => {
-    try {
-      const user =
-        usuario.tipo === 'pf'
-        ? await UsuarioService.obterPorId(usuario.cpf)
-        : await UsuarioService.obterPorId(usuario.cnpj);
+ const carregarDados = async () => {
+  try {
+    const user = usuario.tipo === 'pf'
+      ? await UsuarioService.obterPorId(usuario.cpf)
+      : await UsuarioService.obterPorId(usuario.cnpj);
 
-      setPontos(user.pontos || 0);
-      setDepositos(user.depositos?.length || 0);
+    setPontos(user.pontos || 0);
+    setDepositos(user.depositos?.length || 0);
 
-      if (usuario.tipo === 'pf') {
-        const historico = await PegadaService.obterHistorico(usuario.cpf);
-        if (historico.length > 0) {
-          setPegada(historico[historico.length - 1].pontuacao);
-        }
+    if (usuario.tipo === 'pf') {
+      const historico = await PegadaService.obterHistorico(usuario.cpf);
+      if (historico.length > 0) {
+        setPegada(historico[historico.length - 1].pontuacao);
       }
+    }
 
-      if (usuario.tipo === 'pj') {
-       const totalGerados = await VouchersService.contarVouchersGerados(usuario.cnpj);
-      setQtdVouchers(totalGerados);
+    if (usuario.tipo === 'pj') {
+      const lotes = await VouchersService.listarVouchers();
+      const estatisticas = await VouchersService.obterEstatisticas();
 
-      const adquiridos = await VouchersService.contarVouchersComprados(
-        usuario.cnpj
-      );
+      setQtdVouchers(lotes.length);                    
+      setVouchersAdquiridos(estatisticas.totalComprados); 
+    }
 
-        setVouchersAdquiridos(adquiridos);
-      }
-    }  catch (error) {
+  } catch (error) {
     const mensagem = obterMensagemErro(error, 'Erro ao carregar dados.');
     setModalErro(mensagem);
   }
@@ -200,7 +196,7 @@ export default function Perfil() {
                   <Text style={styles.labelInfo}>Vouchers Gerados</Text>
                 </View>
                 <View style={styles.boxInfo}>
-                  <Text style={styles.valorInfo}>{vouchersAdquiridos?.totalGeral ?? '0'}</Text>
+                  <Text style={styles.valorInfo}>{vouchersAdquiridos}</Text>
 
                   <Text style={styles.labelInfo}>Adquiridos por PF</Text>
                 </View>
