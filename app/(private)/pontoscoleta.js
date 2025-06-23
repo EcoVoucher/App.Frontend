@@ -29,9 +29,14 @@ export default function BuscarPontosColeta() {
   const [resultados, setResultados] = useState([]);
   const [visivelErro, setVisivelErro] = useState(false);
   const [modalResultado, setModalResultado] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-
-
+    const handleFecharModal = () => {
+      setModalResultado(false); 
+      setCep('');              
+      setErro('');              
+      setResultados([]);       
+};
   const handleBuscar = async () => {
      const erros = validarCamposObrigatorios({ cep }, ['cep']);
 
@@ -40,6 +45,9 @@ export default function BuscarPontosColeta() {
     return;
   }
   setErro('');
+
+   if (isLoading) return; 
+  setIsLoading(true);
 
     try {
       // 🔗 Quando estiver usando API real, descomenta abaixo:
@@ -76,6 +84,10 @@ export default function BuscarPontosColeta() {
     } catch (e) {
       setVisivelErro(true);
     }
+    finally {
+    setIsLoading(false); 
+  }
+  
   };
 
   return (
@@ -83,14 +95,16 @@ export default function BuscarPontosColeta() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Image
-          source={require('../../assets/imagensEco/ecoVoucherIcon.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
+       <View style={styles.logoContainer}>
+              <Image
+                source={require('../../assets/imagensEco/ecoVoucherIcon.png')}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+            </View>
         <Text style={styles.titulo}>Buscar Pontos de Coleta</Text>
         <Text style={styles.subtitulo}>Digite seu CEP para localizar pontos próximos.</Text>
-
+        <View style={styles.inputContainer}>
         <InputField
           placeholder="Digite seu CEP"
           value={cep}
@@ -98,24 +112,38 @@ export default function BuscarPontosColeta() {
           mask={Masks.ZIP_CODE}
           error={erro}
         />
-
-        <BotaoVerde texto="Buscar Pontos de Coleta" onPress={handleBuscar} />
-
+        </View>
+        <BotaoVerde
+            texto={isLoading ? "Buscando..." : "Buscar Pontos de Coleta"}
+            onPress={handleBuscar}
+            disabled={isLoading}
+          />
         <Modal
           transparent
           animationType="fade"
           visible={modalResultado}
-          onRequestClose={() => setModalResultado(false)}>
+          onRequestClose={handleFecharModal}>
+          
           <View style={styles.overlay}>
             <View style={styles.modalBox}>
-              <View style={styles.modalHeader}>
-              <Text style={styles.modalTitulo}>Pontos de Coleta Encontrados</Text>
-              <TouchableOpacity 
-                  onPress={() => setModalResultado(false)} 
-                  style={styles.botaoFechar}
+                <View style={styles.logoContainer}>
+                    <Image
+                      source={require('../../assets/imagensEco/ecoVoucherIcon.png')}
+                      style={styles.logo}
+                      resizeMode="contain"
+                    />
+                  </View>
+
+                  <TouchableOpacity 
+                  onPress={handleFecharModal} 
+                  style={styles.botaoFechar} 
                 >
                   <Ionicons name="close" size={28} color={colors.verde} />
                 </TouchableOpacity>
+              <View style={styles.modalHeader}>
+              <Text style={styles.modalTitulo}>Pontos de Coleta Encontrados</Text>
+             
+
             </View>
 
               <ScrollView style={{ width: '100%' }}
@@ -161,11 +189,21 @@ const styles = StyleSheet.create({
   justifyContent: 'center',  
   gap: spacing.large,      
 },
-  logo: {
-    width: 120,
-    height: 120,
-    
-  },
+logoContainer: {
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '100%',
+  marginBottom: spacing.lg,
+},
+logo: {
+  width: 120,
+  height: 120,
+},
+inputContainer: {
+  width: '90%',
+  alignItems: 'center',
+},
+
   titulo: {
     paddingBottom:spacing.sm,
     paddingTop:spacing.md,
@@ -193,12 +231,12 @@ const styles = StyleSheet.create({
     width: '90%',
     maxHeight: '100%',
   },
-  botaoFechar: {
-  right: 0,
-  top: 0,
-  padding: 0,
-  paddingTop:0,
-  paddingRight:10,
+ botaoFechar: {
+  position: 'absolute',
+  top: spacing.sm,
+  right: spacing.sm,
+  padding: 8,
+  zIndex: 10,
 },
   modalHeader: {
     flexDirection: 'row',
