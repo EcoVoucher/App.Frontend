@@ -12,9 +12,7 @@ export const AuthProvider = ({ children }) => {
     const carregarUsuario = async () => {
       const tokenSalvo = await AsyncStorage.getItem('token');
       const usuarioSalvo = await AsyncStorage.getItem('usuario');
-      console.log(usuarioSalvo)
       let user = JSON.parse(usuarioSalvo);
-      console.log(user.tipo)
       if (tokenSalvo && usuarioSalvo) {
         setUsuario(JSON.parse(usuarioSalvo));
       }
