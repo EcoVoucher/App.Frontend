@@ -19,6 +19,7 @@ export default function FormCadastro({
   mostrarConfirmarSenha,
   setMostrarSenha,
   setMostrarConfirmarSenha,
+  camposBloqueados,
 }) {
   return (
     <View style={styles.formWrapper}>
@@ -29,6 +30,7 @@ export default function FormCadastro({
             value={dados.nome}
             onChangeText={(v) => handleChange('nome', v)}
             error={erros.nome}
+            
           />
           <InputField
             label="Data de nascimento"
@@ -86,30 +88,42 @@ export default function FormCadastro({
             keyboardType="numeric"
             error={erros.cep}
           />
-          <InputField
+         <InputField
             label="Endereço"
             value={dados.endereco}
-            editable={false}
-            style={{ backgroundColor: '#f0f0f0' }}
+            onChangeText={(texto) => handleChange('endereco', texto.toUpperCase())}
+            error={erros.endereco}
+            editable={!camposBloqueados}
+            style={camposBloqueados ? { backgroundColor: '#f0f0f0' } : {}}
           />
+
           <InputField
             label="Bairro"
             value={dados.bairro}
-            editable={false}
-            style={{ backgroundColor: '#f0f0f0' }}
+            onChangeText={(texto) => handleChange('bairro', texto.toUpperCase())}
+            error={erros.bairro}
+            editable={!camposBloqueados}
+            style={camposBloqueados ? { backgroundColor: '#f0f0f0' } : {}}
           />
+
           <InputField
             label="Cidade"
             value={dados.cidade}
-            editable={false}
-            style={{ backgroundColor: '#f0f0f0' }}
+            onChangeText={(texto) => handleChange('cidade', texto.toUpperCase())}
+            error={erros.cidade}
+            editable={!camposBloqueados}
+            style={camposBloqueados ? { backgroundColor: '#f0f0f0' } : {}}
           />
+
           <InputField
             label="Estado"
             value={dados.estado}
-            editable={false}
-            style={{ backgroundColor: '#f0f0f0' }}
+            onChangeText={(texto) => handleChange('estado', texto.toUpperCase())}
+            error={erros.estado}
+            editable={!camposBloqueados}
+            style={camposBloqueados ? { backgroundColor: '#f0f0f0' } : {}}
           />
+
           <InputField
             label="Número"
             value={dados.numero}

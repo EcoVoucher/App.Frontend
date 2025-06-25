@@ -55,6 +55,8 @@ export default function Cadastro() {
   const [erros, setErros] = useState({});
   const [dados, setDados] = useState(ESTADO_INICIAL);
   const [carregando, setCarregando] = useState(false);
+  const [camposBloqueados, setCamposBloqueados] = useState(true);
+
 
   const handleChange = (campo, valor) => {
      if (carregando) return; // 
@@ -88,7 +90,7 @@ export default function Cadastro() {
       // Adicionar timeout de segurança para evitar travamento em caso de rede lenta
       const controller = new AbortController();
       setTimeout(() => controller.abort(), 5000);
-      const res = await fetch(`http://viacep.com.br/ws/${cep}/json/`, { signal: controller.signal });
+      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`, { signal: controller.signal });
 
       console.log(cep)
       const data = await res.json();
@@ -105,12 +107,13 @@ export default function Cadastro() {
         cidade: data.localidade || '',
         estado: data.uf || ''
       }));
-    } catch(e) {
-      setMensagemErro('Erro ao buscar endereço. Tente novamente mais tarde.');
-      setErroVisivel(true);
-      console.log(e)
-
-    }
+     setCamposBloqueados(true); // bloqueia edição se veio do ViaCEP
+  } catch (e) {
+    console.log(e);
+    setMensagemErro('Erro ao buscar endereço. Tente novamente mais tarde.');
+    setErroVisivel(true);
+    setCamposBloqueados(false); // libera campos para edição manual
+  }
   };
 
   const camposPreenchidos = () => {
