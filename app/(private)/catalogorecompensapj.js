@@ -26,7 +26,9 @@ import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
 import { validarCamposObrigatorios } from '../../utils/validarCamposObrigatorios';
 import VerMaisMenos from '../../components/VerMaisMenos';
-import { obterStatus, textoStatus,corStatus,obterMensagemErro } from '../../utils/status';
+import { obterStatus, textoStatus,corStatus } from '../../utils/status';
+import { obterMensagemErro } from '../../utils/obterMensagemErro.js';
+
 
 const { width, height } = Dimensions.get('window');
 
@@ -89,7 +91,7 @@ const carregarDados = async () => {
   try {
     const [vouchers, estatisticas] = await Promise.all([
       VouchersService.listarVouchers(),
-      VouchersService.obterEstatisticas(),
+      //VouchersService.obterEstatisticas(),
     ]);
     setVouchersGerados(vouchers);
     setQtdAdquiridos(estatisticas.totalComprados);
@@ -278,8 +280,9 @@ useEffect(() => {
                 </Text>
 
                 <Text style={styles.cardInfo}>
-                  🔑 Último código: {item.codigos[item.codigos.length - 1] || '---'}
-                </Text>
+  🔑 Último código: {item.codigos[item.codigos.length - 1]?.codigo || '---'}
+        </Text>
+
               </View>
             );
           }}
