@@ -30,9 +30,6 @@ export default function BuscarPontosColeta() {
   const [visivelErro, setVisivelErro] = useState(false);
   const [modalResultado, setModalResultado] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [localizacao, setLocalizacao] = useState(null);
-  const [pontoMaisProximo, setPontoMaisProximo] = useState(null);
-
 
     const handleFecharModal = () => {
       setModalResultado(false); 
@@ -40,111 +37,57 @@ export default function BuscarPontosColeta() {
       setErro('');              
       setResultados([]);       
 };
-
-const calcularDistancia = (lat1, lon1, lat2, lon2) => {
-  const R = 6371; // Raio da Terra em km
-  const dLat = (lat2 - lat1) * (Math.PI / 180);
-  const dLon = (lon2 - lon1) * (Math.PI / 180);
-
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * (Math.PI / 180)) *
-      Math.cos(lat2 * (Math.PI / 180)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return R * c; // Retorna distância em KM
-};
-
-const obterCoordenadas = async (cep) => {
-  const response = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cep)}`
-  );
-  const data = await response.json();
-
-  if (data.length > 0) {
-    return {
-      latitude: parseFloat(data[0].lat),
-      longitude: parseFloat(data[0].lon),
-    };
-  } else {
-    throw new Error('Endereço não encontrado');
-  }
-};
-
-
-
   const handleBuscar = async () => {
-    const erros = validarCamposObrigatorios({ cep }, ['cep']);
+     const erros = validarCamposObrigatorios({ cep }, ['cep']);
 
-    if (erros.cep) {
-      setErro(erros.cep);
-      return;
-    }
-    setErro('');
+  if (erros.cep) {
+    setErro(erros.cep);
+    return;
+  }
+  setErro('');
 
-    if (isLoading) return;
-    setIsLoading(true);
+   if (isLoading) return; 
+  setIsLoading(true);
 
     try {
-      const coords = await obterCoordenadas(cep);
-      setLocalizacao(coords);
+      // 🔗 Quando estiver usando API real, descomenta abaixo:
+      // const dados = await PontoColetaService.buscarPontosPorCep(cep);
 
+      // 🟩 Dados Mockados para teste no Front
       const dados = [
         {
-          id: '1',
-          nome: 'Tauste Campolim',
-          endereco: 'Av. Antônio Carlos Comitre, 1200 - Campolim',
-          latitude: -23.522632,
-          longitude: -47.452447,
-          descricao: 'Aceita: plástico, papel e vidro.',
-          telefone: '(15) 3219-9000',
+          nome: 'Ponto Verde Central',
+          endereco: 'Rua das Flores, 123 - Centro, Votorantim - SP, 18115-030',
+          distancia: 1.2,
+          observacao: 'Aceita plástico, papel e metal',
         },
         {
-          id: '2',
-          nome: 'Confiança Supermercados',
-          endereco: 'Av. Dr. Armando Pannunzio, 1936 - Jardim Vera Cruz',
-          latitude: -23.503650,
-          longitude: -47.492108,
-          descricao: 'Aceita: plástico, alumínio e óleo.',
-          telefone: '(15) 3418-4000',
+          nome: 'Eco Ponto Norte',
+          endereco: 'Av. Brasil, 789 - Norte, Votorantim - SP, 18115-050',
+          distancia: 2.8,
+          observacao: 'Somente vidro',
         },
         {
-          id: '3',
-          nome: 'Atacadão Sorocaba',
-          endereco: 'Av. Independência, 3475 - Éden',
-          latitude: -23.532207,
-          longitude: -47.420020,
-          descricao: 'Aceita: plástico, papelão e alumínio.',
-          telefone: '(15) 3238-6800',
-        }
+          nome: 'Recicla Fácil',
+          endereco: 'Rua do Meio, 456 - Sul, Votorantim - SP, 18115-070',
+          distancia: 3.5,
+          observacao: '',
+        },
       ];
 
-      const dadosComDistancia = dados.map((p) => ({
-        ...p,
-        distancia: calcularDistancia(
-          coords.latitude,
-          coords.longitude,
-          p.latitude,
-          p.longitude
-        ).toFixed(2),
-      }));
-
-      const maisProximo = dadosComDistancia.reduce((prev, current) =>
-        prev.distancia < current.distancia ? prev : current
-      );
-
-      setPontoMaisProximo(maisProximo);
-      setResultados(dadosComDistancia);
-      setModalResultado(true);
+      if (dados.length === 0) {
+        setResultados([]);
+      } else {
+        setResultados(dados);
+        setModalResultado(true);
+      }
     } catch (e) {
-      console.log(e);
       setVisivelErro(true);
-    } finally {
-      setIsLoading(false);
     }
+    finally {
+    setIsLoading(false); 
+  }
+  
   };
 
   return (
@@ -198,40 +141,10 @@ const obterCoordenadas = async (cep) => {
                   <Ionicons name="close" size={28} color={colors.verde} />
                 </TouchableOpacity>
               <View style={styles.modalHeader}>
-  <Text style={styles.modalTitulo}>Pontos de Coleta Encontrados</Text>
-              </View>
+              <Text style={styles.modalTitulo}>Pontos de Coleta Encontrados</Text>
+             
 
-              {localizacao && (
-                <MapView
-                  style={styles.mapa}
-                  initialRegion={{
-                    latitude: localizacao.latitude,
-                    longitude: localizacao.longitude,
-                    latitudeDelta: 0.05,
-                    longitudeDelta: 0.05,
-                  }}>
-                  <Marker
-                    coordinate={{
-                      latitude: localizacao.latitude,
-                      longitude: localizacao.longitude,
-                    }}
-                    title="Sua Localização"
-                    pinColor="blue"
-                  />
-                  {resultados.map((item) => (
-                    <Marker
-                      key={item.id}
-                      coordinate={{
-                        latitude: item.latitude,
-                        longitude: item.longitude,
-                      }}
-                      title={item.nome}
-                      description={item.observacao}
-                      pinColor={item.id === pontoMaisProximo?.id ? 'green' : 'red'}
-                    />
-                  ))}
-                </MapView>
-              )}
+            </View>
 
               <ScrollView style={{ width: '100%' }}
               contentContainerStyle={{ alignItems: 'center' }}
@@ -239,9 +152,7 @@ const obterCoordenadas = async (cep) => {
                 {resultados.length > 0 ? (
                   resultados.map((item, index) => (
                     <View key={index} style={styles.card}>
-                      <Text style={styles.cardTitulo}>
-                          {item.nome} {item.id === pontoMaisProximo?.id ? '⭐ Mais Próximo' : ''}
-                        </Text>
+                      <Text style={styles.cardTitulo}>{item.nome}</Text>
                       <Text style={styles.cardTexto}>📍 {item.endereco}</Text>
                       <Text style={styles.cardTexto}>📏 Distância: {item.distancia} km</Text>
                       {item.observacao ? (
@@ -378,11 +289,4 @@ cardObservacao: {
   color: colors.secondary,
   fontStyle: 'italic',
 },
-mapa: {
-  width: '100%',
-  height: 250,
-  borderRadius: 16,
-  marginBottom: spacing.lg,
-},
-
 });
