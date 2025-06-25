@@ -42,7 +42,6 @@
     "react-native": "0.79.2",
     "react-native-gesture-handler": "~2.24.0",
     "react-native-keyboard-aware-scroll-view": "^0.9.5",
-    "react-native-maps": "^1.24.3",
     "react-native-mask-input": "^1.2.3",
     "react-native-reanimated": "~3.17.4",
     "react-native-reanimated-carousel": "^4.0.2",
