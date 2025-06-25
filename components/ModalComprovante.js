@@ -8,15 +8,15 @@ import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { spacing } from '../theme/spacing';
 import BotaoVerde from './BotaoVerde';
-//import logoEcoApp from '../assets/imagensEco/eco-novo.jpeg';
-//import { carregarLogoBase64 } from '../utils/converterImagem.js';
+import logoEcoApp from '../assets/imagensEco/eco-novo.jpeg';
+import { carregarLogoBase64 } from '../utils/converterImagem.js';
 
 
 export default function ModalComprovante({ visible, onClose, extrato }) {
   if (!extrato) return null;
   
 
-const gerarHtml = () => {
+const gerarHtml = (logoBase64) => {
   const { cpf, dataHora, codigo, materiais, total } = extrato;
 
   return `
@@ -38,7 +38,7 @@ const gerarHtml = () => {
       </head>
       <body>
         <div style="text-align:center;">
-         
+          <img src="${logoBase64}" width="150" style="margin-bottom:10px;" />
           <h1>Comprovante de Depósito</h1>
           <p class="info"><strong>Código:</strong> ${codigo}</p>
           <p class="info"><strong>CPF:</strong> ${cpf}</p>
@@ -56,8 +56,8 @@ const gerarHtml = () => {
 };
   const imprimirComprovante = async () => {
   try {
-   // const logoBase64 = await carregarLogoBase64(); // 👈 pega logo da pasta
-    const html = gerarHtml();
+    const logoBase64 = await carregarLogoBase64(); // 👈 pega logo da pasta
+    const html = gerarHtml(logoBase64);
 
     const result = await Print.printToFileAsync({ html });
     if (!result?.uri) throw new Error('Falha ao gerar PDF.');

@@ -8,8 +8,7 @@ import {
   ScrollView
 } from 'react-native';
 
-//import apiMock from '../../services/apiMock'; // 🔄 Mock funcionando hoje
-import { DepositoService } from '../../services/depositoService'; // 🔗 API real — pronto para ativar
+import { DepositoService } from '../../services/depositoService'; 
 import { apenasNumeros } from '../../utils/formatarenvio'; 
 import { Masks } from 'react-native-mask-input';
 import InputField from '../../components/InputField';
@@ -23,7 +22,7 @@ import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
 
-// 🔄 Materiais disponíveis para simulação no mock
+
 const materiaisDisponiveis = [
   { nome: 'Plástico', pontos: 10 },
   { nome: 'Alumínio', pontos: 15 },
@@ -32,7 +31,6 @@ const materiaisDisponiveis = [
   { nome: 'Orgânico', pontos: 2 },
 ];
 
-// 🔄 Função que gera simulação de materiais — Usada no mock (mantém no front mesmo com API)
 const gerarSimulacao = () => {
   return materiaisDisponiveis
     .sort(() => 0.5 - Math.random())
@@ -42,12 +40,6 @@ const gerarSimulacao = () => {
       quantidade: Math.floor(Math.random() * 10) + 1,
     }));
 };
-
-/*/ 🔄 Gerador de código local — Só no mock (API gera automaticamente)
-const gerarCodigoDeposito = () => {
-  const timestamp = Date.now();
-  return `DEP-${timestamp}`;
-};/*/
 
 export default function DepositoMaterial() {
   const [cpf, setCpf] = useState('');
@@ -88,14 +80,7 @@ export default function DepositoMaterial() {
         (acc, item) => acc + item.quantidade * item.pontos,
         0
       );
-     // const dataHora = new Date().toLocaleString('pt-BR');
-     // const codigo = gerarCodigoDeposito();/*/
-
-      // 🔄 MOCK — Registrar depósito no mock (funcionando hoje)
-      //await apiMock.registrarDeposito(cpf, simulados, total, codigo);
-
-      // 🔗 API — Registrar depósito na API (ATIVAR no futuro)
-  
+        
       const comprovante = await DepositoService.realizarDeposito(cpfLimpo, simulados, total);
 
       const codigo = comprovante.deposito?.codigo 
