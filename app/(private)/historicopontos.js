@@ -47,7 +47,7 @@ export default function HistoricoPontos() {
     const carregarDados = async () => {
     try {
       setCarregando(true);
-      const dados = await UsuarioService.obterPorId(usuario.cpf);
+      const dados = await UsuarioService.carregaHistorico(usuario.cpf);
       const movimentacoesOrdenadas = (dados.movimentacoes || []).sort(
         (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
       );

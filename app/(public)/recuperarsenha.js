@@ -18,6 +18,10 @@ import { obterMensagemErro } from '../../utils/obterMensagemErro';
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
+import { Linking } from 'react-native';
+
+
+
 
 export default function RecuperarSenha() {
   const router = useRouter();
@@ -126,9 +130,10 @@ if (resposta?.sucesso) {
       <ModalSucesso
         visivel={modalSucessoVisivel}
         mensagem="Enviamos as instruções para redefinir sua senha ao e-mail cadastrado. Verifique sua caixa de entrada!"
-        onClose={() => {
+        onFechar={() => {
           setModalSucessoVisivel(false);
-          router.replace('/(public)/login');
+          //router.replace('/(public)/login');
+          Linking.openURL('ecoapp://(public)/redefinirsenha?token=abc123');
         }}
       />
     </>
