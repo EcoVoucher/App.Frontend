@@ -1,5 +1,6 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   Dimensions,
   FlatList,
@@ -10,22 +11,20 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useCarrinho } from '../../context/CarrinhoContext';
-import { useAuth } from '../../context/AuthContext';
-import { useModalCarrinho } from '../../context/ModalCarrinhoContext';
-import { VouchersService } from '../../services/voucherService';
-import { UsuarioService } from '../../services/usuarioService';
+import Badge from '../../components/Badge';
 import BotaoVerde from '../../components/BotaoVerde';
-import BotaoVerdePequeno from '../../components/BotaoVerdePequeno';
-import ModalSucesso from '../../components/ModalSucesso';
+import HeaderComFiltros from '../../components/HeaderComFiltros';
 import ModalErro from '../../components/ModalErro';
+import ModalSucesso from '../../components/ModalSucesso';
+import VerMaisMenos from '../../components/VerMaisMenos';
+import { useAuth } from '../../context/AuthContext';
+import { useCarrinho } from '../../context/CarrinhoContext';
+import { useModalCarrinho } from '../../context/ModalCarrinhoContext';
+import { UsuarioService } from '../../services/usuarioService';
+import { VouchersService } from '../../services/voucherService';
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
-import VerMaisMenos from '../../components/VerMaisMenos';
-import Badge from '../../components/Badge';
-import { useFocusEffect } from '@react-navigation/native';
-import { useCallback } from 'react';
 import { obterMensagemErro } from '../../utils/obterMensagemErro';
 
 
@@ -203,32 +202,15 @@ const temMais = () => {
   return (
     <View style={styles.container}>
       <View style={styles.contentBox}>
-        <View style={styles.boxResumo}>
-          <Text style={styles.titulo}>Catálogo de Vouchers</Text>
-          <Text style={styles.subtitulo}>
-            Troque seus pontos por produtos!
-          </Text>
-          <Text style={styles.saldo}>
-            🥇 Saldo atual: {saldoAtual} pontos
-          </Text>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filtrosLinha}
-          >
-            {tipos.map((tipo) => (
-              <BotaoVerdePequeno
-                key={tipo}
-                texto={tipo}
-                onPress={() => setTipoSelecionado(tipo)}
-                ativo={tipo === tipoSelecionado}
-              />
-            ))}
-          </ScrollView>
-
-        </View>
-
+          <HeaderComFiltros
+            titulo="Catálogo de Vouchers"
+            subtitulo="Troque seus pontos por produtos!"
+            saldo={saldoAtual}
+            tipos={tipos}
+            tipoSelecionado={tipoSelecionado}
+            onSelecionarTipo={setTipoSelecionado}
+          />
         <FlatList
           data={filtrarPorTipo()}
           keyExtractor={(item) => item.idLote}
@@ -409,37 +391,6 @@ const styles = StyleSheet.create({
     width: width > 700 ? '70%' : '100%',
     alignSelf: 'center',
   },
-  boxResumo: {
-    backgroundColor: colors.branco,
-    borderRadius: 12,
-    marginBottom: spacing.lg,
-    padding: spacing.md,
-  },
-  titulo: {
-    fontSize: fonts.size.xl,
-    fontWeight: fonts.weight.bold,
-    color: colors.verde,
-    textAlign: 'center',
-    marginBottom: spacing.md,
-  },
-  subtitulo: {
-    fontSize: fonts.size.md,
-    fontWeight: fonts.weight.bold,
-    color: colors.verde,
-    textAlign: 'center',
-    marginBottom: spacing.md,
-  },
-  saldo: {
-    textAlign: 'center',
-    fontSize: fonts.size.md,
-    color: colors.verde,
-    marginBottom: spacing.md,
-  },
- filtrosLinha: {
-  flexDirection: 'row',
-  gap: spacing.sm,
-  paddingHorizontal: spacing.sm,
-},
 
   card: {
     padding: spacing.sm,

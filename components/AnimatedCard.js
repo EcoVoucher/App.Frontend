@@ -12,7 +12,7 @@ import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { spacing } from '../theme/spacing';
 
-export default function AnimatedCard({ imagem, rota, label }) {
+export default function AnimatedCard({ imagem, rota, label,onPress }) {
   const router = useRouter();
   const scale = new Animated.Value(1);
   const { width } = useWindowDimensions();
@@ -69,18 +69,19 @@ export default function AnimatedCard({ imagem, rota, label }) {
         toValue: 0.95,
         duration: 100,
         useNativeDriver: true,
-      }),
-      Animated.timing(scale, {
-        toValue: 1,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-    ]).start(() => router.push(rota));
+        }),
+    ]).start(() => {
+      if (onPress) {
+        onPress(); // Executa função customizada (ex: abrir WhatsApp)
+      } else if (rota) {
+        router.push(rota); // Executa navegação padrão
+      }
+    });
   };
 
   return (
     <View style={styles.container}>
-      <Animated.View style={[styles.card, { transform: [{ scale }] }]}>
+    <Animated.View style={[styles.card, { transform: [{ scale }] }]}>
         <TouchableOpacity onPress={animar} activeOpacity={0.85} style={styles.touch}>
           <Image source={imagem} style={styles.icone} />
         </TouchableOpacity>

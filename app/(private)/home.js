@@ -16,6 +16,8 @@ import { fonts } from '../../theme/fonts';
 import AnimatedCard from '../../components/AnimatedCard';
 import { obterMensagemErro } from '../../utils/obterMensagemErro';
 import { apenasNumeros } from '../../utils/formatarenvio';
+import { Platform, Linking } from 'react-native';
+
 
 import { UsuarioService } from '../../services/usuarioService'; // 🔗 API real — ativar futuramente
 import { VouchersService } from '../../services/voucherService'; // 🔗 API real — ativar futuramente
@@ -25,7 +27,7 @@ import { VouchersService } from '../../services/voucherService'; // 🔗 API rea
 import { obterComparativoPegada } from '../../utils/formatadores';
 
 export default function Home() {
-  const router = useRouter();
+  const router = useRouter();     
   const { width } = useWindowDimensions();
   const isLargeScreen = width > 500;
   const { usuario } = useAuth();
@@ -36,6 +38,18 @@ export default function Home() {
   const [vouchersUtilizados, setVouchersUtilizados] = useState(0);
   const [icones, setIcones] = useState([]);
   const [carregando, setCarregando] = useState(true);
+  
+const abrirWhatsApp = async () => {
+  const url = 'https://wa.me/5515996893760?text=Olá!%20Quero%20saber%20mais%20sobre%20o%20EcoVoucher.';
+  console.log("Abrindo WhatsApp...");
+
+  const canOpen = await Linking.canOpenURL(url);
+  if (canOpen) {
+    Linking.openURL(url);
+  } else {
+    Alert.alert('Erro', 'Não foi possível abrir o WhatsApp. Verifique se o aplicativo está instalado.');
+  }
+};
 
   const mensagens = [
     { texto: '🌱 Acompanhe sua pegada ecológica.' },
@@ -45,7 +59,6 @@ export default function Home() {
 
 useEffect(() => {
   if (!usuario) return;
-  console.log(usuario)
   let intervalo;
 
   const carregarDados = async () => {
@@ -66,10 +79,10 @@ useEffect(() => {
         ]);
       }
 
-           if (usuario.tipo === 'pj') {
+           if (usuario.tipo =='pj') {
           const [vouchers, estatisticas] = await Promise.all([
             VouchersService.listarVouchers(),
-            VouchersService.obterEstatisticas(),
+            //VouchersService.obterEstatisticas(),
           ]);
 
           const totalGerados = vouchers?.reduce((acc, v) => acc + (v.quantidade || 0), 0) ?? 0;
@@ -80,7 +93,11 @@ useEffect(() => {
         setIcones([
           { imagem: require('../../assets/imagensEco/gerarVoucherIcon.png'), rota: '/(private)/catalogorecompensapj', label: 'Gerar Voucher' },
           { imagem: require('../../assets/imagensEco/validarVoucherIcon.png'), rota: '/(private)/validarvoucherpj', label: 'Validar Voucher' },
-          { imagem: require('../../assets/imagensEco/faleConoscoIcon.png'), rota: '(private)/faleconosco', label: 'Contato' },
+          {
+            imagem: require('../../assets/imagensEco/faleConoscoIcon.png'),
+            label: 'Contato',
+            onPress:abrirWhatsApp,
+            }
         ]);
       }
     } catch (error) {
@@ -140,8 +157,14 @@ useEffect(() => {
 
         <View style={styles.conteudoCentral}>
           <View style={styles.grid}>
-            {icones.map((item, index) => (
-              <AnimatedCard key={index} imagem={item.imagem} rota={item.rota} label={item.label} />
+           {icones.map((item, index) => (
+              <AnimatedCard
+                key={index}
+                imagem={item.imagem}
+                rota={item.rota}
+                label={item.label}
+                onPress={item.onPress} // ✅ ESSENCIAL para funcionar
+              />
             ))}
           </View>
 
@@ -173,7 +196,6 @@ useEffect(() => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.fundo,
   },
   conteudoCentral: {
   flex: 1,

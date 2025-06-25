@@ -13,18 +13,22 @@ import { obterMensagemErro } from '../../utils/obterMensagemErro';
 export default function AdminDevScreen() {
   const [usuarios, setUsuarios] = useState([]);
   const [visiveis, setVisiveis] = useState([]);
-  const { usuario, token } = useAuth();
+  const { usuario } = useAuth();
+
 
   const router = useRouter();
 
 
  useEffect(() => {
-  if (!usuario?.isAdmin || !token) {
-    router.replace('/(public)/login');
+  if (usuario.isAdmin == 'false') {
+   router.replace('/(public)/login');
+
+  
+
   } else {
     carregarUsuarios();
   }
-}, [usuario, token]);
+}, [usuario]);
 
 
   const carregarUsuarios = async () => {

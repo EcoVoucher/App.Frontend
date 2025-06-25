@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { UsuarioService } from '../../services/usuarioService';
+import HeaderComFiltros from '../../components/HeaderComFiltros';
 import { obterMensagemErro } from '../../utils/obterMensagemErro';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
@@ -147,32 +148,14 @@ export default function HistoricoPontos() {
   return (
     <View style={styles.container}>
       <View style={styles.contentBox}>
-        <View style={styles.topoInfo}>
-          <Text style={styles.titulo}>Histórico Pontos e Vouchers</Text>
-          <Text style={styles.subtitulo}>Total de pontos disponíveis: {pontos}</Text>
-          <Text style={styles.resumo}>
-            ➕ Entradas: {totalEntradas}  ·  
-            🎁 Vouchers: {totalSaidas}                                                       ·  
-            ✅ Utilizados: {totalUtilizados}  ·  
-            ⏰ Expirados: {totalExpirados}
-          </Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filtrosLinhaHorizontal}
-          >
-            {opcoesFiltro.map((f) => (
-              <View key={f} style={styles.botaoFiltroHorizontal}>
-                <BotaoVerdePequeno
-                  texto={f.charAt(0).toUpperCase() + f.slice(1)}
-                  onPress={() => setFiltro(f)}
-                  ativo={filtro === f}
-                />
-              </View>
-            ))}
-          </ScrollView>
-        </View>
-
+        <HeaderComFiltros
+          titulo="Histórico Pontos e Vouchers"
+          subtitulo={`Total de pontos disponíveis: ${pontos}`}
+          saldo={`➕ Entradas: ${totalEntradas} · 🎁 Vouchers: ${totalSaidas} · ✅ Utilizados: ${totalUtilizados} · ⏰ Expirados: ${totalExpirados}`}
+          tipos={opcoesFiltro}
+          tipoSelecionado={filtro}
+          onSelecionarTipo={setFiltro}
+        />
         <TextInput
           placeholder="Buscar..."
           value={busca}
@@ -214,38 +197,8 @@ const styles = StyleSheet.create({
   },
   contentBox: {
     width: '100%',
-    maxWidth: 700,
+    maxWidth: 800,
     alignSelf: 'center',
-  },
-  topoInfo: {
-    backgroundColor: colors.branco,
-    borderRadius: 12,
-    marginBottom: spacing.sm,
-    paddingTop: spacing.sm,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  titulo: {
-    fontSize: fonts.size.xl,
-    fontWeight: fonts.weight.bold,
-    color: colors.verde,
-    textAlign: 'center',
-    marginBottom: spacing.md,
-  },
-  subtitulo: {
-    fontSize: fonts.size.md,
-    color: colors.verde,
-    textAlign: 'center',
-    fontWeight: fonts.weight.bold,
-  },
-  resumo: {
-    textAlign: 'center',
-    fontSize: fonts.size.sm,
-    color: colors.cinzaEscuro,
-    marginVertical: spacing.md,
   },
   vazio: {
     textAlign: 'center',

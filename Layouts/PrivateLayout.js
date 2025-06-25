@@ -41,7 +41,7 @@ export default function PrivateLayout() {
   }, []);
 
   useEffect(() => {
-    if (!isReady || !usuario) return;
+    if (!isReady) return;
 
     if (!usuario) {
       router.replace('/(public)/login');
@@ -52,8 +52,7 @@ export default function PrivateLayout() {
 
     if (
       rota.includes('catalogorecompensapj') ||
-      rota.includes('validarvoucherpj') ||
-      rota.includes('faleconosco')
+      rota.includes('validarvoucherpj') 
     ) {
       if (usuario.tipo !== 'pj') {
         router.replace('/(private)/home');

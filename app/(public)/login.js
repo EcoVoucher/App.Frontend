@@ -7,17 +7,17 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import ModalErro from '../../components/ModalErro';
 import BotaoVerde from '../../components/BotaoVerde';
 import FormLogin from '../../components/forms/FormLogin';
+import ModalErro from '../../components/ModalErro';
 import { useAuth } from '../../context/AuthContext';
 //import apiMock from '../../services/apiMock';
 import { AuthService } from '../../services/authService';
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
-import { validarCamposObrigatorios } from '../../utils/validarCamposObrigatorios';
 import { obterMensagemErro } from '../../utils/obterMensagemErro';
+import { validarCamposObrigatorios } from '../../utils/validarCamposObrigatorios';
 
 export default function Login() {
   const router = useRouter();
@@ -93,10 +93,13 @@ export default function Login() {
 
     if (usuario.isAdmin) {
       router.replace('/(admin)/admin');
+      console.log('/(admin)/admin')
     } else if (usuario.primeiroAcesso && usuario.tipo === 'pf') {
       router.replace('/(private)/pegada');
+      console.log("pf")
     } else {
       router.replace('/(private)/home');
+      console.log('home')
     }
 
   } catch (error) {
