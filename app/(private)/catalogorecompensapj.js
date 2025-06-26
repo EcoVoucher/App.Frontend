@@ -92,7 +92,7 @@ const carregarDados = async () => {
   try {
     const [vouchers, estatisticas] = await Promise.all([
       VouchersService.listarVouchers(),
-      //VouchersService.obterEstatisticas(),
+      VouchersService.obterEstatisticas(),
     ]);
     setVouchersGerados(vouchers);
     setQtdAdquiridos(estatisticas.totalComprados);
