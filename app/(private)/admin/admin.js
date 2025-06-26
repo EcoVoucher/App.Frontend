@@ -1,30 +1,43 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { AdminService } from '../../services/serviceAdmin';
-import { colors } from '../../theme/colors';
-import { fonts } from '../../theme/fonts';
-import { spacing } from '../../theme/spacing';
-import AsyncStorage from '../../utils/storage';
-import { obterComparativoPegada, formatarDataBR } from '../../utils/formatadores';
-import { useAuth } from '../../context/AuthContext'; 
-import { obterMensagemErro } from '../../utils/obterMensagemErro';
- import { useRouter } from 'expo-router';
+import { AdminService } from '../../../services/serviceAdmin';
+import { colors } from '../../../theme/colors';
+import { fonts } from '../../../theme/fonts';
+import { spacing } from '../../../theme/spacing';
+import AsyncStorage from '../../../utils/storage';
+import { obterComparativoPegada, formatarDataBR } from '../../../utils/formatadores';
+import { useAuth } from '../../../context/AuthContext'; 
+import { obterMensagemErro } from '../../../utils/obterMensagemErro';
+import { useRouter } from 'expo-router';
+import HeaderComFiltros from '../../../components/HeaderComFiltros';
+
+import { Ionicons } from '@expo/vector-icons';
+
+
 
 export default function AdminDevScreen() {
+ 
+
   const [usuarios, setUsuarios] = useState([]);
   const [visiveis, setVisiveis] = useState([]);
-  const { usuario, token } = useAuth();
+ const { usuario, logout } = useAuth();
 
+
+  const tipos = ['Todos', 'Pessoa Física', 'PJ Aprovada', 'PJ Pendente'];
+  const [tipoSelecionado, setTipoSelecionado] = useState('Todos');
   const router = useRouter();
 
 
  useEffect(() => {
-  if (!usuario?.isAdmin || !token) {
+  if (!usuario) return; 
+
+  if (usuario.isAdmin === 'false') {
     router.replace('/(public)/login');
   } else {
     carregarUsuarios();
   }
-}, [usuario, token]);
+}, [usuario]);
+
 
 
   const carregarUsuarios = async () => {
@@ -61,31 +74,36 @@ export default function AdminDevScreen() {
     setVisiveis(novos);
   };
 
- const resetarUsuarios = async () => {
-  try {
-    await AsyncStorage.multiRemove(['@usuarios_mock', '@vouchersGerados', 'contador_vouchers_gerados']);
-    setUsuarios([]);
-    Alert.alert('Base de usuários mock foi resetada!');
-  }  catch (error) {
-    console.error('Erro ao resetar usuários:', error);
-
-    const mensagem = obterMensagemErro(error, 'Erro ao resetar dados.');
-
-    Alert.alert('Erro', mensagem);
-  }
-};
-  
-
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={{ width: '100%', maxWidth: 600 }}>
-        <Text style={styles.titulo}>Usuários Cadastrados</Text>
+  <View style={{ flex: 1 }}>
+  {/* 🔐 Botão logout fixo no topo direito */}
+  <TouchableOpacity onPress={logout} style={styles.logoutBotao}>
+    <Ionicons name="log-out-outline" size={28} color={colors.verde} />
+  </TouchableOpacity>
+    <ScrollView contentContainerStyle={styles.container}>   
 
+      <View style={{ width: '100%', maxWidth: 600 }}>
+
+        <HeaderComFiltros
+          titulo="Administração de Usuários"
+          subtitulo="Aprovação e visualização dos cadastros"
+          tipos={tipos}
+          tipoSelecionado={tipoSelecionado}
+          onSelecionarTipo={setTipoSelecionado}
+        />
         {usuarios.length === 0 ? (
           <Text style={styles.vazio}>Nenhum usuário cadastrado.</Text>
         ) : (
-          usuarios.map((usuario, index) => {
+         usuarios
+            .filter((u) => {
+              if (tipoSelecionado === 'Pessoa Física') return u.tipo === 'pf';
+              if (tipoSelecionado === 'PJ Aprovada') return u.tipo === 'pj' && u.aprovado;
+              if (tipoSelecionado === 'PJ Pendente') return u.tipo === 'pj' && !u.aprovado;
+              return true; // 'Todos'
+            })
+            .map((usuario, index) => {
+
             const historico = Array.isArray(usuario.historicoPegada) ? usuario.historicoPegada : [];
             const ultima = historico.length > 0 ? historico[historico.length - 1] : null;
 
@@ -139,12 +157,9 @@ export default function AdminDevScreen() {
         <TouchableOpacity style={styles.botao} onPress={carregarUsuarios}>
           <Text style={styles.botaoTexto}>Atualizar Lista</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity style={[styles.botao, { backgroundColor: colors.erro }]} onPress={resetarUsuarios}>
-          <Text style={styles.botaoTexto}>Resetar Usuários</Text>
-        </TouchableOpacity>
       </View>
     </ScrollView>
+    </View>
   );
 }
 
@@ -205,4 +220,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
   },
+  logoutBotao: {
+  position: 'absolute',
+  top: spacing.md,
+  right: spacing.md,
+  zIndex: 10,
+  backgroundColor: 'transparent',
+  padding: spacing.sm,
+},
+
 });

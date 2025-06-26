@@ -26,9 +26,8 @@ export default function RodapeNavegacao() {
 
 ] : [
   { texto: 'Conheça o Eco Voucher', icone: 'recycle', rota:'/(private)/ecoempresa' },
-  { texto: 'Fale pelo WhatsApp', icone: 'whatsapp', link: 'https://wa.me/5599999999999?text=Olá!%20Gostaria%20de%20saber%20mais%20sobre%20o%20projeto%20EcoVoucher.' },
+  { texto: 'Fale pelo WhatsApp', icone: 'whatsapp', link: 'https://wa.me/5515996893760?text=Olá!%20Gostaria%20de%20saber%20mais%20sobre%20o%20projeto%20EcoVoucher.' },
   { texto: 'Histórico Pegada', icone: 'history', rota: '/(private)/historicopegada' },
-  { texto: 'Depósito', icone: 'handshake', rota: '/(public)/depositomaterial' },
   { texto: 'Seu Perfil', icone: 'account', rota:'/(private)/perfil' },
   
 ];

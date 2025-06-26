@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import HeaderComFiltros from '../../components/HeaderComFiltros';
 import BotaoVerde from '../../components/BotaoVerde';
 import Badge from '../../components/Badge.js';
 import BotaoVerdePequeno from '../../components/BotaoVerdePequeno';
@@ -201,48 +202,47 @@ useEffect(() => {
   return (
     <View style={styles.container}>
       <View style={styles.contentBox}>
-        <View style={styles.boxResumo}>
-            <Text style={styles.titulo}>Histórico de Vouchers Emitidos</Text>
-            <Text style={styles.subtitulo}>
-              🧾 Lotes: {totalLotes} · ✅ Ativos: {qtdAtivos} · 🔁 Adquiridos: {qtdAdquiridos}
-            </Text>
-
-            <View style={styles.filtrosLinha}>
-             {['todos', 'validos', 'expirado'].map((value) => (
-            <View key={value} style={styles.botaoFiltroBox}>
-              <BotaoVerdePequeno
-                texto={textoStatus[value]}
-                onPress={() => setFiltroStatus(value)}
-                ativo={filtroStatus === value}
-              />
-            </View>
-            ))}
-             <TouchableOpacity onPress={() => setModalInfo(true)}>
-              <Ionicons name="information-circle-outline" size={20} color={colors.verdeEscuro} />
-              <Text style={{color: colors.verdeEscuro, marginLeft: 4}}></Text>
-              </TouchableOpacity>
-          </View>
-
-          <View style={styles.linhaAcao}>
-            <View style={styles.ordenarBox}>
-              <SelectField
-                label="Ordenar por:"
-                selectedValue={criterioOrdenacao}
-                onValueChange={setCriterioOrdenacao}
-                options={[
-                  { label: 'Validade (mais próximas)', value: 'validade' },
-                  { label: 'Tipo (A-Z)', value: 'tipo' },
-                  { label: 'Mais utilizados', value: 'uso' },
-                ]}
-              />
-            </View>
-
-            <TouchableOpacity style={styles.botaoCadastrar} onPress={handleAbrirModal}>
-              <Ionicons name="add-circle" size={20} color={colors.branco} />
-              <Text style={styles.textoCadastrar}>Cadastrar novo voucher</Text>
-            </TouchableOpacity>
-          </View>
+       <HeaderComFiltros
+        titulo="Histórico de Vouchers Emitidos"
+        subtitulo={`🧾 Lotes: ${totalLotes} · ✅ Ativos: ${qtdAtivos} · 🔁 Adquiridos: ${qtdAdquiridos}`}
+       filtros={
+    <View style={styles.filtrosLinha}>
+      {['todos', 'validos', 'expirado'].map((value) => (
+        <View key={value} style={styles.botaoFiltroBox}>
+          <BotaoVerdePequeno
+            texto={textoStatus[value]}
+            onPress={() => setFiltroStatus(value)}
+            ativo={filtroStatus === value}
+          />
         </View>
+      ))}
+      <TouchableOpacity onPress={() => setModalInfo(true)}>
+        <Ionicons name="information-circle-outline" size={20} color={colors.verdeEscuro} />
+      </TouchableOpacity>
+    </View>
+  }
+  acoes={
+    <View style={styles.linhaAcao}>
+      <View style={styles.ordenarBox}>
+        <SelectField
+          label="Ordenar por:"
+          selectedValue={criterioOrdenacao}
+          onValueChange={setCriterioOrdenacao}
+          options={[
+            { label: 'Validade (mais próximas)', value: 'validade' },
+            { label: 'Tipo (A-Z)', value: 'tipo' },
+            { label: 'Mais utilizados', value: 'uso' },
+          ]}
+        />
+      </View>
+
+      <TouchableOpacity style={styles.botaoCadastrar} onPress={handleAbrirModal}>
+        <Ionicons name="add-circle" size={20} color={colors.branco} />
+        <Text style={styles.textoCadastrar}>Cadastrar novo voucher</Text>
+      </TouchableOpacity>
+    </View>
+  }
+/>
 
         <FlatList
           data={mostrarTodos ? vouchersFiltrados : vouchersFiltrados.slice(0, itensPorPagina)}

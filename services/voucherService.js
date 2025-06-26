@@ -18,10 +18,13 @@ export const VouchersService = {
    * - Lista de códigos dos vouchers
    * 📥 GET → /vouchers
    */
-  async listarVouchers() {
-    const { data } = await api.get('/vouchers');
-    return data;
-  },
+ async listarVouchers(cnpj) {
+  const { data } = cnpj
+    ? await api.get('/vouchers', { params: { cnpj } }) 
+    : await api.get('/vouchers');                      
+  return data;
+},
+
 
   /**
    * 📊 Obter estatísticas dos vouchers (PJ).

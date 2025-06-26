@@ -14,11 +14,14 @@ import { useRouter } from 'expo-router';
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
+import HeaderComFiltros from '../../components/HeaderComFiltros';
 import PegadaTermometro from '../../components/PegadaTermometro';
 import { formatarDataBR, obterComparativoPegada } from '../../utils/formatadores';
 import VerMaisMenos from '../../components/VerMaisMenos';
 import { obterMensagemErro } from '../../utils/obterMensagemErro';
 import { apenasNumeros } from '../../utils/formatadores';
+import ModalErro from '../../components/ModalErro';
+
 
 
 const { height } = Dimensions.get('window');
@@ -31,6 +34,10 @@ export default function HistoricoPegada() {
   const [carregando, setCarregando] = useState(true);
   const [mostrarTodos, setMostrarTodos] = useState(false);
   const itensPorPagina = 2;
+  const [modalErro, setModalErro] = useState('');
+  const [mensagemErro, setMensagemErro] = useState('');
+  const [erroVisivel, setErroVisivel] = useState(false);
+
 
   useEffect(() => {
     const carregarHistorico = async () => {
@@ -40,10 +47,13 @@ export default function HistoricoPegada() {
         const dados = await PegadaService.obterHistorico(documento);
         
         setHistorico(dados);
-      }catch (error) {
-  console.error(error);
-  Alert.alert('Erro', obterMensagemErro(error, 'Erro ao carregar histórico.'));
+     } catch (error) {
+  const mensagem = obterMensagemErro(error, 'Erro ao carregar histórico.');
+  setMensagemErro(mensagem);    
+  setErroVisivel(true);         
 }
+
+
  finally {
         setCarregando(false);
       }
@@ -64,12 +74,24 @@ export default function HistoricoPegada() {
       showsVerticalScrollIndicator={false}
     >
       <View style={[styles.contentBox, { width: width > 700 ? '60%' : '110%' }]}>
-        <View style={styles.headerBox}>
-          <Text style={styles.titulo}>Histórico de Pegadas</Text>
+       <HeaderComFiltros
+            titulo="Histórico de Pegadas"
+            subtitulo={
+              historico.length > 0
+                ? obterComparativoPegada(historico[0].pontuacao)
+                : ''
+            }
+            saldo={
+              historico.length > 0 ? `${historico[0].pontuacao} pontos` : undefined
+            }
+          />
+
           {historico.length > 0 && (
-            <PegadaTermometro pontuacao={historico[0].pontuacao} />
+            <View style={{ marginBottom: spacing.md }}>
+              <PegadaTermometro pontuacao={historico[0].pontuacao} />
+            </View>
           )}
-        </View>
+
 
         {carregando ? (
           <ActivityIndicator size="large" color={colors.verde} />
@@ -102,6 +124,12 @@ export default function HistoricoPegada() {
           />
         )}
       </View>
+            <ModalErro
+        visivel={!!modalErro}
+        onClose={() => setModalErro('')}
+        mensagem={modalErro}
+      />
+
     </ScrollView>
   );
 }
@@ -114,19 +142,7 @@ const styles = StyleSheet.create({
   contentBox: {
     alignSelf: 'center',
   },
-  headerBox: {
-    backgroundColor: colors.branco,
-    padding: spacing.md,
-    borderRadius: 10,
-    marginBottom: spacing.md,
-  },
-  titulo: {
-    fontSize: fonts.size.xl,
-    fontWeight: fonts.weight.bold,
-    color: colors.verde,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
+  
   vazio: {
     textAlign: 'center',
     color: colors.cinza,

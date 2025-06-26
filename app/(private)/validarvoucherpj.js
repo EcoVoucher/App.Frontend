@@ -46,6 +46,7 @@ export default function ValidarVoucherPJ() {
   const [modalVisivel, setModalVisivel] = useState(false);
   const [erroVisivel, setErroVisivel] = useState(false);
   const [mensagemErro, setMensagemErro] = useState('');
+  
 
   const [validando, setValidando] = useState(false);
   const [buscando, setBuscando] = useState(false);

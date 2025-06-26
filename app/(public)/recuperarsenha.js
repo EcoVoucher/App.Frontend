@@ -29,6 +29,7 @@ export default function RecuperarSenha() {
   const [dados, setDados] = useState({ cpf: '' });
   const [erros, setErros] = useState({});
   const [tipoPessoa, setTipoPessoa] = useState('pf');
+  
 
   const maskDocumento = tipoPessoa === 'pf' ? Masks.BRL_CPF : Masks.BRL_CNPJ;
 

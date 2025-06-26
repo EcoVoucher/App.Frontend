@@ -41,7 +41,7 @@ export default function PrivateLayout() {
   }, []);
 
   useEffect(() => {
-    if (!isReady || !usuario) return;
+    if (!isReady) return;
 
     if (!usuario) {
       router.replace('/(public)/login');
@@ -50,10 +50,14 @@ export default function PrivateLayout() {
 
     const rota = pathname.toLowerCase();
 
+  if (usuario.isAdmin === 'true' && !rota.includes('/admin/admin')) {
+    router.replace('/(private)/admin/admin');
+    return;
+  }
+
     if (
       rota.includes('catalogorecompensapj') ||
-      rota.includes('validarvoucherpj') ||
-      rota.includes('faleconosco')
+      rota.includes('validarvoucherpj') 
     ) {
       if (usuario.tipo !== 'pj') {
         router.replace('/(private)/home');
@@ -93,7 +97,7 @@ export default function PrivateLayout() {
           </ScrollView>
         </View>
 
-        {estaNoCatalogoPF && selecionados.length > 0 && (
+        {usuario?.isAdmin !== 'true' && estaNoCatalogoPF && selecionados.length > 0 && (
           <TouchableOpacity
             onPress={abrirResumo} // 🔥 Aqui faz abrir o modal de resumo
             style={styles.botaoCarrinho}
@@ -105,7 +109,7 @@ export default function PrivateLayout() {
           </TouchableOpacity>
         )}
 
-        {!esconderRodape && (
+        {!esconderRodape && usuario?.isAdmin !== 'true' && (
           <View style={styles.rodape}>
             <RodapeNavegacao ativo="menu" />
           </View>

@@ -26,6 +26,7 @@ import ModalSucesso from '../../components/ModalSucesso';
 
 export default function Perfil() {
   const { usuario } = useAuth();
+
   const [pontos, setPontos] = useState(0);
   const [depositos, setDepositos] = useState(0);
   const [pegada, setPegada] = useState(null);
@@ -33,7 +34,6 @@ export default function Perfil() {
   const [vouchersAdquiridos, setVouchersAdquiridos] = useState(0);
 
   const [senhaAberta, setSenhaAberta] = useState(false);
-
   const [senhaAtual, setSenhaAtual] = useState('');
   const [novaSenha, setNovaSenha] = useState('');
   const [confirmarNovaSenha, setConfirmarNovaSenha] = useState('');
@@ -45,40 +45,41 @@ export default function Perfil() {
   const [erros, setErros] = useState({});
   const [modalErro, setModalErro] = useState('');
   const [modalSucesso, setModalSucesso] = useState('');
+  
 
   useEffect(() => {
     carregarDados();
   }, []);
 
- const carregarDados = async () => {
-  try {
-    const user = usuario.tipo === 'pf'
-      ? await UsuarioService.obterPorId(usuario.cpf)
-      : await UsuarioService.obterPorId(usuario.cnpj);
+   const carregarDados = async () => {
+    try {
+      const documento = usuario.cpf || usuario.cnpj;
+      const user = await UsuarioService.obterPorId(documento);
 
-    setPontos(user.pontos || 0);
-    setDepositos(user.depositos?.length || 0);
+      setPontos(user.pontos ?? 0);
+      setDepositos(user.depositos?.length ?? 0);
 
-    if (usuario.tipo === 'pf') {
-      const historico = await PegadaService.obterHistorico(usuario.cpf);
-      if (historico.length > 0) {
-        setPegada(historico[historico.length - 1].pontuacao);
+      if (usuario.tipo === 'pf') {
+        const historico = await PegadaService.obterHistorico(documento);
+        if (historico.length > 0) {
+          setPegada(historico[historico.length - 1].pontuacao);
+        }
       }
+if (usuario.tipo === 'pj') {
+        const lotes = await VouchersService.listarVouchers(usuario.cnpj); 
+        const estatisticas = await VouchersService.obterEstatisticas();
+
+        const totalVouchersGerados = lotes.reduce((acc, lote) => acc + (lote.quantidade ?? 0), 0);
+        setQtdVouchers(totalVouchersGerados);
+        setVouchersAdquiridos(estatisticas?.totalComprados ?? 0);
+      }
+
+    } catch (error) {
+      const mensagem = obterMensagemErro(error, 'Erro ao carregar dados.');
+      setModalErro(mensagem);
     }
+  };
 
-    if (usuario.tipo === 'pj') {
-      const lotes = await VouchersService.listarVouchers();
-      const estatisticas = await VouchersService.obterEstatisticas();
-
-      setQtdVouchers(lotes.length);                    
-      setVouchersAdquiridos(estatisticas.totalComprados); 
-    }
-
-  } catch (error) {
-    const mensagem = obterMensagemErro(error, 'Erro ao carregar dados.');
-    setModalErro(mensagem);
-  }
-};
 
   const handleAlterarSenha = async () => {
     const dados = {
