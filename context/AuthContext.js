@@ -33,7 +33,6 @@ export const AuthProvider = ({ children }) => {
   await AsyncStorage.setItem('token', token);
   await AsyncStorage.setItem('usuario', JSON.stringify(usuarioComTipo));
   setUsuario(usuarioComTipo);
-  console.log('🟢 TOKEN RECEBIDO NO LOGIN:', token);
 
 };
 

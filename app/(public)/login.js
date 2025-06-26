@@ -94,6 +94,7 @@ export default function Login() {
 
     if (usuario.isAdmin) {
       router.replace('/(private)/admin');
+      
     } else if (usuario.primeiroAcesso && usuario.tipo === 'pf') {
       router.replace('/(private)/pegada');
       console.log("pf")
@@ -160,10 +161,6 @@ export default function Login() {
   return (
     
     <View style={styles.contentBox}>
-      <TouchableOpacity onPress={() => router.push('/(public)/admin')}>
-      <Text>Ir para Admin</Text>
-    </TouchableOpacity>
-
       <Text style={styles.titulo}>Bem-vindo ao EcoVoucher</Text>
       <Text style={styles.subtitulo}>Acesse sua conta</Text>
 

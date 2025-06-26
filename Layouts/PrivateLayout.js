@@ -97,7 +97,8 @@ export default function PrivateLayout() {
           </ScrollView>
         </View>
 
-        {usuario?.isAdmin !== 'true' && estaNoCatalogoPF && selecionados.length > 0 && (
+        {usuario?.isAdmin !== true && usuario?.isAdmin !== 'true' && estaNoCatalogoPF && selecionados.length > 0 && (
+
           <TouchableOpacity
             onPress={abrirResumo} // 🔥 Aqui faz abrir o modal de resumo
             style={styles.botaoCarrinho}
@@ -109,7 +110,7 @@ export default function PrivateLayout() {
           </TouchableOpacity>
         )}
 
-        {!esconderRodape && usuario?.isAdmin !== 'true' && (
+        {!esconderRodape && usuario?.isAdmin !== true && usuario?.isAdmin !== 'true' && (
           <View style={styles.rodape}>
             <RodapeNavegacao ativo="menu" />
           </View>
