@@ -71,7 +71,7 @@ export default function ValidarVoucherPJ() {
   setValidando(true);
 
   try {
-    const resultado = await VouchersService.validarVoucherPorCodigo(codigo.trim().toUpperCase());
+    const resultado = await VouchersService.validarVoucherPorCodigo(codigo.trim());
 
     if (!resultado) {
       setMensagemErro('Voucher não localizado.');
@@ -217,7 +217,7 @@ export default function ValidarVoucherPJ() {
           <InputField
             label="Código do voucher"
             value={codigo}
-            onChangeText={(text) => setCodigo(text.toUpperCase())}
+            onChangeText={(text) => setCodigo(text)}
             placeholder="Digite o código"
           />
          <BotaoVerde
