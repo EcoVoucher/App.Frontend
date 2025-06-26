@@ -71,7 +71,6 @@ export default function ValidarVoucherPJ() {
   setValidando(true);
 
   try {
-    // 🔗 Chamada real à API
     const resultado = await VouchersService.validarVoucherPorCodigo(codigo.trim().toUpperCase());
 
     if (!resultado) {
@@ -82,8 +81,10 @@ export default function ValidarVoucherPJ() {
 
     const statusFinal = determinarStatus(resultado);
     setStatus(statusFinal);
-    setVouchersEncontrados([resultado]); // ⬅️ importante
-    setModalResultadoVisivel(true);
+    setVouchersEncontrados([resultado]);
+
+    setModalResultadoVisivel(true); // ✅ Só abre o modal se houver resultado
+    setCodigo(''); // ✅ Limpa o campo somente após sucesso
   } catch (erro) {
     const mensagem = obterMensagemErro(erro, 'Erro ao validar voucher.');
     setMensagemErro(mensagem);
@@ -92,7 +93,6 @@ export default function ValidarVoucherPJ() {
     setValidando(false);
   }
 };
-
 
       const confirmarUso = async (codigoConfirmar = null) => {
   if (confirmando) return;
