@@ -57,7 +57,7 @@ export default function Perfil() {
       const user = await UsuarioService.obterPorId(documento);
 
       setPontos(user.pontos ?? 0);
-      setDepositos(user.depositos?.length ?? 0);
+      setDepositos(user.depositos);
 
       if (usuario.tipo === 'pf') {
         const historico = await PegadaService.obterHistorico(documento);
