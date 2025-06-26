@@ -14,6 +14,7 @@ export default function HeaderComFiltros({
   onSelecionarTipo,
   acoes,
   filtros,
+  children,
 }) {
   return (
     <View style={styles.boxResumo}>
@@ -26,8 +27,10 @@ export default function HeaderComFiltros({
           ? `🥇 Saldo atual: ${saldo} pontos`
           : saldo}
       </Text>
+      
     )}
-
+    
+{children && <View style={styles.extra}>{children}</View>}
  {filtros && <View style={{ marginBottom: spacing.md }}>{filtros}</View>}
 
   {tipos.length > 0 && (
@@ -94,5 +97,10 @@ const styles = StyleSheet.create({
   paddingHorizontal: spacing.sm,
   minWidth: '100%', 
 },
+extra: {
+  alignItems: 'center',
+  marginBottom: spacing.md,
+},
+
 
 });

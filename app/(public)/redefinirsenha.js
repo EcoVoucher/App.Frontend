@@ -1,12 +1,10 @@
-import { useState } from 'react';
+import { useState,useEffect } from 'react';
 import {
-  View,
   Text,
   StyleSheet,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Dimensions,
 } from 'react-native';
 import { AuthService } from '../../services/authService';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -19,9 +17,6 @@ import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
 import { obterMensagemErro } from '../../utils/obterMensagemErro';
-
-
-const { width } = Dimensions.get('window');
 
 export default function RedefinirSenha() {
   const router = useRouter();
@@ -58,20 +53,19 @@ export default function RedefinirSenha() {
 
 
   const handleSalvar = async () => {
-    const campos = ['senha', 'confirmarSenha'];
-    const dadosValidacao = {
-      senha: novaSenha,
-      confirmarSenha,
-    };
+   const campos = ['novaSenha', 'confirmarSenha'];
+  const dadosValidacao = {
+  novaSenha,
+  confirmarSenha,
+};
+
 
     const errosValidados = validarCamposObrigatorios(dadosValidacao, campos);
     setErros(errosValidados);
     if (Object.keys(errosValidados).length > 0) return;
 
     setCarregando(true);
-
     try {
-          // 🔄 FUTURO: chamada real à API
       await AuthService.redefinirSenha({ token, senha: novaSenha });
 
       setModalSucesso(true);
@@ -94,12 +88,13 @@ export default function RedefinirSenha() {
 
         <InputField
           label="Nova senha"
+          
           value={novaSenha}
           onChangeText={setNovaSenha}
           secureTextEntry={!mostrarSenha}
           mostrarSenha={mostrarSenha}
           alternarSenha={() => setMostrarSenha(!mostrarSenha)}
-          error={erros.senha}
+           error={erros.novaSenha}
         />
 
         <InputField

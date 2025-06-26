@@ -27,9 +27,9 @@ export const AuthService = {
   },
 
   /**
-   * Envia solicitação de recuperação de senha.
-   * @param {string} cpfOuCnpj - CPF ou CNPJ sem máscara.
-   * @returns {Promise<{ sucesso: boolean, mensagem: string }>}
+   * 🔐 Solicita recuperação de senha.
+   * @param {string} cpfOuCnpj - Apenas números (sem máscara).
+   * @returns {Promise<{ sucesso: boolean, mensagem?: string, erro?: string }>}
    */
   recuperarSenha: async ({ cpfOuCnpj }) => {
     const response = await api.post('/auth/recuperar-senha', { cpfOuCnpj });
@@ -37,23 +37,23 @@ export const AuthService = {
   },
 
   /**
-   * Redefine a senha usando o token recebido.
-   * @param {string} token
-   * @param {string} senha
-   * @returns {Promise<{ sucesso: boolean, mensagem: string }>}
+   * 🔍 Valida o código/token enviado ao e-mail.
+   * @param {string} token - Código enviado ao e-mail do usuário.
+   * @returns {Promise<{ valido: boolean, mensagem?: string, erro?: string }>}
    */
-  redefinirSenha: async ({ token, senha }) => {
-    const response = await api.post('/auth/redefinir-senha', { token, senha });
+  validarToken: async (token) => {
+    const response = await api.get(`/auth/validar-token?token=${token}`);
     return response.data;
   },
 
   /**
-   * Valida o token de redefinição de senha.
-   * @param {string} token
-   * @returns {Promise<{ valido: boolean, mensagem: string }>}
+   * 🔄 Redefine a senha do usuário com o token.
+   * @param {string} token - Token válido (código).
+   * @param {string} senha - Nova senha.
+   * @returns {Promise<{ sucesso: boolean, mensagem?: string, erro?: string }>}
    */
-  validarToken: async (token) => {
-    const response = await api.get(`/auth/validar-token?token=${token}`);
+  redefinirSenha: async ({ token, senha }) => {
+    const response = await api.post('/auth/redefinir-senha', { token, senha });
     return response.data;
   },
 };

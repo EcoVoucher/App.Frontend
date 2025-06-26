@@ -16,10 +16,9 @@ import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
 import HeaderComFiltros from '../../components/HeaderComFiltros';
 import PegadaTermometro from '../../components/PegadaTermometro';
-import { formatarDataBR, obterComparativoPegada } from '../../utils/formatadores';
+import { formatarDataBR, obterComparativoPegada,apenasNumeros } from '../../utils/formatadores';
 import VerMaisMenos from '../../components/VerMaisMenos';
 import { obterMensagemErro } from '../../utils/obterMensagemErro';
-import { apenasNumeros } from '../../utils/formatadores';
 import ModalErro from '../../components/ModalErro';
 
 
@@ -74,23 +73,14 @@ export default function HistoricoPegada() {
       showsVerticalScrollIndicator={false}
     >
       <View style={[styles.contentBox, { width: width > 700 ? '60%' : '110%' }]}>
-       <HeaderComFiltros
-            titulo="Histórico de Pegadas"
-            subtitulo={
-              historico.length > 0
-                ? obterComparativoPegada(historico[0].pontuacao)
-                : ''
-            }
-            saldo={
-              historico.length > 0 ? `${historico[0].pontuacao} pontos` : undefined
-            }
-          />
-
-          {historico.length > 0 && (
-            <View style={{ marginBottom: spacing.md }}>
-              <PegadaTermometro pontuacao={historico[0].pontuacao} />
-            </View>
-          )}
+                   <HeaderComFiltros
+                      titulo="Histórico de Pegadas"
+                     
+                    >
+                      {historico.length > 0 && (
+                        <PegadaTermometro pontuacao={historico[0].pontuacao} />
+                      )}
+                    </HeaderComFiltros>
 
 
         {carregando ? (

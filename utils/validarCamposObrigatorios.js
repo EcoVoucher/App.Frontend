@@ -31,12 +31,14 @@ export const validarCamposObrigatorios = (dados, campos, tipoPessoa) => {
         break;
 
       case 'senha':
+        case 'novaSenha':
         if (valor.length < 6) {
           erros.senha = 'A senha deve ter no mínimo 6 caracteres';
         } else if (!regexSenha.test(valor)) {
           erros.senha = 'A senha deve conter letras, números e um caractere especial';
         }
         break;
+
 
       case 'confirmarSenha': {
         const senhaReferencia = dados.senha ?? dados.novaSenha;

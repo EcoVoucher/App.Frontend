@@ -14,6 +14,7 @@ import ModalSucesso from '../../components/ModalSucesso';
 import FormRecuperarSenha from '../../components/forms/FormRecuperarSenha';
 import { validarCamposObrigatorios } from '../../utils/validarCamposObrigatorios';
 import { obterMensagemErro } from '../../utils/obterMensagemErro';
+import InputField from '../../components/InputField';
 
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
@@ -29,6 +30,10 @@ export default function RecuperarSenha() {
   const [dados, setDados] = useState({ cpf: '' });
   const [erros, setErros] = useState({});
   const [tipoPessoa, setTipoPessoa] = useState('pf');
+  const [codigo, setCodigo] = useState('');
+  const [erroCodigo, setErroCodigo] = useState('');
+  const [validandoCodigo, setValidandoCodigo] = useState(false);
+
   
 
   const maskDocumento = tipoPessoa === 'pf' ? Masks.BRL_CPF : Masks.BRL_CNPJ;
@@ -57,11 +62,11 @@ export default function RecuperarSenha() {
     
 //🔗 === MODO API REAL (ativar no futuro) ===
 const resposta = await AuthService.recuperarSenha({
-   cpfOuCnpj: dados.cpf, // ✅ API espera campo unificado
+   cpfOuCnpj: dados.cpf, 
 });
 
 if (resposta?.sucesso) {
-  setModalSucessoVisivel(true); // ✔️ Exibe que foi enviado para o e-mail
+  setModalSucessoVisivel(true); 
 } else {
   throw new Error(resposta?.erro || 'Erro ao recuperar senha.');
 }
@@ -125,13 +130,93 @@ if (resposta?.sucesso) {
 
       {/* ✅ Modal de sucesso FUTURO (com API real) */}
       <ModalSucesso
-        visivel={modalSucessoVisivel}
-        mensagem="Enviamos as instruções para redefinir sua senha ao e-mail cadastrado. Verifique sua caixa de entrada!"
-        onClose={() => {
-          setModalSucessoVisivel(false);
-          router.replace('/(public)/login');
+    visivel={modalSucessoVisivel}
+    onFechar={() => {
+      setCodigo('');
+      setErroCodigo('');
+      setModalSucessoVisivel(false);
+    }}
+  exibirBotao={false}
+  mensagem={
+    <View style={{ width: '100%', alignItems: 'center' }}>
+      <Text style={{ textAlign: 'center', marginBottom: 12 }}>
+        Enviamos um código para seu e-mail. Digite abaixo para continuar:
+      </Text>
+
+      <InputField
+            placeholder="Código recebido"
+            value={codigo}
+            onChangeText={(val) => {
+              setCodigo(val);
+              setErroCodigo('');
+            }}
+            error={erroCodigo}
+            containerStyle={{
+              width: '100%',
+              maxWidth: 280,
+              alignSelf: 'center',
+              marginBottom: spacing.sm,
+            }}
+          />
+      <TouchableOpacity
+       disabled={validandoCodigo}
+        onPress={async () => {
+          if (!codigo || codigo.length < 4) {
+            setErroCodigo('Código inválido.');
+            return;
+          }
+            try {
+              setValidandoCodigo(true);
+              const resposta = await AuthService.validarToken(codigo);
+
+              if (resposta?.valido) {
+                setModalSucessoVisivel(false);
+                router.replace({
+                  pathname: '/(public)/redefinirSenha',
+                  params: { token: codigo },
+                });
+              } else {
+                setErroCodigo('Código inválido ou expirado.');
+              }
+            } catch (error) {
+              console.error(error);
+              setMensagemErro(obterMensagemErro(error,'Erro ao validar o código.'));
+              setErroVisivel(true);
+            }
+
+
+          }}
+        style={{
+
+          backgroundColor: colors.verde,
+          paddingVertical: spacing.sm,
+          paddingHorizontal: spacing.xl,
+          borderRadius: 12,
+          marginTop: spacing.sm,
         }}
-      />
+        
+      >
+    <Text style={{ color: colors.branco, fontWeight: 'bold' }}>OK</Text>
+      </TouchableOpacity>
+
+      {/* Botão Cancelar */}
+      <TouchableOpacity
+        onPress={() => {
+              setCodigo('');
+              setErroCodigo('');
+              setModalSucessoVisivel(false);
+            }}
+        style={{
+          paddingVertical: spacing.sm,
+          marginTop: spacing.sm,
+        }}
+      >
+        <Text style={{ color: colors.erro, fontWeight: 'bold' }}>Cancelar</Text>
+      </TouchableOpacity>
+    </View>
+  }
+/>
+
     </>
   );
 }

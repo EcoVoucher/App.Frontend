@@ -3,13 +3,12 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   ScrollView,
   Image,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { Ionicons } from '@expo/vector-icons';
-
+import ModalResultado from '../../components/ModalResultado';
 import InputField from '../../components/InputField';
 import BotaoVerde from '../../components/BotaoVerde';
 import BotaoVerdePequeno from '../../components/BotaoVerdePequeno';
@@ -35,7 +34,6 @@ export default function ValidarVoucherPJ() {
   const { usuario } = useAuth();
 
   const [codigo, setCodigo] = useState('');
-  const [voucher, setVoucher] = useState(null);
   const [status, setStatus] = useState('');
   const [modoBusca, setModoBusca] = useState('codigo');
   const [cpfBusca, setCpfBusca] = useState('');
@@ -51,7 +49,10 @@ export default function ValidarVoucherPJ() {
   const [validando, setValidando] = useState(false);
   const [buscando, setBuscando] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
+  const [modalResultadoVisivel, setModalResultadoVisivel] = useState(false);
 
+  if (!usuario?.cnpj) return null;
+  
   const determinarStatus = (v) => {
     if (v.status === 'utilizado') return 'utilizado';
     const hoje = new Date();
@@ -60,65 +61,65 @@ export default function ValidarVoucherPJ() {
   };
 
   const validarCodigo = async () => {
-    if (!codigo.trim()) {
-      setMensagemErro('Informe um código de voucher.');
+  if (!codigo.trim()) {
+    setMensagemErro('Informe um código de voucher.');
+    setErroVisivel(true);
+    return;
+  }
+
+  if (validando) return;
+  setValidando(true);
+
+  try {
+    // 🔗 Chamada real à API
+    const resultado = await VouchersService.validarVoucherPorCodigo(codigo.trim().toUpperCase());
+
+    if (!resultado) {
+      setMensagemErro('Voucher não localizado.');
       setErroVisivel(true);
       return;
     }
 
-      if (validando) return; 
-      setValidando(true);
-
-    try {
-       const resultado = await VouchersService.validarVoucherPorCodigo(codigo.trim().toUpperCase());
-
-
-      if (!resultado) {
-        setMensagemErro('Voucher não localizado.');
-        setErroVisivel(true);
-        setVoucher(null);
-        return;
-      }
-          setVoucher({ ...resultado });
-      setStatus(determinarStatus(resultado));
-    } catch (erro) {
-      const mensagem = obterMensagemErro(erro, 'Erro ao validar voucher.');
-      setMensagemErro(mensagem);
-      setErroVisivel(true);
-    } finally {
-      setValidando(false);
-    }
-  };
+    const statusFinal = determinarStatus(resultado);
+    setStatus(statusFinal);
+    setVouchersEncontrados([resultado]); // ⬅️ importante
+    setModalResultadoVisivel(true);
+  } catch (erro) {
+    const mensagem = obterMensagemErro(erro, 'Erro ao validar voucher.');
+    setMensagemErro(mensagem);
+    setErroVisivel(true);
+  } finally {
+    setValidando(false);
+  }
+};
 
 
       const confirmarUso = async (codigoConfirmar = null) => {
-        if (confirmando) return; 
-        setConfirmando(true);
+  if (confirmando) return;
+  setConfirmando(true);
 
-        try {
-          const codigoAlvo = codigoConfirmar || voucher.codigo;
-          if (!codigoAlvo) {
-              setMensagemErro('Código do voucher não encontrado.');
-              setErroVisivel(true);
-              setConfirmando(false);
-              return;
-            }
-         await VouchersService.utilizarVoucher(codigoAlvo);
-
-      setVoucher(null);
-      setCodigo('');
-      setVouchersEncontrados(
-        vouchersEncontrados.filter((v) => v.codigo !== codigoAlvo)
-      );
-      setModalVisivel(true);
-    } catch (error) {
-      const mensagem = obterMensagemErro(error, 'Erro ao confirmar uso.');
-      setMensagemErro(mensagem);
+  try {
+    const codigoAlvo = codigoConfirmar || (vouchersEncontrados[0]?.codigo ?? null);
+    if (!codigoAlvo) {
+      setMensagemErro('Código do voucher não encontrado.');
       setErroVisivel(true);
-    } finally {
-      setConfirmando(false);
+      return;
     }
-  };
+
+    await VouchersService.utilizarVoucher(codigoAlvo);
+
+    setCodigo('');
+    setVouchersEncontrados(prev => prev.filter((v) => v.codigo !== codigoAlvo));
+    setModalResultadoVisivel(false);
+    setModalVisivel(true);
+  } catch (error) {
+    const mensagem = obterMensagemErro(error, 'Erro ao confirmar uso.');
+    setMensagemErro(mensagem);
+    setErroVisivel(true);
+  } finally {
+    setConfirmando(false);
+  }
+};
         const buscarPorCpfETipo = async () => {
           if (buscando) return;
           setBuscando(true); 
@@ -150,6 +151,8 @@ export default function ValidarVoucherPJ() {
 
       }
         setVouchersEncontrados(resultado);
+        setModalResultadoVisivel(true);
+
        } catch (error) {
       const mensagem = obterMensagemErro(error, 'Erro ao buscar vouchers.');
       setMensagemErro(mensagem);
@@ -221,20 +224,7 @@ export default function ValidarVoucherPJ() {
             onPress={validarCodigo}
             disabled={validando}
           />
-          {voucher && (
-            <View style={styles.detalhes}>
-              <Text style={styles.info}>Código: {voucher.codigo}</Text>
-              <Text style={styles.info}>Tipo: {voucher.tipo}</Text>
-              <Text style={styles.info}>Empresa: {voucher.empresa}</Text>
-              <Text style={styles.info}>Endereço: {voucher.endereco}</Text>
-              <Text style={styles.info}>Produtos: {voucher.produtos?.join(', ')}</Text>
-              <Text style={styles.info}>Validade: {new Date(voucher.validade).toLocaleDateString('pt-BR')}</Text>
-              <StatusBadge status={status} />
-              {status === 'válido' && (
-                <BotaoVerde texto="Confirmar uso" onPress={() => confirmarUso()} />
-              )}
-            </View>
-          )}
+
         </>
       ) : (
         <>
@@ -267,27 +257,29 @@ export default function ValidarVoucherPJ() {
               onPress={buscarPorCpfETipo}
               disabled={buscando}
             />
-          <FlatList
-            data={vouchersEncontrados}
-            keyExtractor={(item) => item.codigo}
-            renderItem={({ item }) => (
-              <View style={styles.detalhes}>
-                <Text style={styles.info}>Código: {item.codigo}</Text>
-                <Text style={styles.info}>Empresa: {item.empresa}</Text>
-                <Text style={styles.info}>Endereço: {item.endereco}</Text>
-                <Text style={styles.info}>Produtos: {item.produtos?.join(', ')}</Text>
-                <Text style={styles.info}>Validade: {new Date(item.validade).toLocaleDateString('pt-BR')}</Text>
-                <StatusBadge status={determinarStatus(item)} />
-                {determinarStatus(item) === 'válido' && (
-                  <BotaoVerde
-                  texto={confirmando ? 'Confirmando...' : 'Confirmar uso'}
-                  onPress={() => confirmarUso(item?.codigo)}
-                  disabled={confirmando}
-                />
-                )}
-              </View>
-            )}
-          />
+          <ModalResultado
+                visivel={modalResultadoVisivel}
+                onFechar={() => setModalResultadoVisivel(false)}
+                titulo="Vouchers encontrados"
+              >
+                {vouchersEncontrados.map((item) => (
+                  <View key={item.codigo} style={styles.detalhes}>
+                    <Text style={styles.info}>Código: {item.codigo}</Text>
+                    <Text style={styles.info}>Empresa: {item.empresa}</Text>
+                    <Text style={styles.info}>Endereço: {item.endereco}</Text>
+                    <Text style={styles.info}>Produtos: {item.produtos?.join(', ')}</Text>
+                    <Text style={styles.info}>Validade: {new Date(item.validade).toLocaleDateString('pt-BR')}</Text>
+                    <StatusBadge status={determinarStatus(item)} />
+                    {determinarStatus(item) === 'válido' && (
+                      <BotaoVerde
+                        texto={confirmando ? 'Confirmando...' : 'Confirmar uso'}
+                        onPress={() => confirmarUso(item?.codigo)}
+                        disabled={confirmando}
+                      />
+                    )}
+                  </View>
+                ))}
+              </ModalResultado>
         </>
       )}
 

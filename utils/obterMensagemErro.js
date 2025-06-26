@@ -5,7 +5,11 @@ export function obterMensagemErro(error, mensagemPadrao = 'Erro inesperado.') {
   if (status === 401) return 'Sessão expirada. Faça login novamente.';
   if (status === 403) return 'Você não tem permissão para isso.';
   if (status === 404) return 'Recurso não encontrado.';
-  if (status === 500) return ' Tente novamente mais tarde, a aquipe de suporte do aplicativo já foi acionada .';
+  if (status >= 500) return 'Tente novamente mais tarde, a equipe de suporte do aplicativo já foi acionada.';
+
+  if (error?.message?.includes('Network Error')) {
+    return 'Sem conexão com o servidor. Verifique sua internet ou tente novamente em instantes.';
+  }
 
   return (
     error?.response?.data?.message ||
