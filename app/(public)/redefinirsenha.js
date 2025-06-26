@@ -46,10 +46,11 @@ export default function RedefinirSenha() {
       if (!resposta?.valido) {
         throw new Error(resposta?.erro || 'Token inválido ou expirado.');
       }
-    } catch (error) {
-      setMensagemErro(error.message);
-      setErroVisivel(true);
-    }
+   } catch (error) {
+  const mensagem = obterMensagemErro(error, 'Ocorreu um erro. Tente novamente.');
+  setMensagemErro(mensagem);
+  setErroVisivel(true);
+}
   };
 
   verificarToken();

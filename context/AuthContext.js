@@ -24,9 +24,10 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async ({ token, usuario, tipo }) => {
-  const usuarioComTipo = {
+   const usuarioComTipo = {
     ...usuario,
-    
+    tipo: tipo, // 🔐 garante tipo (pf, pj, admin)
+    isAdmin: usuario?.isAdmin ?? 'false', // garante isAdmin como string
   };
 
   await AsyncStorage.setItem('token', token);

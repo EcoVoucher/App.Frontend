@@ -11,8 +11,6 @@ import {
 import ModalErro from '../../components/ModalErro';
 import BotaoVerde from '../../components/BotaoVerde';
 import FormCadastro from '../../components/forms/FormCadastro';
-//import apiMock from '../../services/apiMock'; //substituir pela api.js
-// 🔥 Importe assim quando usar API real:
 import { cadastrarPF, cadastrarPJ } from '../../services/usuarioService';
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
@@ -21,6 +19,7 @@ import { validarCamposObrigatorios } from '../../utils/validarCamposObrigatorios
 import { formatarCadastro } from '../../utils/formatarenvio';
 import ModalSucesso from '../../components/ModalSucesso';
 import { obterMensagemErro } from '../../utils/obterMensagemErro';
+
 const { width } = Dimensions.get('window');
 
 const ESTADO_INICIAL = {
@@ -56,38 +55,55 @@ export default function Cadastro() {
   const [dados, setDados] = useState(ESTADO_INICIAL);
   const [carregando, setCarregando] = useState(false);
   const [camposBloqueados, setCamposBloqueados] = useState(true);
+  
 
+const handleChange = (campo, valor) => {
+  if (carregando) return;
 
-  const handleChange = (campo, valor) => {
-     if (carregando) return; // 
-    setDados((prev) => {
-      const novosDados = { ...prev, [campo]: valor };
+  if (campo === 'cep') {
+    const cepLimpo = valor.replace(/\D/g, '');
 
-      if (campo === 'cep') {
-        const cepLimpo = valor.replace(/\D/g, '');
-        novosDados.endereco = '';
-        novosDados.bairro = '';
-        novosDados.cidade = '';
-        novosDados.estado = '';
+    setDados((prev) => ({
+      ...prev,
+      cep: valor,
+    }));
 
-        if (cepLimpo.length === 8) {
-          buscarEndereco(cepLimpo);
-        }
-      }
+    if (cepLimpo.length === 8) {
+      setDados((prev) => ({
+        ...prev,
+        endereco: '',
+        bairro: '',
+        cidade: '',
+        estado: '',
+      }));
+      buscarEndereco(cepLimpo);
+    }
 
-      return novosDados;
-    });
+    return;
+  }
 
-    setErros((prev) => {
-      const novosErros = { ...prev };
-      if (valor.trim()) delete novosErros[campo];
-      return novosErros;
-    });
-  };
+  if (
+    ['endereco', 'bairro', 'cidade', 'estado'].includes(campo) &&
+    camposBloqueados
+  ) {
+    return;
+  }
+
+  setDados((prev) => ({
+    ...prev,
+    [campo]: valor,
+  }));
+
+  setErros((prev) => {
+    const novosErros = { ...prev };
+    if (valor.trim()) delete novosErros[campo];
+    return novosErros;
+  });
+};
+
 
   const buscarEndereco = async (cep) => {
     try {
-      // Adicionar timeout de segurança para evitar travamento em caso de rede lenta
       const controller = new AbortController();
       setTimeout(() => controller.abort(), 5000);
       const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`, { signal: controller.signal });
@@ -107,12 +123,12 @@ export default function Cadastro() {
         cidade: data.localidade || '',
         estado: data.uf || ''
       }));
-     setCamposBloqueados(true); // bloqueia edição se veio do ViaCEP
+     setCamposBloqueados(true); 
   } catch (e) {
     console.log(e);
     setMensagemErro('Erro ao buscar endereço. Tente novamente mais tarde.');
     setErroVisivel(true);
-    setCamposBloqueados(false); // libera campos para edição manual
+    setCamposBloqueados(false);
   }
   };
 
@@ -161,12 +177,11 @@ const handleCadastro = async () => {
   try {
     const dadosFormatados = formatarCadastro(dados);
 
-    // ✅ === ATIVAR PARA API REAL ===
   
     if (tipoPessoa === 'pf') {
-      await cadastrarPF(dadosFormatados); // ← Importar de usuarioService.js
+      await cadastrarPF(dadosFormatados);
     } else {
-      await cadastrarPJ(dadosFormatados); // ← Importar de usuarioService.js
+      await cadastrarPJ(dadosFormatados); 
     }
   
 
@@ -194,7 +209,7 @@ const handleCadastro = async () => {
   setMensagemErro(mensagem);
   setErroVisivel(true);
 
-  // ✅ Reset específico — aqui é seguro manter
+  
   if (mensagem.includes('CNPJ')) {
     setDados(ESTADO_INICIAL);
     setErros({});
@@ -243,7 +258,6 @@ const handleCadastro = async () => {
       <Text style={styles.rodape}>© 2025 EcoVoucher</Text>
     </View>
 
-    {/* Modal escolha tipo */}
     <Modal visible={modalTipoVisivel} transparent animationType="slide">
       <View style={styles.modalContainer}>
         <View style={styles.modalBox}>

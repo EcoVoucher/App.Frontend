@@ -39,6 +39,9 @@ export default function Home() {
   const [icones, setIcones] = useState([]);
   const [carregando, setCarregando] = useState(true);
   
+
+  
+  
 const abrirWhatsApp = async () => {
   const url = 'https://wa.me/5515996893760?text=Olá!%20Quero%20saber%20mais%20sobre%20o%20EcoVoucher.';
   console.log("Abrindo WhatsApp...");
@@ -69,7 +72,7 @@ useEffect(() => {
       const usuarioAtualizado = await UsuarioService.obterPorId(documento);
       setPontos(usuarioAtualizado.pontos ?? 0);
       if (usuario.tipo == 'pf') {
-       // const ultima = await PegadaService.obterUltimaPontuacao(documento);
+      //const ultima = await PegadaService.obterUltimaPontuacao(documento);
         setPegada(usuarioAtualizado?.pontuacao ?? 0);
 
         setIcones([

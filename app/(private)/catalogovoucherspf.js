@@ -44,6 +44,7 @@ export default function CatalogoVouchersPF() {
   const [saldoAtual, setSaldoAtual] = useState(0);
   const [comprando, setComprando] = useState(false);
   const [mostrarTodos, setMostrarTodos] = useState(false);
+
   const itensPorPagina = 4;
 
   const {
@@ -96,15 +97,7 @@ setSaldoAtual(atual.pontos || 0);
 
   setComprando(true);
   try {
-    const listaFinal = selecionados.map((item) => ({
-      idLote: item.idLote,
-      tipo: item.tipo,
-      produtos: item.produtos,
-      empresa: item.empresa,
-      endereco: item.endereco,
-      validade: item.validade,
-      pontos: item.pontos,
-    }));
+    const listaFinal = selecionados.map((item) => item.idLote);
 
     const resultado = await VouchersService.comprarVouchers(usuario.cpf, listaFinal);
 
@@ -152,6 +145,7 @@ setSaldoAtual(atual.pontos || 0);
 
   const mensagemApi = error?.message || '';
 
+  // 🎯 Verificações específicas por conteúdo da mensagem
   if (mensagemApi.includes('já adquiriu')) {
     setModalErro('Você já adquiriu este voucher. Só é permitido 1 unidade por lote.');
   } else if (mensagemApi.includes('Pontos insuficientes')) {
@@ -159,7 +153,7 @@ setSaldoAtual(atual.pontos || 0);
   } else if (mensagemApi.includes('Sem códigos disponíveis')) {
     setModalErro('Este voucher está esgotado no momento.');
   } else {
-    // 🟢 Fallback seguro e elegante
+    // 🟢 Fallback seguro e elegante com função utilitária
     const mensagem = obterMensagemErro(
       error,
       'Ocorreu um erro na compra. Tente novamente ou verifique seus pontos.'

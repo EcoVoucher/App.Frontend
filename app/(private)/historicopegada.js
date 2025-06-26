@@ -35,6 +35,8 @@ export default function HistoricoPegada() {
   const [mostrarTodos, setMostrarTodos] = useState(false);
   const itensPorPagina = 2;
   const [modalErro, setModalErro] = useState('');
+  const [mensagemErro, setMensagemErro] = useState('');
+  const [erroVisivel, setErroVisivel] = useState(false);
 
 
   useEffect(() => {
@@ -45,11 +47,12 @@ export default function HistoricoPegada() {
         const dados = await PegadaService.obterHistorico(documento);
         
         setHistorico(dados);
-      } catch (error) {
-  console.error(error);
+     } catch (error) {
   const mensagem = obterMensagemErro(error, 'Erro ao carregar histórico.');
-  setModalErro(mensagem);
+  setMensagemErro(mensagem);    
+  setErroVisivel(true);         
 }
+
 
  finally {
         setCarregando(false);

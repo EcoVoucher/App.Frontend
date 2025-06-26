@@ -80,6 +80,7 @@
       opcoes: [
         { label: 'De carro', value: '60' },
         { label: 'De carona', value: '30' },
+        { label: 'De moto', value: '20' },
         { label: 'De transporte público', value: '15' },
         { label: 'A pé ou de bicicleta', value: '0' },
       ],
@@ -116,23 +117,14 @@
       ],
     },
     {
-      label: '13 - Quantas compras significativas faz no ano?',
-      opcoes: [
-        { label: '0', value: '0' },
-        { label: '1 a 3', value: '15' },
-        { label: '4 a 6', value: '30' },
-        { label: 'Mais de 6', value: '45' },
-      ],
-    },
-    {
-      label: '14 - Costuma comprar produtos de baixo consumo de energia?',
+      label: '13 - Costuma comprar produtos de baixo consumo de energia?',
       opcoes: [
         { label: 'Sim', value: '0' },
         { label: 'Não', value: '25' },
       ],
     },
     {
-      label: '15 - Você procura reduzir a produção de resíduos?',
+      label: '14 - Você procura reduzir a produção de resíduos?',
       opcoes: [
         { label: 'Sempre', value: '0' },
         { label: 'Às vezes', value: '10' },
@@ -141,7 +133,7 @@
       ],
     },
     {
-      label: '16 - Você pratica compostagem de resíduos orgânicos?',
+      label: '15 - Você pratica compostagem de resíduos orgânicos?',
       opcoes: [
         { label: 'Sempre', value: '0' },
         { label: 'Às vezes', value: '10' },
@@ -149,7 +141,7 @@
       ],
     },
     {
-      label: '17 - Você separa o lixo reciclável?',
+      label: '16 - Você separa o lixo reciclável?',
       opcoes: [
         { label: 'Sempre', value: '0' },
         { label: 'Às vezes', value: '10' },
@@ -158,7 +150,7 @@
       ],
     },
     {
-      label: '18 - Quantos sacos de lixo produz na semana?',
+      label: '17 - Quantos sacos de lixo produz na semana?',
       opcoes: [
         { label: '1', value: '10' },
         { label: '2', value: '20' },

@@ -34,6 +34,8 @@ export default function Pegada() {
   const [ultimaPontuacao, setUltimaPontuacao] = useState(null);
   const [indiceAtual, setIndiceAtual] = useState(0);
   const [mostrarModal, setMostrarModal] = useState(false);
+  const [mensagemErro, setMensagemErro] = useState('');
+  const [erroVisivel, setErroVisivel] = useState(false);
 
  useEffect(() => {
   if (resultado) {
@@ -52,9 +54,11 @@ useEffect(() => {
       const ultima = await PegadaService.obterUltimaPontuacao(documento);
       setUltimaPontuacao(ultima?.pontuacao ?? null);
     } catch (error) {
-      console.error('Erro ao carregar última pegada:', error);
-    }
-  };
+  const mensagem = obterMensagemErro(error, 'Erro ao carregar sua última pegada.');
+  setMensagemErro(mensagem);
+  setErroVisivel(true);
+}
+};
 
   carregarUltimaPegada();
 }, []);

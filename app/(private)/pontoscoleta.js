@@ -22,6 +22,7 @@ import ModalErro from '../../components/ModalErro';
 import { validarCamposObrigatorios } from '../../utils/validarCamposObrigatorios';
 //import { PontoColetaService } from '../../services/pontoColetaService';
 import { Ionicons } from '@expo/vector-icons';
+import { obterMensagemErro } from '../../utils/obterMensagemErro';
 
 export default function BuscarPontosColeta() {
   const [cep, setCep] = useState('');
@@ -30,6 +31,9 @@ export default function BuscarPontosColeta() {
   const [visivelErro, setVisivelErro] = useState(false);
   const [modalResultado, setModalResultado] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [mensagemErro, setMensagemErro] = useState('');
+  
+
 
     const handleFecharModal = () => {
       setModalResultado(false); 
@@ -75,18 +79,13 @@ export default function BuscarPontosColeta() {
         },
       ];
 
-      if (dados.length === 0) {
-        setResultados([]);
-      } else {
-        setResultados(dados);
-        setModalResultado(true);
-      }
-    } catch (e) {
-      setVisivelErro(true);
-    }
-    finally {
-    setIsLoading(false); 
-  }
+      } catch (error) {
+  const mensagem = obterMensagemErro(error, 'Erro ao buscar resultados.');
+  setMensagemErro(mensagem);  
+  setVisivelErro(true);          
+} finally {
+  setIsLoading(false);
+}
   
   };
 
