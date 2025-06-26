@@ -156,11 +156,7 @@ if (usuario.tipo === 'pj') {
           <View style={styles.linha}>
             <Text style={styles.label}>Email:</Text>
             <Text style={styles.valor}>{usuario.email}</Text>
-          </View>
-          <View style={styles.linha}>
-            <Text style={styles.label}>Telefone:</Text>
-            <Text style={styles.valor}>{usuario.telefone}</Text>
-          </View>
+          </View>         
           <View style={styles.linha}>
             <Text style={styles.label}>Endereço:</Text>
             <Text style={styles.valor}>
