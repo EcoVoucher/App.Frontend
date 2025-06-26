@@ -12,9 +12,28 @@ export const cadastrarPJ = async (dados) => {
   return response.data;
 };
 
+function isCPF(identifier) {
+  const cleaned = identifier.replace(/\D/g, '');
+  return cleaned.length === 11;
+}
+
+function isCNPJ(identifier) {
+  const cleaned = identifier.replace(/\D/g, '');
+  return cleaned.length === 14;
+}
+
 export const UsuarioService = {
   async obterPorId(cpfOuCnpj) {
-    const response = await api.get(`/usuarios/historico/${cpfOuCnpj}`);
+    if (!isCPF(cpfOuCnpj) && !isCNPJ(cpfOuCnpj)) {
+      throw new Error('Identificador inválido: deve ser CPF ou CNPJ.');
+    }
+    let response;
+    if(isCPF(cpfOuCnpj)) {
+      response = await api.get(`/usuarios/historico/${cpfOuCnpj}`);
+    }
+    if(isCNPJ(cpfOuCnpj)){
+      response = await api.get(`/usuarios/${cpfOuCnpj}`);
+    }
     return response.data;
   },
 

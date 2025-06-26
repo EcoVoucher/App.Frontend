@@ -278,7 +278,9 @@ useEffect(() => {
                 </Text>
 
                 <Text style={styles.cardInfo}>
-                  🔑 Último código: {item.codigos[item.codigos.length - 1] || '---'}
+                  🔑 Último código: {(item.codigos.length > 0 && typeof item.codigos[item.codigos.length - 1] === 'object'
+                    ? item.codigos[item.codigos.length - 1].codigo
+                    : item.codigos[item.codigos.length - 1] || '---')}
                 </Text>
               </View>
             );

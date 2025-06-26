@@ -85,7 +85,7 @@ useEffect(() => {
            if (usuario.tipo =='pj') {
           const [vouchers, estatisticas] = await Promise.all([
             VouchersService.listarVouchers(),
-            //VouchersService.obterEstatisticas(),
+            VouchersService.obterEstatisticas(),
           ]);
 
           const totalGerados = vouchers?.reduce((acc, v) => acc + (v.quantidade || 0), 0) ?? 0;
