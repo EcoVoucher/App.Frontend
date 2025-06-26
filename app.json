@@ -8,6 +8,7 @@
     "scheme": "ecoapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "deepLinking": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.joaopedro01.ecoApp"
@@ -17,6 +18,62 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "https",
+              "host": "ecoapp.com",
+              "pathPrefix": "/reset"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        },
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "ecoapp",
+              "host": "*"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        },
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "https",
+              "host": "ecoapp.com",
+              "pathPrefix": "/reset"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        },
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "ecoapp",
+              "host": "*"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ],
       "edgeToEdgeEnabled": true,
       "package": "com.joaopedro01.ecoApp"
     },
