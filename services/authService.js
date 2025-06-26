@@ -42,7 +42,7 @@ export const AuthService = {
    * @returns {Promise<{ valido: boolean, mensagem?: string, erro?: string }>}
    */
   validarToken: async (token) => {
-    const response = await api.get(`/auth/validar-token?token=${token}`);
+    const response = await api.get(`/auth/validar-token/${token}`);
     return response.data;
   },
 

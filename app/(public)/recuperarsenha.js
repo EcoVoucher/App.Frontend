@@ -172,7 +172,7 @@ if (resposta?.sucesso) {
               if (resposta?.valido) {
                 setModalSucessoVisivel(false);
                 router.replace({
-                  pathname: '/(public)/redefinirSenha',
+                  pathname: '/(public)/redefinirsenha',
                   params: { token: codigo },
                 });
               } else {

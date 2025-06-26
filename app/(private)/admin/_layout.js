@@ -17,7 +17,7 @@ export default function AdminLayout({ children }) {
      if (!usuario || usuario.isAdmin != 'true') {
 
     
-        //router.replace('/(public)/login');
+        router.replace('/(public)/login');
       }
     }
   }, [usuario, carregando]);

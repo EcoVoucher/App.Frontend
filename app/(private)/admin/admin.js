@@ -29,11 +29,13 @@ export default function AdminDevScreen() {
 
 
  useEffect(() => {
-  if (!usuario) return; 
+ // if (!usuario) return; 
 
   if (usuario.isAdmin === 'false') {
+    console.log ("if")
     router.replace('/(public)/login');
   } else {
+    console.log ("else")
     carregarUsuarios();
   }
 }, [usuario]);

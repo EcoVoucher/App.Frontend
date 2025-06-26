@@ -136,7 +136,7 @@ if (usuario.tipo === 'pj') {
             style={styles.logo}
           />
           <View>
-            <Text style={styles.titulo}>Seu Perfil {nomeFormatado}</Text>
+            <Text style={styles.titulo}>Seu Perfil{'\n'}{nomeFormatado}</Text>
             <Text style={styles.subtitulo}>
               Transforme suas ações em benefícios
             </Text>
