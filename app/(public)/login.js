@@ -93,8 +93,7 @@ export default function Login() {
     setTentativas(0); 
 
     if (usuario.isAdmin) {
-      router.replace('/(admin)/admin');
-      console.log('/(admin)/admin')
+      router.replace('/(private)/admin');
     } else if (usuario.primeiroAcesso && usuario.tipo === 'pf') {
       router.replace('/(private)/pegada');
       console.log("pf")

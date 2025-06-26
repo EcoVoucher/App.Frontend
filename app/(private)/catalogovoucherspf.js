@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentBox: {
-    width: width > 700 ? '70%' : '100%',
+    width: width > 700 ? '90%' : '100%',
     alignSelf: 'center',
   },
 

@@ -6,6 +6,8 @@ import {
   useWindowDimensions,
   TouchableOpacity,
   Image,
+  Linking,
+  Alert
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Carousel from 'react-native-reanimated-carousel';
@@ -16,11 +18,10 @@ import { fonts } from '../../theme/fonts';
 import AnimatedCard from '../../components/AnimatedCard';
 import { obterMensagemErro } from '../../utils/obterMensagemErro';
 import { apenasNumeros } from '../../utils/formatarenvio';
-import { Platform, Linking } from 'react-native';
 
 
-import { UsuarioService } from '../../services/usuarioService'; // 🔗 API real — ativar futuramente
-import { VouchersService } from '../../services/voucherService'; // 🔗 API real — ativar futuramente
+import { UsuarioService } from '../../services/usuarioService'; 
+import { VouchersService } from '../../services/voucherService'; 
 
 
 
@@ -71,8 +72,8 @@ useEffect(() => {
 
       const usuarioAtualizado = await UsuarioService.obterPorId(documento);
       setPontos(usuarioAtualizado.pontos ?? 0);
-      if (usuario.tipo == 'pf') {
-      //const ultima = await PegadaService.obterUltimaPontuacao(documento);
+      if (usuario.tipo === 'pf') {
+     
         setPegada(usuarioAtualizado?.pontuacao ?? 0);
 
         setIcones([
@@ -82,7 +83,7 @@ useEffect(() => {
         ]);
       }
 
-           if (usuario.tipo =='pj') {
+           if (usuario.tipo ==='pj') {
           const [vouchers, estatisticas] = await Promise.all([
             VouchersService.listarVouchers(),
             VouchersService.obterEstatisticas(),

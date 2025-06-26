@@ -57,12 +57,16 @@ export default function HeaderComFiltros({
 }
 
 const styles = StyleSheet.create({
-  boxResumo: {
-    backgroundColor: colors.branco,
-    borderRadius: 12,
-    marginBottom: spacing.lg,
-    padding: spacing.md,
-  },
+ boxResumo: {
+  backgroundColor: colors.branco,
+  borderRadius: 12,
+  marginBottom: spacing.lg,
+  padding: spacing.md,
+  width: '100%',
+  maxWidth: 700,
+  alignSelf: 'center',
+},
+
    logo: {
   width: 80,
   height: 80,

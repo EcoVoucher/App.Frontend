@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   SafeAreaView,
+  ScrollView,
 } from 'react-native';
 import Carousel from 'react-native-reanimated-carousel';
 import { spacing } from '../../theme/spacing';
@@ -25,42 +26,48 @@ export default function EcoEmpresa() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <View style={styles.card}>
-          <Image
-            source={require('../../assets/imagensEco/ecoVoucherIcon.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-
-          <Text style={styles.titulo}>Conheça o EcoVoucher</Text>
-          <Text style={styles.subtitulo}>
-            Uma solução sustentável que conecta empresas e pessoas à economia circular.
-          </Text>
-
-          <TouchableOpacity
-            onPress={() => Linking.openURL('https://www.youtube.com/watch?v=iWuV1oapv8s')}
-            style={styles.thumbWrapper}
-            accessibilityLabel="Abrir vídeo institucional no YouTube"
-          >
+      <View style={styles.wrapper}>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.card}>
             <Image
-              source={require('../../assets/imagensEco/placeholder.png')}
-              style={styles.video}
-              resizeMode="cover"
+              source={require('../../assets/imagensEco/ecoVoucherIcon.png')}
+              style={styles.logo}
+              resizeMode="contain"
             />
-            <View style={styles.playOverlay}>
-              <Image
-                source={require('../../assets/imagensEco/playIcon.png')}
-                style={styles.playIcon}
-              />
-            </View>
-          </TouchableOpacity>
-        </View>
 
+            <Text style={styles.titulo}>Conheça o EcoVoucher</Text>
+            <Text style={styles.subtitulo}>
+              Uma solução sustentável que conecta empresas e pessoas à economia circular.
+            </Text>
+
+            <TouchableOpacity
+              onPress={() => Linking.openURL('https://www.youtube.com/watch?v=iWuV1oapv8s')}
+              style={styles.thumbWrapper}
+              accessibilityLabel="Abrir vídeo institucional no YouTube"
+            >
+              <Image
+                source={require('../../assets/imagensEco/placeholder.png')}
+                style={styles.video}
+                resizeMode="cover"
+              />
+              <View style={styles.playOverlay}>
+                <Image
+                  source={require('../../assets/imagensEco/playIcon.png')}
+                  style={styles.playIcon}
+                />
+              </View>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+
+        {/* Carrossel fixo fora da rolagem */}
         <View style={styles.carouselWrapper}>
           <Carousel
             loop
-            width={Math.min(width * 0.9, 500)}
+            width={width} // ocupa toda a largura da tela
             height={70}
             autoPlay
             scrollAnimationDuration={4000}
@@ -78,21 +85,32 @@ export default function EcoEmpresa() {
 }
 
 const styles = StyleSheet.create({
-
-  container: {
+  safeArea: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'space-between', // evita rolagem
+    backgroundColor: colors.cinzaClaro ?? '#f4f4f4',
   },
-  card: {
-    backgroundColor: colors.branco,
-    borderRadius: 16,
-    width: '100%',
-    maxWidth: 500,
-    alignItems: 'center',
-    padding: spacing.lg,
-    elevation: 2,
+  wrapper: {
+    flex: 1,
+    justifyContent: 'space-between',
   },
+ container: {
+  flexGrow: 1,
+  alignItems: 'center',
+  paddingVertical: spacing.lg,
+  paddingHorizontal: spacing.sm, // garante margem lateral em telas pequenas
+  backgroundColor: colors.cinzaClaro ?? '#f4f4f4',
+},
+
+card: {
+  backgroundColor: colors.branco,
+  borderRadius: 16,
+  width: '100%',
+  maxWidth: 700,
+  padding: spacing.sm,
+  alignItems: 'center',
+  elevation: 2,
+},
+
   logo: {
     width: 100,
     height: 100,
@@ -113,8 +131,8 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.xs,
   },
   thumbWrapper: {
-    width: '100%',
-    height: 160,
+    width: '90%',
+    height: 300,
     borderRadius: 12,
     overflow: 'hidden',
     marginBottom: spacing.sm,
@@ -132,14 +150,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.3)',
   },
   playIcon: {
-    width: 90,
-    height: 90,
+    width: 100,
+    height: 100,
     tintColor: 'white',
   },
   carouselWrapper: {
-    paddingTop:spacing.md,
-    width: '100%',
-    alignItems: 'center',
+    paddingVertical: spacing.md,
   },
   carouselItem: {
     backgroundColor: colors.verdeClaro,
@@ -148,7 +164,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    width: '100%',
+    marginHorizontal: spacing.md,
   },
   carouselText: {
     fontSize: fonts.size.sm,

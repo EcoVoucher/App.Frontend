@@ -192,12 +192,9 @@ export default function HistoricoPontos() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
   contentBox: {
     width: '100%',
-    maxWidth: 800,
+    maxWidth: 700,
     alignSelf: 'center',
   },
   vazio: {
