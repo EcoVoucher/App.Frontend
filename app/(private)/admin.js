@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
-import { AdminService } from '../../../services/serviceAdmin';
-import { colors } from '../../../theme/colors';
-import { fonts } from '../../../theme/fonts';
-import { spacing } from '../../../theme/spacing';
-import AsyncStorage from '../../../utils/storage';
-import { obterComparativoPegada, formatarDataBR } from '../../../utils/formatadores';
-import { useAuth } from '../../../context/AuthContext'; 
-import { obterMensagemErro } from '../../../utils/obterMensagemErro';
+import { AdminService } from '../../services/serviceAdmin';
+import { colors } from '../../theme/colors';
+import { fonts } from '../../theme/fonts';
+import { spacing } from '../../theme/spacing';
+import AsyncStorage from '../../utils/storage';
+import { obterComparativoPegada, formatarDataBR } from '../../utils/formatadores';
+import { useAuth } from '../../context/AuthContext'; 
+import { obterMensagemErro } from '../../utils/obterMensagemErro';
 import { useRouter } from 'expo-router';
-import HeaderComFiltros from '../../../components/HeaderComFiltros';
+import HeaderComFiltros from '../../components/HeaderComFiltros';
 
 import { Ionicons } from '@expo/vector-icons';
 
@@ -22,38 +22,33 @@ export default function AdminDevScreen() {
   const [visiveis, setVisiveis] = useState([]);
  const { usuario, logout } = useAuth();
 
+const [carregando, setCarregando] = useState(false);
 
   const tipos = ['Todos', 'Pessoa Física', 'PJ Aprovada', 'PJ Pendente'];
   const [tipoSelecionado, setTipoSelecionado] = useState('Todos');
   const router = useRouter();
 
+useEffect(() => {
+    if (!usuario?.isAdmin) {
+      router.replace('/(public)/login');
+    }
+  }, [usuario]);
 
- useEffect(() => {
- // if (!usuario) return; 
-
-  if (usuario.isAdmin === 'false') {
-    console.log ("if")
-    router.replace('/(public)/login');
-  } else {
-    console.log ("else")
-    carregarUsuarios();
-  }
-}, [usuario]);
+  if (!usuario?.isAdmin) return null;
 
 
 
-  const carregarUsuarios = async () => {
-    try {
-     const lista = await AdminService.listarUsuarios();
-
-      setUsuarios(lista);
-      setVisiveis(new Array(lista.length).fill(false));
-    } catch (error) {
+const carregarUsuarios = async () => {
+  try {
+    setCarregando(true);
+    const lista = await AdminService.listarUsuarios();
+    setUsuarios(lista);
+    setVisiveis(new Array(lista.length).fill(false));
+  } catch (error) {
     console.error(error);
-
-    const mensagem = obterMensagemErro(error, 'Erro ao carregar usuários.');
-
-    Alert.alert('Erro', mensagem);
+    Alert.alert('Erro', obterMensagemErro(error, 'Erro ao carregar usuários.'));
+  } finally {
+    setCarregando(false);
   }
 };
 
@@ -75,7 +70,13 @@ export default function AdminDevScreen() {
     novos[index] = !novos[index];
     setVisiveis(novos);
   };
-
+if (carregando) {
+  return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <Text>Carregando usuários...</Text>
+    </View>
+  );
+}
 
   return (
   <View style={{ flex: 1 }}>

@@ -72,7 +72,7 @@ export default function HistoricoPegada() {
       contentContainerStyle={[styles.scrollContainer, { minHeight: height }]}
       showsVerticalScrollIndicator={false}
     >
-      <View style={[styles.contentBox, { width: width > 700 ? '60%' : '110%' }]}>
+      <View style={[styles.contentBox, { width: width > 800 ? '80%' : '100%' }]}>
                    <HeaderComFiltros
                       titulo="Histórico de Pegadas"
                      
@@ -126,7 +126,6 @@ export default function HistoricoPegada() {
 
 const styles = StyleSheet.create({
   scrollContainer: {
-    paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl,
   },
   contentBox: {

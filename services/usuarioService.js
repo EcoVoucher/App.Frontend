@@ -14,7 +14,7 @@ export const cadastrarPJ = async (dados) => {
 
 export const UsuarioService = {
   async obterPorId(cpfOuCnpj) {
-    const response = await api.get(`/usuarios/historico/${cpfOuCnpj}`);
+    const response = await api.get(`/usuarios/${cpfOuCnpj}`);
     return response.data;
   },
 

@@ -49,11 +49,11 @@ export default function PrivateLayout() {
     }
 
     const rota = pathname.toLowerCase();
+    if ((usuario.isAdmin === 'true' || usuario.isAdmin === true) && !rota.endsWith('(private)/admin')) {
+  router.replace('/(private)/admin');
+  return;
+}
 
-  if (usuario.isAdmin === 'true' && !rota.includes('/admin/admin')) {
-    router.replace('/(private)/admin/admin');
-    return;
-  }
 
     if (
       rota.includes('catalogorecompensapj') ||
