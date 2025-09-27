@@ -1,18 +1,24 @@
-import { API_URL } from '@env';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
-console.log(API_URL)
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const baseURL = process.env.EXPO_PUBLIC_API_URL;
+
+if (!baseURL) {
+  console.warn('[API] EXPO_PUBLIC_API_URL não definida. Confira seu .env');
+}
+
+console.log('[API] baseURL =', baseURL);
+
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: baseURL ?? 'http://localhost:3000', // fallback opcional
   timeout: 10000,
 });
 
-// 🔐 Interceptor para adicionar token nas requisições automaticamente
 api.interceptors.request.use(
   async (config) => {
     const token = await AsyncStorage.getItem('token');
     if (token) {
-      config.headers['access-token'] = `${token}`;
+      config.headers['access-token'] = token;
     }
     return config;
   },
