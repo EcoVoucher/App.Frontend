@@ -1,3 +1,4 @@
+// utils/status.js
 import { colors } from '../theme/colors';
 
 export const textoStatus = {
@@ -13,22 +14,28 @@ export const corStatus = {
   expirado: colors.cinza,
   indefinido: colors.cinza,
 };
+
+function zerarHora(d) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
 export const obterStatus = (lote) => {
-  const hoje = new Date();
-  const validade = new Date(lote.dataValidade);
+  const hoje = zerarHora(new Date());
+  const validade = zerarHora(lote.dataValidade);
 
-  if (validade < hoje) {
-    return 'expirado';
-  }
+  // Expirado somente por data
+  if (validade < hoje) return 'expirado';
 
-  const total = lote.quantidade;
-  const usados = total - (lote.codigos?.length || 0);
+  const total = Number(lote.quantidade) || 0;
+  const disponiveis = Array.isArray(lote.codigos) ? lote.codigos.length : 0; // fallback seguro
+  const usados = Math.max(0, total - disponiveis);
 
-  if (usados === 0) {
-    return 'validos';
-  } else if (usados > 0 && usados < total) {
-    return 'parcial';
-  } else {
-    return 'expirado';
-  }
+  if (usados === 0) return 'validos';
+  if (usados > 0 && usados < total) return 'parcial';
+
+  // ⚠️ Aqui você já marcava como 'expirado' quando esgotou.
+  // Mantive igual para NÃO mudar seu comportamento.
+  return 'expirado';
 };

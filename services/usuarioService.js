@@ -1,49 +1,45 @@
+// services/usuarioService.js
 import api from './api';
+import { handle } from './http';
 
-// 📍 Cadastro de Pessoa Física
-export const cadastrarPF = async (dados) => {
-  const response = await api.post('/cadastro/pf', dados);
-  return response.data;
-};
+// Helpers locais
+const limparId = (id) => String(id || '').replace(/\D/g, '');
+const isCPF = (id) => limparId(id).length === 11;
+const isCNPJ = (id) => limparId(id).length === 14;
 
-// 📍 Cadastro de Pessoa Jurídica
-export const cadastrarPJ = async (dados) => {
-  const response = await api.post('/cadastro/pj', dados);
-  return response.data;
-};
-
-function isCPF(identifier) {
-  const cleaned = identifier.replace(/\D/g, '');
-  return cleaned.length === 11;
-}
-
-function isCNPJ(identifier) {
-  const cleaned = identifier.replace(/\D/g, '');
-  return cleaned.length === 14;
-}
+// 📍 Cadastro PF/PJ (usando handle para normalizar { ok, data | error })
+export const cadastrarPF = (dados) => handle(api.post('/cadastro/pf', dados));
+export const cadastrarPJ = (dados) => handle(api.post('/cadastro/pj', dados));
 
 export const UsuarioService = {
+  // 🔎 Busca por CPF OU CNPJ
   async obterPorId(cpfOuCnpj) {
-    if (!isCPF(cpfOuCnpj) && !isCNPJ(cpfOuCnpj)) {
-      throw new Error('Identificador inválido: deve ser CPF ou CNPJ.');
+    const id = limparId(cpfOuCnpj);
+
+    if (!isCPF(id) && !isCNPJ(id)) {
+      return {
+        ok: false,
+        error: { status: 400, code: 'INVALID_IDENTIFIER', message: 'Identificador inválido: deve ser CPF ou CNPJ.' },
+      };
     }
-    let response;
-    if(isCPF(cpfOuCnpj)) {
-      response = await api.get(`/usuarios/historico/${cpfOuCnpj}`);
-    }
-    if(isCNPJ(cpfOuCnpj)){
-      response = await api.get(`/usuarios/${cpfOuCnpj}`);
-    }
-    return response.data;
+
+    // ✅ sempre envia SEM máscara
+    const endpoint = isCPF(id)
+      ? `/usuarios/historico/${id}`
+      : `/usuarios/${id}`;
+
+    return handle(api.get(endpoint));
   },
 
-  async alterarSenha(identificador, senhaAtual, novaSenha) {
-    const response = await api.post('/usuarios/alterar-senha', {
-      cpfOuCnpj: identificador,
-      senhaAtual,
-      novaSenha,
-    });
-    return response.data;
+  // 🔐 Alterar senha
+  alterarSenha(identificador, senhaAtual, novaSenha) {
+    const id = limparId(identificador);
+    return handle(
+      api.post('/usuarios/alterar-senha', {
+        cpfOuCnpj: id,
+        senhaAtual,
+        novaSenha,
+      })
+    );
   },
-  
 };

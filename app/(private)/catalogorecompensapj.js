@@ -21,16 +21,16 @@ import ModalSucesso from '../../components/ModalSucesso';
 import ModalErro from '../../components/ModalErro';
 import SelectField from '../../components/SelectField';
 import { useAuth } from '../../context/AuthContext';
-import { VouchersService } from '../../services/voucherService';
+import { VouchersService } from '../../services/voucherService'; // <- service no padrão Result
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
 import { validarCamposObrigatorios } from '../../utils/validarCamposObrigatorios';
 import VerMaisMenos from '../../components/VerMaisMenos';
-import { obterStatus, textoStatus,corStatus,obterMensagemErro } from '../../utils/status';
+import { obterStatus, textoStatus, corStatus } from '../../utils/status';
+import { obterMensagemErro } from '../../utils/obterMensagemErro'; // <- import correto
 
 const { width, height } = Dimensions.get('window');
-
 
 const produtosPorTipo = {
   Alimentacao: ['Marmitex', 'Arroz 5kg', 'Feijão 1kg', 'Leite integral', 'Cesta básica'],
@@ -38,63 +38,66 @@ const produtosPorTipo = {
   Transporte: ['Metrô', 'Ônibus'],
 };
 
-
-
-
 export default function CatalogoRecompensaPJ() {
   const { usuario } = useAuth();
+
+  // Filtros e UI
   const [filtroStatus, setFiltroStatus] = useState('todos');
   const [criterioOrdenacao, setCriterioOrdenacao] = useState('validade');
   const [modalVisible, setModalVisible] = useState(false);
   const [modalSucesso, setModalSucesso] = useState(false);
+  const [modalInfo, setModalInfo] = useState(false);
 
+  // Form de geração
   const [tipo, setTipo] = useState('');
   const [produtos, setProdutos] = useState([]);
   const [quantidade, setQuantidade] = useState('');
   const [dataValidade, setDataValidade] = useState('');
-
   const [erros, setErros] = useState({});
+
+  // Dados
   const [vouchersGerados, setVouchersGerados] = useState([]);
   const [qtdAdquiridos, setQtdAdquiridos] = useState(0);
   const [adquiridosPorLote, setAdquiridosPorLote] = useState({});
 
-
+  // Estado/feedback
   const [mostrarTodos, setMostrarTodos] = useState(false);
   const [erroVisivel, setErroVisivel] = useState(false);
   const [mensagemErro, setMensagemErro] = useState('');
-  const [gerandoVoucher, setGerandoVoucher] = useState(false);
-  const [modalInfo, setModalInfo] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);        // <- carregamento inicial
+  const [isSubmitting, setIsSubmitting] = useState(false);  // <- envio do form
+  const [erroCarregamento, setErroCarregamento] = useState(''); // <- banner inline, sem modal no mount
+
   const itensPorPagina = 5;
-  
- const formatarData = (data) => {
-  if (!data) return '---';
 
-  try {
-    // Remove hora, se existir
-    const dataLimpa = data.includes('T') ? data.split('T')[0] : data;
-    const partes = dataLimpa.split('-');
-
-    if (partes.length === 3) {
-      const [ano, mes, dia] = partes;
-      return `${dia}/${mes}/${ano}`;
+  const formatarData = (data) => {
+    if (!data) return '---';
+    try {
+      const dataLimpa = data.includes('T') ? data.split('T')[0] : data;
+      const partes = dataLimpa.split('-');
+      if (partes.length === 3) {
+        const [ano, mes, dia] = partes;
+        return `${dia}/${mes}/${ano}`;
+      }
+      return data;
+    } catch {
+      return data;
     }
+  };
 
-    return data;
-  } catch (error) {
-    return data;
-  }
-};
-
-
-const carregarDados = async () => {
+ const carregarDados = async () => {
   try {
-    const [vouchers, estatisticas] = await Promise.all([
+    const [vRes, eRes] = await Promise.all([
       VouchersService.listarVouchers(),
       VouchersService.obterEstatisticas(),
     ]);
-    setVouchersGerados(vouchers);
-    setQtdAdquiridos(estatisticas.totalComprados);
-    setAdquiridosPorLote(estatisticas.porLote);
+
+    if (!vRes.ok) throw vRes.error;
+    if (!eRes.ok) throw eRes.error;
+
+    setVouchersGerados(vRes.data);
+    setQtdAdquiridos(eRes.data.totalComprados);
+    setAdquiridosPorLote(eRes.data.porLote);
   } catch (error) {
     const mensagem = obterMensagemErro(error, 'Erro ao carregar dados.');
     setMensagemErro(mensagem);
@@ -102,10 +105,9 @@ const carregarDados = async () => {
   }
 };
 
-useEffect(() => {
-  if (usuario) carregarDados();
-}, [usuario]);
-
+  useEffect(() => {
+    if (usuario) carregarDados();
+  }, [usuario]);
 
   const handleAbrirModal = () => {
     setTipo('');
@@ -122,78 +124,67 @@ useEffect(() => {
     setErros((prev) => ({ ...prev, dataValidade: 'Data inválida' }));
     return;
   }
-
   const [dia, mes, ano] = partesData;
   const validadeFormatada = `${ano}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
 
   if (gerandoVoucher) return;
 
-    const dados = {
+  const dados = { tipo, produtos, quantidade, dataValidade };
+  const errosValidacao = validarCamposObrigatorios(dados, ['tipo', 'produtos', 'quantidade', 'dataValidade']);
+  if (Object.keys(errosValidacao).length > 0) {
+    setErros(errosValidacao);
+    return;
+  }
+
+  setGerandoVoucher(true);
+  try {
+    const res = await VouchersService.gerarVoucher({
       tipo,
       produtos,
-      quantidade,
-      dataValidade,
-    };
+      quantidade: parseInt(quantidade, 10),
+      dataValidade: validadeFormatada,
+    });
 
-    const errosValidacao = validarCamposObrigatorios(
-      dados,
-      ['tipo', 'produtos', 'quantidade', 'dataValidade']
-    );
-
-    if (Object.keys(errosValidacao).length > 0) {
-      setErros(errosValidacao);
+    if (!res.ok) {
+      setMensagemErro(obterMensagemErro(res.error, 'Erro ao gerar voucher.'));
+      setErroVisivel(true);
       return;
     }
 
-    setGerandoVoucher(true);
+    setModalVisible(false);
+    setModalSucesso(true);
+    setTipo('');
+    setProdutos([]);
+    setQuantidade('');
+    setDataValidade('');
+    setErros({});
+    carregarDados(); // mantém seu reload
+  } finally {
+    setGerandoVoucher(false);
+  }
+};
 
-    try {
-      await VouchersService.gerarVoucher({
-        tipo,
-        produtos,
-        quantidade: parseInt(quantidade),
-        dataValidade: validadeFormatada,
-      });
-
-      setModalVisible(false);
-      setModalSucesso(true);
-      setTipo('');
-      setProdutos([]);
-      setQuantidade('');
-      setDataValidade('');
-      setErros({});
-     carregarDados();
-    } catch (error) {
-      const mensagem = obterMensagemErro(error, 'Erro ao gerar voucher.');
-      setMensagemErro(mensagem);
-      setErroVisivel(true);
-    }
- finally {
-      setGerandoVoucher(false);
-    }
-  };
 
   const vouchersFiltrados = useMemo(() => {
-  return vouchersGerados
-    .filter((item) => {
-      const status = obterStatus(item);
-      if (filtroStatus === 'validos') return status === 'validos';
-      if (filtroStatus === 'expirado') return status === 'expirado';
-      return true; // 'todos'
-    })
-    .sort((a, b) => {
-      if (criterioOrdenacao === 'tipo') return a.tipo.localeCompare(b.tipo);
-      if (criterioOrdenacao === 'uso') {
-        const usadosA = a.quantidade - a.codigos.length;
-        const usadosB = b.quantidade - b.codigos.length;
-        const percA = a.quantidade > 0 ? usadosA / a.quantidade : 0;
-        const percB = b.quantidade > 0 ? usadosB / b.quantidade : 0;
-        return percB - percA;
-      }
-      return new Date(a.dataValidade) - new Date(b.dataValidade);
-    });
-}, [vouchersGerados, filtroStatus, criterioOrdenacao]);
-
+    return vouchersGerados
+      .filter((item) => {
+        const status = obterStatus(item);
+        if (filtroStatus === 'validos') return status === 'validos';
+        if (filtroStatus === 'expirado') return status === 'expirado';
+        return true; // 'todos'
+      })
+      .sort((a, b) => {
+        if (criterioOrdenacao === 'tipo') return a.tipo.localeCompare(b.tipo);
+        if (criterioOrdenacao === 'uso') {
+          const usadosA = a.quantidade - a.codigos.length;
+          const usadosB = b.quantidade - b.codigos.length;
+          const percA = a.quantidade > 0 ? usadosA / a.quantidade : 0;
+          const percB = b.quantidade > 0 ? usadosB / b.quantidade : 0;
+          return percB - percA;
+        }
+        return new Date(a.dataValidade) - new Date(b.dataValidade);
+      });
+  }, [vouchersGerados, filtroStatus, criterioOrdenacao]);
 
   const totalLotes = vouchersFiltrados.length;
   const totalVouchers = vouchersFiltrados.reduce((acc, v) => acc + v.quantidade, 0);
@@ -202,47 +193,58 @@ useEffect(() => {
   return (
     <View style={styles.container}>
       <View style={styles.contentBox}>
-       <HeaderComFiltros
-        titulo="Histórico de Vouchers Emitidos"
-        subtitulo={`🧾 Lotes: ${totalLotes} · ✅ Ativos: ${qtdAtivos} · 🔁 Adquiridos: ${qtdAdquiridos}`}
-       filtros={
-    <View style={styles.filtrosLinha}>
-      {['todos', 'validos', 'expirado'].map((value) => (
-        <View key={value} style={styles.botaoFiltroBox}>
-          <BotaoVerdePequeno
-            texto={textoStatus[value]}
-            onPress={() => setFiltroStatus(value)}
-            ativo={filtroStatus === value}
-          />
-        </View>
-      ))}
-      <TouchableOpacity onPress={() => setModalInfo(true)}>
-        <Ionicons name="information-circle-outline" size={20} color={colors.verdeEscuro} />
-      </TouchableOpacity>
-    </View>
-  }
-  acoes={
-    <View style={styles.linhaAcao}>
-      <View style={styles.ordenarBox}>
-        <SelectField
-          label="Ordenar por:"
-          selectedValue={criterioOrdenacao}
-          onValueChange={setCriterioOrdenacao}
-          options={[
-            { label: 'Validade (mais próximas)', value: 'validade' },
-            { label: 'Tipo (A-Z)', value: 'tipo' },
-            { label: 'Mais utilizados', value: 'uso' },
-          ]}
-        />
-      </View>
 
-      <TouchableOpacity style={styles.botaoCadastrar} onPress={handleAbrirModal}>
-        <Ionicons name="add-circle" size={20} color={colors.branco} />
-        <Text style={styles.textoCadastrar}>Cadastrar novo voucher</Text>
-      </TouchableOpacity>
-    </View>
-  }
-/>
+        {/* Banner de erro de carregamento (sem modal no mount) */}
+        {!!erroCarregamento && (
+          <View style={{ backgroundColor: '#FFF3CD', borderColor: '#FFEEBA', borderWidth: 1, padding: 8, borderRadius: 8, marginVertical: 8 }}>
+            <Text style={{ color: '#856404', textAlign: 'center' }}>{erroCarregamento}</Text>
+            <TouchableOpacity onPress={carregarDados} style={{ alignSelf: 'center', marginTop: 6 }}>
+              <Text style={{ color: colors.verde, textDecorationLine: 'underline' }}>Tentar novamente</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <HeaderComFiltros
+          titulo="Histórico de Vouchers Emitidos"
+          subtitulo={`🧾 Lotes: ${totalLotes} · ✅ Ativos: ${qtdAtivos} · 🔁 Adquiridos: ${qtdAdquiridos}`}
+          filtros={
+            <View style={styles.filtrosLinha}>
+              {['todos', 'validos', 'expirado'].map((value) => (
+                <View key={value} style={styles.botaoFiltroBox}>
+                  <BotaoVerdePequeno
+                    texto={textoStatus[value]}
+                    onPress={() => setFiltroStatus(value)}
+                    ativo={filtroStatus === value}
+                  />
+                </View>
+              ))}
+              <TouchableOpacity onPress={() => setModalInfo(true)}>
+                <Ionicons name="information-circle-outline" size={20} color={colors.verdeEscuro} />
+              </TouchableOpacity>
+            </View>
+          }
+          acoes={
+            <View style={styles.linhaAcao}>
+              <View style={styles.ordenarBox}>
+                <SelectField
+                  label="Ordenar por:"
+                  selectedValue={criterioOrdenacao}
+                  onValueChange={setCriterioOrdenacao}
+                  options={[
+                    { label: 'Validade (mais próximas)', value: 'validade' },
+                    { label: 'Tipo (A-Z)', value: 'tipo' },
+                    { label: 'Mais utilizados', value: 'uso' },
+                  ]}
+                />
+              </View>
+
+              <TouchableOpacity style={styles.botaoCadastrar} onPress={handleAbrirModal} disabled={isLoading}>
+                <Ionicons name="add-circle" size={20} color={colors.branco} />
+                <Text style={styles.textoCadastrar}>Cadastrar novo voucher</Text>
+              </TouchableOpacity>
+            </View>
+          }
+        />
 
         <FlatList
           data={mostrarTodos ? vouchersFiltrados : vouchersFiltrados.slice(0, itensPorPagina)}
@@ -255,9 +257,7 @@ useEffect(() => {
             const percentual = total > 0 ? (usados / total) * 100 : 0;
             const corFundo = percentual === 100 ? '#f5f5f5' : percentual > 0 ? '#fffbe5' : '#e6ffed';
             const corBorda = percentual === 100 ? '#ccc' : percentual > 0 ? '#f0c674' : '#6acc8b';
-            const status = obterStatus(item);
 
-              
             return (
               <View style={[styles.card, { backgroundColor: corFundo, borderLeftColor: corBorda }]}>
                 <View style={styles.headerCard}>
@@ -268,19 +268,16 @@ useEffect(() => {
                   />
                 </View>
                 <Text style={styles.cardInfo}>🧾 Produtos: {item.produtos.join(', ')}</Text>
-                <Text style={styles.cardInfo}>
-                  📅 Validade: {formatarData(item.dataValidade)}
-                </Text>
+                <Text style={styles.cardInfo}>📅 Validade: {formatarData(item.dataValidade)}</Text>
                 <Text style={styles.cardInfo}>🏢 Empresa: {item.empresa}</Text>
                 <Text style={styles.cardInfo}>📍 Endereço: {item.endereco}</Text>
+                <Text style={styles.cardInfo}>🔁 Adquiridos: {adquiridosPorLote[item.idLote] || 0} de {item.quantidade}</Text>
                 <Text style={styles.cardInfo}>
-                  🔁 Adquiridos: {adquiridosPorLote[item.idLote] || 0} de {item.quantidade}
-                </Text>
-
-                <Text style={styles.cardInfo}>
-                  🔑 Último código: {(item.codigos.length > 0 && typeof item.codigos[item.codigos.length - 1] === 'object'
-                    ? item.codigos[item.codigos.length - 1].codigo
-                    : item.codigos[item.codigos.length - 1] || '---')}
+                  🔑 Último código: {(
+                    item.codigos.length > 0 && typeof item.codigos[item.codigos.length - 1] === 'object'
+                      ? item.codigos[item.codigos.length - 1].codigo
+                      : item.codigos[item.codigos.length - 1] || '---'
+                  )}
                 </Text>
               </View>
             );
@@ -296,6 +293,8 @@ useEffect(() => {
           />
         )}
       </View>
+
+      {/* Modal explicativo */}
       <Modal
         visible={modalInfo}
         transparent
@@ -308,7 +307,6 @@ useEffect(() => {
             <Text style={styles.modalInfo}>✅ Válido: Lote ativo, sem vouchers utilizados.</Text>
             <Text style={styles.modalInfo}>⚠️ Parcial: Parte dos vouchers já adquiridos.</Text>
             <Text style={styles.modalInfo}>❌ Expirado: Lote cuja validade já passou.</Text>
-
             <TouchableOpacity onPress={() => setModalInfo(false)} style={styles.botaoFechar}>
               <Text style={styles.textoFechar}>Fechar</Text>
             </TouchableOpacity>
@@ -316,13 +314,9 @@ useEffect(() => {
         </View>
       </Modal>
 
-
       {/* Modal de geração */}
       <Modal visible={modalVisible} animationType="slide">
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={{ flex: 1 }}
-        >
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={styles.modalContent}>
             <View style={styles.modalBox}>
               <Text style={styles.modalTitulo}>Gerar Voucher</Text>
@@ -393,19 +387,14 @@ useEffect(() => {
 
               <View style={styles.botoesBox}>
                 <BotaoVerde
-                  texto={gerandoVoucher ? 'Gerando...' : 'Gerar Voucher'}
+                  texto={isSubmitting ? 'Gerando...' : 'Gerar Voucher'}
                   onPress={handleGerarVoucher}
-                  disabled={gerandoVoucher}
+                  disabled={isSubmitting}
                 />
-
                 <BotaoVerde
                   texto="Cancelar"
                   onPress={() => setModalVisible(false)}
-                  style={{
-                    backgroundColor: 'transparent',
-                    borderWidth: 1,
-                    borderColor: colors.erro,
-                  }}
+                  style={{ backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.erro }}
                   textoStyle={{ color: colors.erro }}
                 />
               </View>
@@ -414,11 +403,8 @@ useEffect(() => {
         </KeyboardAvoidingView>
       </Modal>
 
-      <ModalErro
-        visivel={erroVisivel}
-        mensagem={mensagemErro}
-        onClose={() => setErroVisivel(false)}
-      />
+      {/* Modais globais (não abrem no mount) */}
+      <ModalErro visivel={erroVisivel} mensagem={mensagemErro} onClose={() => setErroVisivel(false)} />
 
       <ModalSucesso
         visivel={modalSucesso}
@@ -428,7 +414,6 @@ useEffect(() => {
     </View>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: {
@@ -522,7 +507,7 @@ const styles = StyleSheet.create({
     fontSize: fonts.size.sm,
     color: colors.textDark,
   },
-    modalContent: {
+  modalContent: {
     backgroundColor: colors.fundo,
     alignItems: 'center',
     paddingVertical: spacing.lg,
@@ -579,56 +564,54 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   headerCard: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-},
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
 
-statusBadge: {
-  paddingHorizontal: 8,
-  paddingVertical: 4,
-  borderRadius: 12,
-  alignSelf: 'flex-start',
-},
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
 
-statusTexto: {
-  color: colors.branco,
-  fontSize: fonts.size.xs,
-  fontWeight: 'bold',
-},
+  statusTexto: {
+    color: colors.branco,
+    fontSize: fonts.size.xs,
+    fontWeight: 'bold',
+  },
 
-overlay: {
-  flex: 1,
-  backgroundColor: 'rgba(0,0,0,0.6)',
-  justifyContent: 'center',
-  alignItems: 'center',
-},
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 
-box: {
-  backgroundColor: colors.branco,
-  padding: spacing.lg,
-  borderRadius: 12,
-  width: '80%',
-},
+  box: {
+    backgroundColor: colors.branco,
+    padding: spacing.lg,
+    borderRadius: 12,
+    width: '80%',
+  },
 
-modalInfo: {
-  fontSize: fonts.size.sm,
-  marginBottom: spacing.sm,
-  color: colors.textDark,
-},
+  modalInfo: {
+    fontSize: fonts.size.sm,
+    marginBottom: spacing.sm,
+    color: colors.textDark,
+  },
 
-botaoFechar: {
-  marginTop: spacing.md,
-  backgroundColor: colors.verde,
-  padding: spacing.sm,
-  borderRadius: 8,
-  alignSelf: 'center',
-},
+  botaoFechar: {
+    marginTop: spacing.md,
+    backgroundColor: colors.verde,
+    padding: spacing.sm,
+    borderRadius: 8,
+    alignSelf: 'center',
+  },
 
-textoFechar: {
-  color: colors.branco,
-  fontWeight: 'bold',
-},
-
-
+  textoFechar: {
+    color: colors.branco,
+    fontWeight: 'bold',
+  },
 });

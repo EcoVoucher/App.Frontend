@@ -4,7 +4,6 @@ import { AdminService } from '../../services/serviceAdmin';
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
-import AsyncStorage from '../../utils/storage';
 import { obterComparativoPegada, formatarDataBR } from '../../utils/formatadores';
 import { useAuth } from '../../context/AuthContext'; 
 import { obterMensagemErro } from '../../utils/obterMensagemErro';

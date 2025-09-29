@@ -27,18 +27,16 @@ import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
 import { obterMensagemErro } from '../../utils/obterMensagemErro';
 
-
 const { width, height } = Dimensions.get('window');
 const tipos = ['Todos', 'Alimentacao', 'Transporte', 'Higiene'];
 
-
-export default function CatalogoVouchersPF() {  
+export default function CatalogoVouchersPF() {
   const { usuario } = useAuth();
   const router = useRouter();
   const { mostrarResumo, abrirResumo, fecharResumo } = useModalCarrinho();
 
   const [vouchers, setVouchers] = useState([]);
-  const [modalSucesso, setModalSucesso] = useState({titulo: '', conteudo: null});
+  const [modalSucesso, setModalSucesso] = useState({ titulo: '', conteudo: null });
   const [modalErro, setModalErro] = useState('');
   const [tipoSelecionado, setTipoSelecionado] = useState('Alimentacao');
   const [saldoAtual, setSaldoAtual] = useState(0);
@@ -55,13 +53,24 @@ export default function CatalogoVouchersPF() {
   } = useCarrinho();
 
   const carregarSaldoAtualizado = async () => {
-    const atual = await UsuarioService.obterPorId(usuario.cpf);
-setSaldoAtual(atual.pontos || 0);
+    const res = await UsuarioService.obterPorId(usuario.cpf);
+    if (res?.ok === false) {
+      // opcional: setModalErro(obterMensagemErro(res.error, 'Não foi possível carregar seu saldo.'));
+      setSaldoAtual(0);
+    } else {
+      const data = res?.data ?? res; // compatível com service antigo/novo
+      setSaldoAtual(data?.pontos ?? 0);
+    }
   };
 
   const carregarVouchers = async () => {
-    const lista = await VouchersService.listarVouchersDisponiveisPF();
-    setVouchers(lista);
+    const res = await VouchersService.listarVouchersDisponiveisPF();
+    if (res?.ok === false) {
+      setModalErro(obterMensagemErro(res.error, 'Erro ao carregar catálogo.'));
+    } else {
+      const data = res?.data ?? res; // compatível com service antigo/novo
+      setVouchers(Array.isArray(data) ? data : []);
+    }
   };
 
   const abrirModalResumo = () => {
@@ -71,114 +80,122 @@ setSaldoAtual(atual.pontos || 0);
     }
     abrirResumo();
   };
+
   useFocusEffect(
     useCallback(() => {
       const atualizar = async () => {
-        await Promise.all([
-          carregarVouchers(),
-          carregarSaldoAtualizado(),
-        ]);
+        await Promise.all([carregarVouchers(), carregarSaldoAtualizado()]);
       };
-
       atualizar();
     }, [])
   );
-  
 
   const finalizarCompra = async () => {
-  if (comprando) return;
+    if (comprando) return;
 
-  if (totalPontos > saldoAtual) {
-    setModalErro('Você não possui pontos suficientes para essa compra.');
-    limparCarrinho();
-    fecharResumo();
-    return;
-  }
+    if (totalPontos > saldoAtual) {
+      setModalErro('Você não possui pontos suficientes para essa compra.');
+      // não fecha/limpa; deixa o usuário ajustar
+      return;
+    }
 
-  setComprando(true);
-  try {
-    const listaFinal = selecionados.map((item) => item.idLote);
+    setComprando(true);
+    try {
+      // info rica para o modal
+      const itensComprados = selecionados.map((item) => ({
+        idLote: item.idLote,
+        tipo: item.tipo,
+      }));
 
-    const resultado = await VouchersService.comprarVouchers(usuario.cpf, listaFinal);
+      // payload: ids dos lotes
+      const listaFinal = selecionados.map((item) => item.idLote);
 
+      const res = await VouchersService.comprarVouchers(usuario.cpf, listaFinal);
 
-    await carregarVouchers();
-    await carregarSaldoAtualizado();
+      if (res?.ok === false) {
+        setModalErro(
+          obterMensagemErro(res.error, 'Ocorreu um erro na compra. Tente novamente.')
+        );
+        return;
+      }
 
-    limparCarrinho();
-    fecharResumo();
-    setComprando(false);
+      const resultado = res?.data ?? res;
 
-    setModalSucesso({
-      titulo: 'Compra realizada com sucesso! 🎉',
-      conteudo: (
-        <>
-          <Text style={{ fontWeight: 'bold', marginBottom: 8 }}>
-            Vouchers adquiridos:
-          </Text>
-         {listaFinal.map((v, idx) => (
-              <Text key={idx}>
-                • {v.tipo} – {resultado.codigos?.[idx] || 'Sem código'}
+      // atualiza dados na tela
+      await Promise.all([carregarVouchers(), carregarSaldoAtualizado()]);
+
+      // saldo local só para exibir imediatamente no modal
+      const novoSaldoLocal = Math.max(0, (saldoAtual || 0) - totalPontos);
+
+      // sucesso: agora sim limpa/fecha
+      limparCarrinho();
+      fecharResumo();
+
+      setModalSucesso({
+        titulo: 'Compra realizada com sucesso! 🎉',
+        conteudo: (
+          <>
+            <Text style={{ fontWeight: 'bold', marginBottom: 8 }}>
+              Vouchers adquiridos:
+            </Text>
+            {itensComprados.map((v, idx) => (
+              <Text key={v.idLote}>
+                • {v.tipo} – {resultado?.codigos?.[idx] || 'Código gerado'}
               </Text>
             ))}
-          <Text style={{ fontWeight: 'bold', marginTop: 12 }}>
-            Novo saldo: {saldoAtual - totalPontos} pontos
-          </Text>
-          <Text style={{ marginTop: 10 }}>
-            Vá até o histórico de pontos para ver os vouchers adquiridos.
-          </Text>
-          <BotaoVerde
-            texto="Ir para o Histórico"
-            onPress={() => {
-              setModalSucesso(false);
-              router.push('/(private)/historicopontos');
-            }}
-            style={{ backgroundColor: '#66BB6A', marginTop: 16 }}
-          />
-        </>
-      ),
-    });
- } catch (error) {
-  fecharResumo();
-  limparCarrinho();
-  setComprando(false);
+            <Text style={{ fontWeight: 'bold', marginTop: 12 }}>
+              Novo saldo: {novoSaldoLocal} pontos
+            </Text>
+            <Text style={{ marginTop: 10 }}>
+              Vá até o histórico de pontos para ver os vouchers adquiridos.
+            </Text>
+            <BotaoVerde
+              texto="Ir para o Histórico"
+              onPress={() => {
+                setModalSucesso({ titulo: '', conteudo: null });
+                router.push('/(private)/historicopontos');
+              }}
+              style={{ backgroundColor: '#66BB6A', marginTop: 16 }}
+            />
+          </>
+        ),
+      });
+    } catch (error) {
+      const mensagemApi = error?.message || '';
 
-  const mensagemApi = error?.message || '';
+      if (mensagemApi.includes('já adquiriu')) {
+        setModalErro('Você já adquiriu este voucher. Só é permitido 1 unidade por lote.');
+      } else if (mensagemApi.includes('Pontos insuficientes')) {
+        setModalErro('Você não possui pontos suficientes para essa compra.');
+      } else if (mensagemApi.includes('Sem códigos disponíveis')) {
+        setModalErro('Este voucher está esgotado no momento.');
+      } else {
+        setModalErro(
+          obterMensagemErro(error, 'Ocorreu um erro na compra. Tente novamente ou verifique seus pontos.')
+        );
+      }
+    } finally {
+      setComprando(false);
+    }
+  };
 
-  // 🎯 Verificações específicas por conteúdo da mensagem
-  if (mensagemApi.includes('já adquiriu')) {
-    setModalErro('Você já adquiriu este voucher. Só é permitido 1 unidade por lote.');
-  } else if (mensagemApi.includes('Pontos insuficientes')) {
-    setModalErro('Você não possui pontos suficientes para essa compra.');
-  } else if (mensagemApi.includes('Sem códigos disponíveis')) {
-    setModalErro('Este voucher está esgotado no momento.');
-  } else {
-    // 🟢 Fallback seguro e elegante com função utilitária
-    const mensagem = obterMensagemErro(
-      error,
-      'Ocorreu um erro na compra. Tente novamente ou verifique seus pontos.'
-    );
-    setModalErro(mensagem);
-  }
-}
-};
+  const filtrarPorTipo = () => {
+    const filtrados =
+      tipoSelecionado === 'Todos'
+        ? vouchers
+        : vouchers.filter((v) => v.tipo === tipoSelecionado);
 
-const filtrarPorTipo = () => {
-  const filtrados =
-    tipoSelecionado === 'Todos'
-      ? vouchers
-      : vouchers.filter((v) => v.tipo === tipoSelecionado);
+    return mostrarTodos ? filtrados : filtrados.slice(0, itensPorPagina);
+  };
 
-  return mostrarTodos ? filtrados : filtrados.slice(0, itensPorPagina);
-};
+  const temMais = () => {
+    const total =
+      tipoSelecionado === 'Todos'
+        ? vouchers.length
+        : vouchers.filter((v) => v.tipo === tipoSelecionado).length;
 
-const temMais = () => {
-  const total = tipoSelecionado === 'Todos'
-    ? vouchers.length
-    : vouchers.filter((v) => v.tipo === tipoSelecionado).length;
-
-  return filtrarPorTipo().length < total;
-};
+    return filtrarPorTipo().length < total;
+  };
 
   const corFundoPorTipo = (tipo) => {
     switch (tipo) {
@@ -196,32 +213,32 @@ const temMais = () => {
   return (
     <View style={styles.container}>
       <View style={styles.contentBox}>
+        <HeaderComFiltros
+          titulo="Catálogo de Vouchers"
+          subtitulo="Troque seus pontos por produtos!"
+          saldo={saldoAtual}
+          tipos={tipos}
+          tipoSelecionado={tipoSelecionado}
+          onSelecionarTipo={setTipoSelecionado}
+          // se quiser abrir o resumo por aqui:
+          // onAbrirResumo={abrirModalResumo}
+        />
 
-          <HeaderComFiltros
-            titulo="Catálogo de Vouchers"
-            subtitulo="Troque seus pontos por produtos!"
-            saldo={saldoAtual}
-            tipos={tipos}
-            tipoSelecionado={tipoSelecionado}
-            onSelecionarTipo={setTipoSelecionado}
-          />
         <FlatList
           data={filtrarPorTipo()}
-          keyExtractor={(item) => item.idLote}
+          keyExtractor={(item) =>
+            item.idLote ?? item.id ?? String(item.codigo ?? Math.random())
+          }
           scrollEnabled={false}
           renderItem={({ item }) => {
-            const selecionado = selecionados.find(
-            (v) => v.idLote === item.idLote
-            );
+            const selecionado = selecionados.find((v) => v.idLote === item.idLote);
             const saldoInsuficiente = saldoAtual < item.pontos;
 
             return (
               <TouchableOpacity
                 onPress={() => {
                   if (saldoInsuficiente) {
-                    setModalErro(
-                      'Saldo insuficiente para selecionar este voucher.'
-                    );
+                    setModalErro('Saldo insuficiente para selecionar este voucher.');
                   } else {
                     alternarSelecao(item);
                   }
@@ -232,24 +249,20 @@ const temMais = () => {
                   selecionado && styles.cardSelecionado,
                 ]}
               >
-                 {selecionado && <Badge texto="Selecionado" />}
+                {selecionado && <Badge texto="Selecionado" />}
                 <Text style={styles.cardTitulo}>{item.tipo}</Text>
                 <Text style={styles.cardInfo}>
-                  🥫 Produtos: {item.produtos.join(', ')}
+                  🥫 Produtos: {Array.isArray(item.produtos) ? item.produtos.join(', ') : '—'}
                 </Text>
-                <Text style={styles.cardInfo}>
-                  🏢 Empresa: {item.empresa}
-                </Text>
-                <Text style={styles.cardInfo}>
-                  📍 Endereço: {item.endereco}
-                </Text>
+                <Text style={styles.cardInfo}>🏢 Empresa: {item.empresa}</Text>
+                <Text style={styles.cardInfo}>📍 Endereço: {item.endereco}</Text>
                 <Text style={styles.cardInfo}>
                   📅 Validade:{' '}
-                  {new Date(item.validade).toLocaleDateString('pt-BR')}
+                  {new Date(item.validade || item.dataValidade).toLocaleDateString('pt-BR')}
                 </Text>
                 <Text style={styles.cardInfo}>🎯 Pontos: {item.pontos}</Text>
                 <Text style={styles.cardInfo}>
-                  🔢 Disponíveis: {item.codigos.length}
+                  🔢 Disponíveis: {Array.isArray(item.codigos) ? item.codigos.length : 0}
                 </Text>
                 {saldoInsuficiente && (
                   <Text
@@ -263,22 +276,22 @@ const temMais = () => {
                   </Text>
                 )}
                 {selecionado && (
-                  <Text style={styles.cardSelecionadoTexto}>
-                    ✅ Selecionado
-                  </Text>
+                  <Text style={styles.cardSelecionadoTexto}>✅ Selecionado</Text>
                 )}
               </TouchableOpacity>
             );
           }}
         />
- {vouchers.length > itensPorPagina && (
-  <VerMaisMenos
-    temMais={temMais()}
-    mostrarTodos={mostrarTodos}
-    onVerMais={() => setMostrarTodos(true)}
-    onVerMenos={() => setMostrarTodos(false)}
-  />
-)}
+
+        {vouchers.length > itensPorPagina && (
+          <VerMaisMenos
+            temMais={temMais()}
+            mostrarTodos={mostrarTodos}
+            onVerMais={() => setMostrarTodos(true)}
+            onVerMenos={() => setMostrarTodos(false)}
+          />
+        )}
+
         <View style={{ height: 100 }} />
       </View>
 
@@ -301,31 +314,26 @@ const temMais = () => {
                   </Text>
                   <Text>
                     <Text style={styles.labelNegrito}>Produtos:</Text>{' '}
-                    {item.produtos.join(', ')}
+                    {Array.isArray(item.produtos) ? item.produtos.join(', ') : '—'}
                   </Text>
                   <Text>
-                    <Text style={styles.labelNegrito}>Empresa:</Text>{' '}
-                    {item.empresa}
+                    <Text style={styles.labelNegrito}>Empresa:</Text> {item.empresa}
                   </Text>
                   <Text>
-                    <Text style={styles.labelNegrito}>Endereço:</Text>{' '}
-                    {item.endereco}
+                    <Text style={styles.labelNegrito}>Endereço:</Text> {item.endereco}
                   </Text>
                   <Text>
                     <Text style={styles.labelNegrito}>Validade:</Text>{' '}
-                    {new Date(item.validade).toLocaleDateString('pt-BR')}
+                    {new Date(item.validade || item.dataValidade).toLocaleDateString('pt-BR')}
                   </Text>
                   <Text>
-                    <Text style={styles.labelNegrito}>Pontos:</Text>{' '}
-                    {item.pontos}
+                    <Text style={styles.labelNegrito}>Pontos:</Text> {item.pontos}
                   </Text>
                 </View>
               ))}
             </ScrollView>
 
-            <Text style={styles.totalTexto}>
-              Total: {totalPontos} pontos
-            </Text>
+            <Text style={styles.totalTexto}>Total: {totalPontos} pontos</Text>
 
             <View style={styles.botoesBox}>
               <BotaoVerde
@@ -362,12 +370,12 @@ const temMais = () => {
       </Modal>
 
       {/* 🔥 Modais de feedback */}
-  <ModalSucesso
-  visivel={!!modalSucesso.titulo}
-  titulo={modalSucesso.titulo}
-  mensagem={modalSucesso.conteudo}
-  onFechar={() => setModalSucesso({ titulo: '', conteudo: null })}
-/>
+      <ModalSucesso
+        visivel={!!modalSucesso.titulo}
+        titulo={modalSucesso.titulo}
+        mensagem={modalSucesso.conteudo}
+        onFechar={() => setModalSucesso({ titulo: '', conteudo: null })}
+      />
       <ModalErro
         visivel={!!modalErro}
         onClose={() => setModalErro('')}
@@ -453,7 +461,7 @@ const styles = StyleSheet.create({
   },
   totalTexto: {
     fontSize: fonts.size.md,
-    fontWeight: fonts.weight.bold,
+    fontWeight: 'bold',
     color: colors.textDark,
     textAlign: 'center',
     marginTop: spacing.sm,

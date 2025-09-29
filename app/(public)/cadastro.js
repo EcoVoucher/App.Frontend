@@ -46,11 +46,12 @@ export default function Cadastro() {
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
   const [tipoPessoa, setTipoPessoa] = useState(null);
+
   const [erroVisivel, setErroVisivel] = useState(false);
   const [mensagemErro, setMensagemErro] = useState('');
-
   const [modalTipoVisivel, setModalTipoVisivel] = useState(true);
   const [modalSucesso, setModalSucesso] = useState(false);
+
   const [erros, setErros] = useState({});
   const [dados, setDados] = useState(ESTADO_INICIAL);
   const [carregando, setCarregando] = useState(false);
@@ -69,15 +70,8 @@ const handleChange = (campo, valor) => {
     }));
 
     if (cepLimpo.length === 8) {
-      setDados((prev) => ({
-        ...prev,
-        endereco: '',
-        bairro: '',
-        cidade: '',
-        estado: '',
-      }));
-      buscarEndereco(cepLimpo);
-    }
+  buscarEndereco(cepLimpo);
+  }
 
     return;
   }
@@ -102,35 +96,46 @@ const handleChange = (campo, valor) => {
 };
 
 
-  const buscarEndereco = async (cep) => {
-    try {
-      const controller = new AbortController();
-      setTimeout(() => controller.abort(), 5000);
-      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`, { signal: controller.signal });
+ const buscarEndereco = async (cep) => {
+  try {
+    // limpa erro anterior do CEP
+    setErros((prev) => {
+      const n = { ...prev };
+      delete n.cep;
+      return n;
+    });
 
-      console.log(cep)
-      const data = await res.json();
-      if (data.erro) {
-        setMensagemErro('CEP inválido. Verifique e tente novamente.');
-      setErroVisivel(true);
-      ;
-        return;
-      }
-      setDados((prev) => ({
-        ...prev,
-        endereco: data.logradouro || '',
-        bairro: data.bairro || '',
-        cidade: data.localidade || '',
-        estado: data.uf || ''
-      }));
-     setCamposBloqueados(true); 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
+    const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`, { signal: controller.signal });
+    clearTimeout(timeout);
+
+    const data = await res.json();
+
+    if (data?.erro) {
+      // erro de CEP: trata inline no campo, não em modal global
+      setErros((prev) => ({ ...prev, cep: 'CEP inválido. Verifique e tente novamente.' }));
+      setCamposBloqueados(false); // libera edição manual de endereço
+      return;
+    }
+
+    // sucesso: preenche e mantém bloqueado (como você já fazia)
+    setDados((prev) => ({
+      ...prev,
+      endereco: data.logradouro || '',
+      bairro: data.bairro || '',
+      cidade: data.localidade || '',
+      estado: data.uf || '',
+    }));
+    setCamposBloqueados(true);
   } catch (e) {
-    console.log(e);
-    setMensagemErro('Erro ao buscar endereço. Tente novamente mais tarde.');
-    setErroVisivel(true);
+    // timeout/offline: erro inline no CEP + libera edição manual
+    setErros((prev) => ({ ...prev, cep: 'Erro ao buscar endereço. Tente novamente mais tarde.' }));
     setCamposBloqueados(false);
   }
-  };
+};
+
 
   const camposPreenchidos = () => {
     const obrigatorios = tipoPessoa === 'pf'
@@ -171,54 +176,40 @@ const handleChange = (campo, valor) => {
 
 const handleCadastro = async () => {
   if (carregando) return;
+
+  // 1) Validação local: só marca campos, sem modal
   if (!validarCampos()) return;
 
   setCarregando(true);
   try {
     const dadosFormatados = formatarCadastro(dados);
 
-  
-    if (tipoPessoa === 'pf') {
-      await cadastrarPF(dadosFormatados);
-    } else {
-      await cadastrarPJ(dadosFormatados); 
-    }
-  
+    // 2) Chama o service que retorna { ok, data | error }
+    const res = tipoPessoa === 'pf'
+      ? await cadastrarPF(dadosFormatados)
+      : await cadastrarPJ(dadosFormatados);
 
+    // 3) Erro do backend → ModalErro com mensagem do back (prioridade total)
+    if (!res.ok) {
+      const mensagem = obterMensagemErro(res.error);
+      setMensagemErro(mensagem);
+      setErroVisivel(true);
+
+      // regra especial que você já usa
+      if (mensagem.includes('CNPJ')) {
+        setDados(ESTADO_INICIAL);
+        setErros({});
+      }
+      return; // <<< importante: não prosseguir pro sucesso
+    }
+
+    // 4) Sucesso garantido (200 OK) → abre ModalSucesso
     setModalSucesso(true);
- } catch (error) {
-  console.error(error);
-  let mensagem = error?.message || 'Não foi possível realizar o cadastro.';
-
-  if (error.response) {
-    const status = error.response.status;
-
-    if (status === 400) {
-      mensagem = 'Preencha todos os campos obrigatórios.';
-    } else if (status === 409) {
-      mensagem = 'CPF ou CNPJ já cadastrado.';
-    } else if (status === 422) {
-      mensagem = 'Dados inválidos. Verifique e tente novamente.';
-    } else {
-      mensagem = obterMensagemErro(error, mensagem);
-    }
-  } else {
-    mensagem = obterMensagemErro(error, mensagem);
-  }
-
-  setMensagemErro(mensagem);
-  setErroVisivel(true);
-
-  
-  if (mensagem.includes('CNPJ')) {
-    setDados(ESTADO_INICIAL);
-    setErros({});
-  }
-}
- finally {
+  } finally {
     setCarregando(false);
   }
 };
+
 
   const limparCampos = () => {
     setDados(ESTADO_INICIAL);
@@ -227,68 +218,75 @@ const handleCadastro = async () => {
     setModalTipoVisivel(true);
   };
 
- return (
-  <>
-    <View style={styles.contentBox}>
-      {tipoPessoa && (
-        <TouchableOpacity onPress={limparCampos}>
-          <Text style={styles.voltar}>← Voltar ao tipo de cadastro</Text>
-        </TouchableOpacity>
-      )}
+  return (
+    <>
+      <View style={styles.contentBox}>
+        {tipoPessoa && (
+          <TouchableOpacity onPress={limparCampos}>
+            <Text style={styles.voltar}>← Voltar ao tipo de cadastro</Text>
+          </TouchableOpacity>
+        )}
 
-      <Text style={styles.titulo}>Cadastro</Text>
-      <Text style={styles.subtitulo}>Preencha seus dados abaixo</Text>
+        <Text style={styles.titulo}>Cadastro</Text>
+        <Text style={styles.subtitulo}>Preencha seus dados abaixo</Text>
 
-      {tipoPessoa && (
-        <FormCadastro
-          dados={dados}
-          handleChange={handleChange}
-          erros={erros}
-          tipoPessoa={tipoPessoa}
-          onSubmit={handleCadastro}
-          desabilitado={!camposPreenchidos()}
-          mostrarSenha={mostrarSenha}
-          setMostrarSenha={setMostrarSenha}
-          mostrarConfirmarSenha={mostrarConfirmarSenha}
-          setMostrarConfirmarSenha={setMostrarConfirmarSenha}
-          carregando={carregando}
-        />
-      )}
+        {tipoPessoa && (
+          <FormCadastro
+            dados={dados}
+            handleChange={handleChange}
+            erros={erros}
+            tipoPessoa={tipoPessoa}
+            onSubmit={handleCadastro}
+            desabilitado={!camposPreenchidos()}
+            mostrarSenha={mostrarSenha}
+            setMostrarSenha={setMostrarSenha}
+            mostrarConfirmarSenha={mostrarConfirmarSenha}
+            setMostrarConfirmarSenha={setMostrarConfirmarSenha}
+            carregando={carregando}
+          />
+        )}
 
-      <Text style={styles.rodape}>© 2025 EcoVoucher</Text>
-    </View>
+        <Text style={styles.rodape}>© 2025 EcoVoucher</Text>
+      </View>
 
-    <Modal visible={modalTipoVisivel} transparent animationType="slide">
-      <View style={styles.modalContainer}>
-        <View style={styles.modalBox}>
-          <Text style={styles.modalTitulo}>Escolha o tipo de cadastro</Text>
-          <View style={{ gap: spacing.sm, width: '100%' }}>
-            <BotaoVerde texto="Pessoa Física" onPress={() => { setTipoPessoa('pf'); setModalTipoVisivel(false); }} />
-            <BotaoVerde texto="Pessoa Jurídica" onPress={() => { setTipoPessoa('pj'); setModalTipoVisivel(false); }} />
+      {/* Modal escolha tipo */}
+      <Modal visible={modalTipoVisivel} transparent animationType="slide">
+        <View style={styles.modalContainer}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitulo}>Escolha o tipo de cadastro</Text>
+            <View style={{ gap: spacing.sm, width: '100%' }}>
+              <BotaoVerde texto="Pessoa Física" onPress={() => { setTipoPessoa('pf'); setModalTipoVisivel(false); }} />
+              <BotaoVerde texto="Pessoa Jurídica" onPress={() => { setTipoPessoa('pj'); setModalTipoVisivel(false); }} />
+            </View>
           </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
 
 <ModalSucesso
   visivel={modalSucesso}
+  onFechar={() => {
+    setModalSucesso(false);
+    setDados(ESTADO_INICIAL);
+    setErros({});
+    setTipoPessoa(null);
+  }}
   exibirBotao={false}
   titulo="Cadastro realizado com sucesso!"
   mensagem={
-    tipoPessoa === 'pj' 
+    tipoPessoa === 'pj'
       ? (
         <>
           <Text style={{ textAlign: 'center', marginBottom: 8 }}>
             Aguarde a aprovação do administrador. Entraremos em contato.
           </Text>
           <BotaoVerde
-            texto="Concluir"
+            texto="Ir para Login"
             onPress={() => {
               setModalSucesso(false);
               setDados(ESTADO_INICIAL);
               setErros({});
-              setTipoPessoa('pj');
-              setModalTipoVisivel(false);
+              setTipoPessoa(null);
+              router.replace('/(public)/login');
             }}
           />
         </>
@@ -312,17 +310,19 @@ const handleCadastro = async () => {
       )
   }
 />
-    <ModalErro
-      visivel={erroVisivel}
-      mensagem={mensagemErro}
-      onClose={() => setErroVisivel(false)}
-    />
-  </>
-);
+
+      {/* Modal erro */}
+      <ModalErro
+        visivel={erroVisivel}
+        mensagem={mensagemErro}
+        onClose={() => setErroVisivel(false)}
+      />
+    </>
+  );
 }
 
 const styles = StyleSheet.create({
-   contentBox: {
+  contentBox: {
     width: '100%',
     maxWidth: 500,
     alignSelf: 'center',

@@ -1,3 +1,4 @@
+// components/ModalSucesso.js
 import {
   Modal,
   View,
@@ -7,20 +8,27 @@ import {
   Dimensions,
   ScrollView,
   Image,
-} from 'react-native';
-import { colors } from '../theme/colors';
-import { spacing } from '../theme/spacing';
-import { fonts } from '../theme/fonts';
+  Pressable,
+} from "react-native";
+import { colors } from "../theme/colors";
+import { spacing } from "../theme/spacing";
+import { fonts } from "../theme/fonts";
 
-const { width, height } = Dimensions.get('window');
+const { width, height } = Dimensions.get("window");
 
-export default function ModalSucesso({ visivel, onFechar, mensagem, titulo, exibirBotao = true }) {
+export default function ModalSucesso({
+  visivel,
+  onFechar,
+  mensagem,
+  titulo,
+  exibirBotao = true,
+}) {
   return (
     <Modal transparent animationType="fade" visible={visivel} onRequestClose={onFechar}>
-      <View style={styles.overlay}>
-        <View style={styles.box}>
+      <Pressable style={styles.overlay} onPress={onFechar}>
+        <Pressable style={styles.box} onPress={() => {}}>
           <Image
-            source={require('../assets/imagensEco/ecoVoucherIcon.png')}
+            source={require("../assets/imagensEco/ecoVoucherIcon.png")}
             style={styles.modalLogo}
             resizeMode="contain"
           />
@@ -32,7 +40,7 @@ export default function ModalSucesso({ visivel, onFechar, mensagem, titulo, exib
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
-            {typeof mensagem === 'string' ? (
+            {typeof mensagem === "string" ? (
               <Text style={styles.mensagem}>{mensagem}</Text>
             ) : (
               mensagem
@@ -44,8 +52,8 @@ export default function ModalSucesso({ visivel, onFechar, mensagem, titulo, exib
               <Text style={styles.botaoTexto}>OK</Text>
             </TouchableOpacity>
           )}
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
@@ -53,18 +61,18 @@ export default function ModalSucesso({ visivel, onFechar, mensagem, titulo, exib
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(74, 74, 74, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(74, 74, 74, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: spacing.md,
   },
   box: {
     backgroundColor: colors.branco,
     padding: spacing.lg,
     borderRadius: 20,
-    width: width > 600 ? '60%' : '90%',
+    width: width > 600 ? "60%" : "90%",
     maxHeight: height * 0.8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   modalLogo: {
     width: 100,
@@ -72,26 +80,25 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   titulo: {
-    textAlign: 'center',
-    fontSize: fonts.size.lg, // 🔥 Título maior
+    textAlign: "center",
+    fontSize: fonts.size.lg,
     fontWeight: fonts.weight.bold,
     color: colors.verde,
     marginBottom: spacing.md,
-
   },
   scrollArea: {
     maxHeight: height * 0.4,
-    width: '100%',
+    width: "100%",
     marginBottom: spacing.md,
   },
   scrollContent: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingHorizontal: spacing.sm,
   },
   mensagem: {
-    fontSize: fonts.size.md, // 🔥 Aumentado aqui
+    fontSize: fonts.size.md,
     color: colors.preto,
-    textAlign: 'center',
+    textAlign: "center",
   },
   botao: {
     backgroundColor: colors.verde,
@@ -102,7 +109,7 @@ const styles = StyleSheet.create({
   },
   botaoTexto: {
     color: colors.branco,
-    fontSize: fonts.size.md, // 🔥 Aumentado
+    fontSize: fonts.size.md,
     fontWeight: fonts.weight.bold,
   },
 });

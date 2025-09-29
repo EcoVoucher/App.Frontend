@@ -1,172 +1,77 @@
+// services/voucherService.js
 import api from './api';
+import { handle } from './http';
+
+const limpar = (s) => String(s || '').trim();
+const soDigitos = (s) => String(s || '').replace(/\D/g, '');
 
 /**
- * 🔗 Service responsável por toda a gestão de Vouchers (PJ e PF).
- * Inclui geração, listagem, estatísticas, validação, compra e uso de vouchers.
- * ✔️ Toda a lógica de movimentação de pontos e manipulação dos vouchers passa por esses endpoints.
+ * 🔗 Service responsável pela gestão de Vouchers (PJ e PF)
+ * Todos os métodos retornam { ok: true, data } ou { ok: false, error }
  */
 export const VouchersService = {
+  /** 🧾 Listar vouchers emitidos pelo PJ (opcional cnpj como filtro) */
+  listarVouchers(cnpj) {
+    const c = soDigitos(cnpj);
+    return c
+      ? handle(api.get('/vouchers', { params: { cnpj: c } }))
+      : handle(api.get('/vouchers'));
+  },
 
-  /**
-   * 🧾 Listar todos os vouchers emitidos pelo PJ logado.
-   * 🔸 A API deve retornar os lotes de vouchers criados por este CNPJ.
-   * ✔️ Inclui:
-   * - Tipo do voucher (Alimentacao, Higiene, Transporte)
-   * - Produtos associados
-   * - Quantidade disponível
-   * - Data de validade
-   * - Lista de códigos dos vouchers
-   * 📥 GET → /vouchers
-   */
- async listarVouchers(cnpj) {
-  const { data } = cnpj
-    ? await api.get('/vouchers', { params: { cnpj } }) 
-    : await api.get('/vouchers');                      
-  return data;
-},
-
-
-  /**
-   * 📊 Obter estatísticas dos vouchers (PJ).
-   * 🔸 Retorna:
-   * - Quantidade total de vouchers gerados por este CNPJ
-   * - Quantidade total de vouchers adquiridos por usuários PF
-   * VouchersService.obterEstatisticas();
-    ✅ Correto.
-    ✔️ Retorna:
-
-    ====Total de vouchers adquiridos (totalComprados).
-
-    =====Adquiridos por lote (porLote).
-
-
-   * - Detalhamento por lote 
-   * ✔️ Permite ao PJ visualizar seu desempenho na plataforma.
-   * 📥 GET → /vouchers/estatisticas
-   */
-  async obterEstatisticas() {
-    const { data } = await api.get('/vouchers/estatisticas');
-    return data;
+  /** 📊 Estatísticas (totalComprados, porLote, etc.) */
+  obterEstatisticas() {
+    return handle(api.get('/vouchers/estatisticas'));
   },
 
   /**
-   * 🎟️ Gerar um novo lote de vouchers (PJ).
-   * 🔸 Backend deve validar:
-   * - Se os produtos escolhidos pertencem ao tipo do voucher.
-   * - Se a quantidade é válida.
-   * - Gerar códigos únicos e salvar.
-   * ✔️ Impacto no sistema:
-   * - Cria um lote com os códigos.
-   * - Esses códigos ficam disponíveis para que os usuários PF possam adquirir.
-   * 📤 POST → /vouchers
-   * 🔸 Payload:
-   * {
-   *   tipo: 'Alimentacao' | 'Higiene' | 'Transporte',
-   *   produtos: [Array de produtos],
-   *   quantidade: Number,
-   *   dataValidade: 'YYYY-MM-DD'
-   * }
+   * 🎟️ Gerar um novo lote de vouchers (PJ)
+   * payload: { tipo, produtos, quantidade, dataValidade(YYYY-MM-DD) }
    */
-  async gerarVoucher({ tipo, produtos, quantidade, dataValidade }) {
-    const { data } = await api.post('/vouchers', {
-      tipo,
-      produtos,
-      quantidade,
-      dataValidade,
-    });
-    return data;
+  gerarVoucher({ tipo, produtos, quantidade, dataValidade }) {
+    return handle(
+      api.post('/vouchers', {
+        tipo: limpar(tipo),
+        produtos: Array.isArray(produtos) ? produtos : [],
+        quantidade: Number(quantidade),
+        dataValidade: limpar(dataValidade),
+      })
+    );
+  },
+
+  /** 🔍 Validar por código (PJ) */
+  validarVoucherPorCodigo(codigo) {
+    return handle(api.get(`/vouchers/validar/${limpar(codigo)}`));
+  },
+
+  /** 🔍 Buscar vouchers adquiridos por CPF+Tipo (PJ) */
+  buscarVouchersPorCpfETipo(cpf, tipo) {
+    return handle(
+      api.get('/vouchers/adquiridos', {
+        params: { cpf: soDigitos(cpf), tipo: limpar(tipo) },
+      })
+    );
+  },
+
+  /** ✅ Marcar voucher como utilizado (PJ) */
+  utilizarVoucher(codigo) {
+    return handle(api.post('/vouchers/utilizar', { codigo: limpar(codigo) }));
+  },
+
+  /** 🛍️ Listar vouchers disponíveis para PF (catálogo) */
+  listarVouchersDisponiveisPF() {
+    return handle(api.get('/vouchers/disponiveis'));
   },
 
   /**
-   * 🔍 Validar voucher por código (PJ).
-   * ✔️ Verifica se:
-   * - O voucher existe.
-   * - Pertence ao CNPJ logado.
-   * - Está com status válido, expirado ou utilizado.
-   * ✔️ Retorna os detalhes completos do voucher, incluindo:
-   * - Código, tipo, produtos, empresa, endereço, validade e status.
-   * 📥 GET → /vouchers/validar/{codigo}
+   * 🛒 Comprar vouchers (PF)
+   * cpf: string, lista: array de idLote
    */
-  async validarVoucherPorCodigo(codigo) {
-    const { data } = await api.get(`/vouchers/validar/${codigo}`);
-    return data;
-  },
-
- /* 🔍 Buscar vouchers adquiridos por um CPF e Tipo para o PJ logado
- * 📥 GET → /vouchers/adquiridos?cpf=12345678900&tipo=Alimentacao
- */
-async buscarVouchersPorCpfETipo(cpf, tipo) {
-  const { data } = await api.get('/vouchers/adquiridos', {
-    params: { cpf, tipo },
-  });
-  return data;
-},
-
-
-  /**
-   * ✅ Marcar voucher como utilizado (PJ).
-   * ✔️ Backend deve:
-   * - Alterar o status do voucher de 'valido' para 'utilizado'.
-   * - Esse processo confirma que o voucher foi entregue, resgatado ou usado no mundo físico.
-   * 🚫 NÃO afeta pontos, pois os pontos foram debitados no momento da compra (PF).
-   * 📤 POST → /vouchers/utilizar
-   * 🔸 Payload:
-   * {
-   *   codigo: 'VOUC-2025-001'
-   * }
-   */
-  async utilizarVoucher(codigo) {
-    const { data } = await api.post('/vouchers/utilizar', { codigo });
-    return data;
-  },
-
-  /**
-   * 🛍️ Listar vouchers disponíveis para PF (Catálogo).
-   * ✔️ Mostra apenas vouchers:
-   * - Não expirados.
-   * - Com códigos disponíveis.
-   * - Que foram gerados por algum PJ.
-   * ✔️ Backend deve calcular automaticamente:
-   * - Se a data de validade é maior ou igual à data atual.
-   * - Se ainda há códigos disponíveis no lote.
-   * 📥 GET → /vouchers/disponiveis
-   */
-  async listarVouchersDisponiveisPF() {
-    const { data } = await api.get('/vouchers/disponiveis');
-    return data;
-  },
-
-  /**
-   * 🛒 Comprar vouchers (PF).
-   * ✔️ Backend faz:
-   * - Verifica se o CPF possui saldo de pontos suficiente.
-   * - Debita os pontos do CPF.
-   * - Remove um código do lote disponível.
-   * - Cria uma movimentação de pontos do tipo 'saida'.
-   * - Status do voucher fica como 'valido'.
-   * 🔸 Ao utilizar futuramente, o status muda para 'utilizado'.
-   * 📤 POST →/vouchers/comprar
-   * 🔸 Payload:
-   * {
-   *   cpf: '12345678900',
-   *   vouchers: [
-   *     {
-   *       idLote: 'VOUC-2025-001',
-   *       tipo: 'Alimentacao',
-   *       produtos: [...],
-   *       empresa: 'Supermercado X',
-   *       endereco: 'Rua tal',
-   *       validade: '2025-07-01T00:00:00Z',
-   *       pontos: 150
-   *     }
-   *   ]
-   * }
-   */
-  async comprarVouchers(cpf, lista) {
-    const { data } = await api.post('/vouchers/comprar', {
-      cpf,
-      vouchers: lista,
-    });
-    return data;
+  comprarVouchers(cpf, lista) {
+    return handle(
+      api.post('/vouchers/comprar', {
+        cpf: soDigitos(cpf),
+        vouchers: Array.isArray(lista) ? lista : [],
+      })
+    );
   },
 };

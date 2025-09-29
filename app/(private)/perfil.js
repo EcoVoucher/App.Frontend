@@ -23,6 +23,9 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import ModalErro from '../../components/ModalErro';
 import ModalSucesso from '../../components/ModalSucesso';
 
+// Helper para aceitar services com ou sem { ok, data }
+const toResult = (res) =>
+  res && typeof res === 'object' && 'ok' in res ? res : { ok: true, data: res };
 
 export default function Perfil() {
   const { usuario } = useAuth();
@@ -37,6 +40,7 @@ export default function Perfil() {
   const [senhaAtual, setSenhaAtual] = useState('');
   const [novaSenha, setNovaSenha] = useState('');
   const [confirmarNovaSenha, setConfirmarNovaSenha] = useState('');
+  const [trocandoSenha, setTrocandoSenha] = useState(false);
 
   const [mostrarSenhaAtual, setMostrarSenhaAtual] = useState(false);
   const [mostrarNovaSenha, setMostrarNovaSenha] = useState(false);
@@ -45,41 +49,56 @@ export default function Perfil() {
   const [erros, setErros] = useState({});
   const [modalErro, setModalErro] = useState('');
   const [modalSucesso, setModalSucesso] = useState('');
-  
 
   useEffect(() => {
     carregarDados();
   }, []);
 
-   const carregarDados = async () => {
+  const carregarDados = async () => {
     try {
       const documento = usuario.cpf || usuario.cnpj;
-      const user = await UsuarioService.obterPorId(documento);
 
+      // 🔹 Usuario (padronizado com {ok,data})
+      const userRes = await UsuarioService.obterPorId(documento);
+      if (!userRes.ok) {
+        setModalErro(obterMensagemErro(userRes.error, 'Erro ao carregar dados do usuário.'));
+        return;
+      }
+      const user = userRes.data || {};
       setPontos(user.pontos ?? 0);
-      setDepositos(user.depositos);
+      setDepositos(user.depositos ?? 0);
 
       if (usuario.tipo === 'pf') {
-        const historico = await PegadaService.obterHistorico(documento);
-        if (historico.length > 0) {
-          setPegada(historico[historico.length - 1].pontuacao);
+        // 🔹 Pegada (aceita ambos formatos)
+        const histRes = toResult(await PegadaService.obterHistorico(documento));
+        if (histRes.ok && Array.isArray(histRes.data) && histRes.data.length > 0) {
+          setPegada(histRes.data[histRes.data.length - 1]?.pontuacao ?? null);
         }
       }
-if (usuario.tipo === 'pj') {
-        const lotes = await VouchersService.listarVouchers(usuario.cnpj); 
-        const estatisticas = await VouchersService.obterEstatisticas();
 
+      if (usuario.tipo === 'pj') {
+        // 🔹 Vouchers do PJ
+        const lotesRes = toResult(await VouchersService.listarVouchers(usuario.cnpj));
+        const estatRes = toResult(await VouchersService.obterEstatisticas());
+
+        const lotes = lotesRes.ok ? lotesRes.data ?? [] : [];
         const totalVouchersGerados = lotes.reduce((acc, lote) => acc + (lote.quantidade ?? 0), 0);
         setQtdVouchers(totalVouchersGerados);
-        setVouchersAdquiridos(estatisticas?.totalComprados ?? 0);
-      }
 
+        const totalComprados = estatRes.ok ? estatRes.data?.totalComprados ?? 0 : 0;
+        setVouchersAdquiridos(totalComprados);
+
+        if (!lotesRes.ok) {
+          setModalErro(obterMensagemErro(lotesRes.error, 'Erro ao carregar lotes.'));
+        } else if (!estatRes.ok) {
+          setModalErro(obterMensagemErro(estatRes.error, 'Erro ao carregar estatísticas.'));
+        }
+      }
     } catch (error) {
       const mensagem = obterMensagemErro(error, 'Erro ao carregar dados.');
       setModalErro(mensagem);
     }
   };
-
 
   const handleAlterarSenha = async () => {
     const dados = {
@@ -89,30 +108,40 @@ if (usuario.tipo === 'pj') {
     };
     const campos = ['senhaAtual', 'novaSenha', 'confirmarSenha'];
     const errosValidacao = validarCamposObrigatorios(dados, campos);
+    if (novaSenha && confirmarNovaSenha && novaSenha !== confirmarNovaSenha) {
+      errosValidacao.confirmarSenha = 'As senhas não conferem.';
+    }
     setErros(errosValidacao);
-
     if (Object.keys(errosValidacao).length > 0) return;
 
+    setTrocandoSenha(true);
     try {
-      await UsuarioService.alterarSenha(
+      const res = await UsuarioService.alterarSenha(
         usuario.cpf || usuario.cnpj,
         senhaAtual,
         novaSenha
       );
+
+      if (!res.ok) {
+        setModalErro(obterMensagemErro(res.error, 'Erro ao alterar senha.'));
+        return;
+      }
+
       setModalSucesso('Senha alterada com sucesso!');
       setSenhaAtual('');
       setNovaSenha('');
       setConfirmarNovaSenha('');
       setSenhaAberta(false);
     } catch (error) {
-    const mensagem = obterMensagemErro(error, 'Erro ao alterar senha.');
-    setModalErro(mensagem);
-  }
-};
+      setModalErro(obterMensagemErro(error, 'Erro ao alterar senha.'));
+    } finally {
+      setTrocandoSenha(false);
+    }
+  };
 
   const toggleSenha = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setSenhaAberta(!senhaAberta);
+    setSenhaAberta((v) => !v);
   };
 
   const nomeFormatado =
@@ -121,27 +150,28 @@ if (usuario.tipo === 'pj') {
       : (usuario.nomeEmpresa || '').toUpperCase();
 
   return (
-   <KeyboardAwareScrollView
-  contentContainerStyle={styles.container}
-  enableOnAndroid={true}
-  extraScrollHeight={20}
-  keyboardShouldPersistTaps="handled"
->
+    <KeyboardAwareScrollView
+      contentContainerStyle={styles.container}
+      enableOnAndroid={true}
+      extraScrollHeight={20}
+      keyboardShouldPersistTaps="handled"
+    >
       <ScrollView contentContainerStyle={styles.container}>
         {/* Dados Cadastrais */}
         <View style={styles.card}>
           <View style={styles.header}>
-          <Image
-            source={require('../../assets/imagensEco/ecoVoucherIcon.png')}
-            style={styles.logo}
-          />
-          <View>
-            <Text style={styles.titulo}>Seu Perfil{'\n'}{nomeFormatado}</Text>
-            <Text style={styles.subtitulo}>
-              Transforme suas ações em benefícios
-            </Text>
+            <Image
+              source={require('../../assets/imagensEco/ecoVoucherIcon.png')}
+              style={styles.logo}
+            />
+            <View>
+              <Text style={styles.titulo}>Seu Perfil{'\n'}{nomeFormatado}</Text>
+              <Text style={styles.subtitulo}>
+                Transforme suas ações em benefícios
+              </Text>
+            </View>
           </View>
-        </View>
+
           <Text style={styles.cardTitle}>📄 Dados Cadastrais</Text>
           <View style={styles.linha}>
             <Text style={styles.label}>Nome:</Text>
@@ -156,7 +186,7 @@ if (usuario.tipo === 'pj') {
           <View style={styles.linha}>
             <Text style={styles.label}>Email:</Text>
             <Text style={styles.valor}>{usuario.email}</Text>
-          </View>         
+          </View>
           <View style={styles.linha}>
             <Text style={styles.label}>Endereço:</Text>
             <Text style={styles.valor}>
@@ -194,7 +224,6 @@ if (usuario.tipo === 'pj') {
                 </View>
                 <View style={styles.boxInfo}>
                   <Text style={styles.valorInfo}>{vouchersAdquiridos}</Text>
-
                   <Text style={styles.labelInfo}>Adquiridos por PF</Text>
                 </View>
               </>
@@ -202,34 +231,35 @@ if (usuario.tipo === 'pj') {
           </View>
         </View>
 
-       <View style={styles.card}>
-  <TouchableOpacity onPress={toggleSenha}>
-    <Text style={styles.cardTitle}>
-      🔐 Alterar Senha {senhaAberta ? '▲' : '▼'}
-    </Text>
-  </TouchableOpacity>
+        {/* Alterar Senha */}
+        <View style={styles.card}>
+          <TouchableOpacity onPress={toggleSenha}>
+            <Text style={styles.cardTitle}>
+              🔐 Alterar Senha {senhaAberta ? '▲' : '▼'}
+            </Text>
+          </TouchableOpacity>
 
-    {senhaAberta && (
-      <FormSenhaPerfil
-        senhaAtual={senhaAtual}
-        setSenhaAtual={setSenhaAtual}
-        novaSenha={novaSenha}
-        setNovaSenha={setNovaSenha}
-        confirmarNovaSenha={confirmarNovaSenha}
-        setConfirmarNovaSenha={setConfirmarNovaSenha}
-        erros={erros}
-        mostrarSenhaAtual={mostrarSenhaAtual}
-        setMostrarSenhaAtual={setMostrarSenhaAtual}
-        mostrarNovaSenha={mostrarNovaSenha}
-        setMostrarNovaSenha={setMostrarNovaSenha}
-        mostrarConfirmar={mostrarConfirmar}
-        setMostrarConfirmar={setMostrarConfirmar}
-        carregando={false}
-        onSubmit={handleAlterarSenha}
-      />
-    )}
+          {senhaAberta && (
+            <FormSenhaPerfil
+              senhaAtual={senhaAtual}
+              setSenhaAtual={setSenhaAtual}
+              novaSenha={novaSenha}
+              setNovaSenha={setNovaSenha}
+              confirmarNovaSenha={confirmarNovaSenha}
+              setConfirmarNovaSenha={setConfirmarNovaSenha}
+              erros={erros}
+              mostrarSenhaAtual={mostrarSenhaAtual}
+              setMostrarSenhaAtual={setMostrarSenhaAtual}
+              mostrarNovaSenha={mostrarNovaSenha}
+              setMostrarNovaSenha={setMostrarNovaSenha}
+              mostrarConfirmar={mostrarConfirmar}
+              setMostrarConfirmar={setMostrarConfirmar}
+              carregando={trocandoSenha}
+              onSubmit={handleAlterarSenha}
+            />
+          )}
+        </View>
 
-</View>
         <ModalErro
           visivel={!!modalErro}
           mensagem={modalErro}
@@ -241,16 +271,14 @@ if (usuario.tipo === 'pj') {
           onFechar={() => setModalSucesso('')}
         />
       </ScrollView>
-</KeyboardAwareScrollView>
+    </KeyboardAwareScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container:{
-
-  },
+  container: {},
   header: {
-    marginTop:spacing.xx,
+    marginTop: spacing.xl, // corrigido de spacing.xx
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: spacing.lg,
