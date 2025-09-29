@@ -24,18 +24,22 @@ export const api = axios.create({
  * - injeta Authorization Bearer <token>
  * - mantém 'access-token' se seu backend ainda usar esse header
  */
-api.interceptors.request.use(
-  async (config) => {
-    const token = await storage.getToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-      // remova se não precisar manter compatibilidade:
-      config.headers["access-token"] = token;
-    }
-    return config;
+// coloque temporariamente em services/api.js
+api.interceptors.response.use(
+  (resp) => {
+    console.log('[API OK]', resp.config.url, resp.status, resp.data);
+    return resp;
   },
-  (error) => Promise.reject(error)
+  (err) => {
+    if (err.response) {
+      console.log('[API ERR]', err.config?.url, err.response.status, err.response.data);
+    } else {
+      console.log('[API ERR]', err.config?.url, err.code, err.message);
+    }
+    return Promise.reject(err);
+  }
 );
+
 
 /**
  * Normaliza qualquer erro do Axios em um objeto único

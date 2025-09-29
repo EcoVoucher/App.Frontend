@@ -1,9 +1,15 @@
 // context/AuthContext.js
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import storage from "../utils/storage";
-// Se quiser validar token no load, traga seu cliente: import api from "../services/api";
+import api from "../services/api";            // 👈 para setar/remover Authorization
+// import { AuthService } from "../services/authService"; // opcional se quiser validar token no boot
 
 const AuthContext = createContext(null);
+
+const setAuthHeader = (token) => {
+  if (token) api.defaults.headers.common.Authorization = `Bearer ${token}`;
+  else delete api.defaults.headers.common.Authorization;
+};
 
 export const AuthProvider = ({ children }) => {
   const [usuario, setUsuario] = useState(null);
@@ -14,15 +20,16 @@ export const AuthProvider = ({ children }) => {
       try {
         const [token, user] = await Promise.all([storage.getToken(), storage.getUser()]);
         if (token && user) {
+          setAuthHeader(token);
+
           // (opcional) validar token com o backend:
-          // try {
-          //   await api.get("/auth/me"); // ou endpoint equivalente
-          // } catch {
+          // const me = await AuthService.me();
+          // if (!me.ok) {
           //   await storage.clearAll();
           //   setUsuario(null);
-          //   setCarregando(false);
           //   return;
           // }
+
           setUsuario(user);
         } else {
           setUsuario(null);
@@ -45,11 +52,13 @@ export const AuthProvider = ({ children }) => {
 
     await storage.setToken(token);
     await storage.setUser(usuarioComTipo);
+    setAuthHeader(token);        // 👈 garante Authorization depois do login
     setUsuario(usuarioComTipo);
   };
 
   const logout = async () => {
     await storage.clearAll();
+    setAuthHeader(null);         // 👈 remove Authorization
     setUsuario(null);
   };
 
@@ -59,10 +68,12 @@ export const AuthProvider = ({ children }) => {
       carregando,
       login,
       logout,
-      setUsuario, // útil p/ atualizar perfil local após edição
+      setUsuario,                 // útil p/ atualizar perfil local após edição
       isAutenticado: !!usuario,
       isAdmin: !!usuario?.isAdmin,
       tipo: usuario?.tipo ?? null, // "pf" | "pj" | "admin"
+      isPF: usuario?.tipo === "pf",
+      isPJ: usuario?.tipo === "pj",
     }),
     [usuario, carregando]
   );

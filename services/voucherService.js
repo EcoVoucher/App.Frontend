@@ -28,11 +28,12 @@ export const VouchersService = {
    * payload: { tipo, produtos, quantidade, dataValidade(YYYY-MM-DD) }
    */
   gerarVoucher({ tipo, produtos, quantidade, dataValidade }) {
+    const qtd = parseInt(quantidade, 10);
     return handle(
       api.post('/vouchers', {
         tipo: limpar(tipo),
         produtos: Array.isArray(produtos) ? produtos : [],
-        quantidade: Number(quantidade),
+        quantidade: Number.isFinite(qtd) ? qtd : 0,
         dataValidade: limpar(dataValidade),
       })
     );
@@ -40,7 +41,8 @@ export const VouchersService = {
 
   /** 🔍 Validar por código (PJ) */
   validarVoucherPorCodigo(codigo) {
-    return handle(api.get(`/vouchers/validar/${limpar(codigo)}`));
+    const code = encodeURIComponent(limpar(codigo));
+    return handle(api.get(`/vouchers/validar/${code}`));
   },
 
   /** 🔍 Buscar vouchers adquiridos por CPF+Tipo (PJ) */
@@ -67,10 +69,12 @@ export const VouchersService = {
    * cpf: string, lista: array de idLote
    */
   comprarVouchers(cpf, lista) {
+    // evita ids duplicados sem querer
+    const uniqueIds = Array.from(new Set(Array.isArray(lista) ? lista : []));
     return handle(
       api.post('/vouchers/comprar', {
         cpf: soDigitos(cpf),
-        vouchers: Array.isArray(lista) ? lista : [],
+        vouchers: uniqueIds,
       })
     );
   },

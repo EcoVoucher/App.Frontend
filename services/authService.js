@@ -1,59 +1,69 @@
+// services/authService.js
 import api from './api';
+import { handle } from './http';
+
+const limpar = (s) => String(s ?? '').trim();
+const soDigitos = (s) => String(s ?? '').replace(/\D/g, '');
+const normTipo = (t) => (String(t || '').toLowerCase() === 'pj' ? 'pj' : 'pf');
 
 export const AuthService = {
   /**
-   * Faz login do usuário (PF ou PJ).
-   * @param {string} cpfOuCnpj - CPF ou CNPJ sem máscara.
-   * @param {string} senha - Senha do usuário.
-   * @param {string} tipo - 'pf' ou 'pj'
-   * @returns {Promise<{ token: string, usuario: object }>}
+   * Login PF/PJ
+   * payload esperado do back: { token, usuario, tipo? }
    */
-  login: async ({ cpfOuCnpj, senha, tipo }) => {
-    const response = await api.post('/auth/login', {
-      cpfOuCnpj,
-      senha,
-      tipo,
-    });
-    return response.data;
+  login({ cpfOuCnpj, senha, tipo }) {
+    return handle(
+      api.post('/auth/login', {
+        cpfOuCnpj: soDigitos(cpfOuCnpj),
+        senha: limpar(senha),
+        tipo: normTipo(tipo),
+      })
+    );
   },
 
   /**
-   * Faz logout do usuário.
-   * @returns {Promise<{ sucesso: boolean, mensagem: string }>}
+   * Logout (opcional — além de limpar localmente no AuthContext)
    */
-  logout: async () => {
-    const response = await api.post('/auth/logout');
-    return response.data;
+  logout() {
+    return handle(api.post('/auth/logout'));
   },
 
   /**
-   * 🔐 Solicita recuperação de senha.
-   * @param {string} cpfOuCnpj - Apenas números (sem máscara).
-   * @returns {Promise<{ sucesso: boolean, mensagem?: string, erro?: string }>}
+   * Recuperar senha (envia e-mail/código)
    */
-  recuperarSenha: async ({ cpfOuCnpj }) => {
-    const response = await api.post('/auth/recuperar-senha', { cpfOuCnpj });
-    return response.data;
+  recuperarSenha({ cpfOuCnpj }) {
+    return handle(
+      api.post('/auth/recuperar-senha', {
+        cpfOuCnpj: soDigitos(cpfOuCnpj),
+      })
+    );
   },
 
   /**
-   * 🔍 Valida o código/token enviado ao e-mail.
-   * @param {string} token - Código enviado ao e-mail do usuário.
-   * @returns {Promise<{ valido: boolean, mensagem?: string, erro?: string }>}
+   * Validar token/código de recuperação
    */
-  validarToken: async (token) => {
-    const response = await api.get(`/auth/validar-token/${token}`);
-    return response.data;
+  validarToken(token) {
+    return handle(
+      api.get(`/auth/validar-token/${encodeURIComponent(limpar(token))}`)
+    );
   },
 
   /**
-   * 🔄 Redefine a senha do usuário com o token.
-   * @param {string} token - Token válido (código).
-   * @param {string} senha - Nova senha.
-   * @returns {Promise<{ sucesso: boolean, mensagem?: string, erro?: string }>}
+   * Redefinir senha com token
    */
-  redefinirSenha: async ({ token, senha }) => {
-    const response = await api.post('/auth/redefinir-senha', { token, senha });
-    return response.data;
+  redefinirSenha({ token, senha }) {
+    return handle(
+      api.post('/auth/redefinir-senha', {
+        token: limpar(token),
+        senha: limpar(senha),
+      })
+    );
+  },
+
+  /**
+   * (Opcional) /me para revalidar sessão ao abrir o app
+   */
+  me() {
+    return handle(api.get('/auth/me'));
   },
 };

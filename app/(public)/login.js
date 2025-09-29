@@ -11,7 +11,6 @@ import BotaoVerde from '../../components/BotaoVerde';
 import FormLogin from '../../components/forms/FormLogin';
 import ModalErro from '../../components/ModalErro';
 import { useAuth } from '../../context/AuthContext';
-//import apiMock from '../../services/apiMock';
 import { AuthService } from '../../services/authService';
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
@@ -33,8 +32,6 @@ export default function Login() {
   const [mensagemErro, setMensagemErro] = useState('');
   const [tentativas, setTentativas] = useState(0);
   const [bloqueado, setBloqueado] = useState(false);
-  
-
 
   const handleChange = (campo, valor) => {
     if (campo === 'cpf') setCpf(valor);
@@ -55,7 +52,7 @@ export default function Login() {
     return Object.keys(novoErros).length === 0;
   };
 
- const handleLogin = async () => {
+const handleLogin = async () => {
   if (carregando || bloqueado) return;
 
   if (!validarCampos()) {
@@ -65,13 +62,11 @@ export default function Login() {
   }
 
   const cpfOuCnpj = cpf.replace(/\D/g, '');
-
   if (tipoPessoa === 'pf' && cpfOuCnpj.length !== 11) {
     setMensagemErro('Você selecionou Pessoa Física, mas o CPF está inválido.');
     setErroVisivel(true);
     return;
   }
-
   if (tipoPessoa === 'pj' && cpfOuCnpj.length !== 14) {
     setMensagemErro('Você selecionou Pessoa Jurídica, mas o CNPJ está inválido.');
     setErroVisivel(true);
@@ -79,55 +74,37 @@ export default function Login() {
   }
 
   setCarregando(true);
-
   try {
-    const { token, usuario } = await AuthService.login({
-      cpfOuCnpj,
-      senha,
-      tipo: tipoPessoa,
-    });
-    
+    const res = await AuthService.login({ cpfOuCnpj, senha, tipo: tipoPessoa });
 
-  await login({ token, usuario, tipo: tipoPessoa});
+    // 👇 IMPORTANTE: tratar { ok, data | error }
+    if (!res.ok) {
+      setMensagemErro(obterMensagemErro(res.error, 'Não foi possível acessar sua conta.'));
+      setErroVisivel(true);
+      return;
+    }
 
-    setTentativas(0); 
+    const { token, usuario } = res.data || {};
+    if (!token || !usuario) {
+      setMensagemErro('Resposta inesperada do servidor.');
+      setErroVisivel(true);
+      return;
+    }
+
+    await login({ token, usuario, tipo: tipoPessoa });
+
+    setTentativas(0);
 
     if (usuario.isAdmin) {
       router.replace('/(private)/admin');
-      
     } else if (usuario.primeiroAcesso && usuario.tipo === 'pf') {
       router.replace('/(private)/pegada');
-      console.log("pf")
     } else {
       router.replace('/(private)/home');
-      console.log('home')
     }
-
   } catch (error) {
-    // 🔥 Tratamento de erros inteligente e preparado para API real
-    let mensagem = error?.message || 'Não foi possível acessar sua conta.';
+    let mensagem = obterMensagemErro(error, 'Não foi possível acessar sua conta.');
 
-    
-    // 🔄 Tratamento de erro mais robusto para usar com API real:
-   if (error.response) {
-  const status = error.response.status;
-  if (status === 400) {
-    mensagem = 'CPF/CNPJ e senha são obrigatórios.';
-  } else if (status === 401) {
-    mensagem = 'CPF/CNPJ ou senha incorretos.';
-  } else if (status === 403) {
-    mensagem = 'Cadastro ainda não aprovado.';
-  } else if (status === 404) {
-    mensagem = 'Usuário não encontrado.';
-  } else {
-    mensagem = obterMensagemErro(error, mensagem);
-  }
-} else {
-  mensagem = obterMensagemErro(error, mensagem);
-}
-  
-
-    // 🔴 PJ não aprovado: encerra loading, mostra erro e limpa campos
     if (mensagem.includes('não aprovado')) {
       setMensagemErro(mensagem);
       setErroVisivel(true);
@@ -138,12 +115,9 @@ export default function Login() {
     }
 
     setTentativas((prev) => prev + 1);
-
     if (tentativas + 1 >= 5) {
       setBloqueado(true);
-      setMensagemErro(
-        'Por segurança, sua conta foi temporariamente bloqueada. Tente novamente em 30 segundos.'
-      );
+      setMensagemErro('Por segurança, sua conta foi temporariamente bloqueada. Tente novamente em 30 segundos.');
       setTimeout(() => {
         setTentativas(0);
         setBloqueado(false);
@@ -151,15 +125,14 @@ export default function Login() {
     } else {
       setMensagemErro(mensagem);
     }
-
     setErroVisivel(true);
   } finally {
     setCarregando(false);
   }
 };
 
+
   return (
-    
     <View style={styles.contentBox}>
       <Text style={styles.titulo}>Bem-vindo ao EcoVoucher</Text>
       <Text style={styles.subtitulo}>Acesse sua conta</Text>
@@ -169,9 +142,7 @@ export default function Login() {
           style={[styles.tipoBotao, tipoPessoa === 'pf' && styles.tipoSelecionado]}
           onPress={() => setTipoPessoa('pf')}
         >
-          <Text
-            style={[styles.tipoTexto, tipoPessoa === 'pf' && styles.tipoTextoSelecionado]}
-          >
+          <Text style={[styles.tipoTexto, tipoPessoa === 'pf' && styles.tipoTextoSelecionado]}>
             Pessoa Física
           </Text>
         </TouchableOpacity>
@@ -180,9 +151,7 @@ export default function Login() {
           style={[styles.tipoBotao, tipoPessoa === 'pj' && styles.tipoSelecionado]}
           onPress={() => setTipoPessoa('pj')}
         >
-          <Text
-            style={[styles.tipoTexto, tipoPessoa === 'pj' && styles.tipoTextoSelecionado]}
-          >
+          <Text style={[styles.tipoTexto, tipoPessoa === 'pj' && styles.tipoTextoSelecionado]}>
             Pessoa Jurídica
           </Text>
         </TouchableOpacity>
@@ -192,31 +161,24 @@ export default function Login() {
         cpf={cpf}
         senha={senha}
         erros={erros}
-        tipoPessoa={tipoPessoa} 
+        tipoPessoa={tipoPessoa}
         handleChange={handleChange}
         mostrarSenha={mostrarSenha}
         setMostrarSenha={setMostrarSenha}
       />
 
       {Object.keys(erros).length > 0 && (
-        <Text style={styles.erroAviso}>
-          Preencha os campos obrigatórios corretamente
-        </Text>
+        <Text style={styles.erroAviso}>Preencha os campos obrigatórios corretamente</Text>
       )}
 
       {carregando ? (
-        <ActivityIndicator
-          color={colors.verde}
-          size="large"
-          style={{ marginTop: spacing.sm }}
-        />
+        <ActivityIndicator color={colors.verde} size="large" style={{ marginTop: spacing.sm }} />
       ) : (
         <BotaoVerde
-          texto={bloqueado ? "AGUARDE..." : "ENTRAR"}
+          texto={bloqueado ? 'AGUARDE...' : 'ENTRAR'}
           onPress={handleLogin}
           disabled={carregando || bloqueado || Object.keys(erros).length > 0}
         />
-
       )}
 
       <TouchableOpacity onPress={() => router.push('/(public)/recuperarsenha')}>
@@ -231,11 +193,7 @@ export default function Login() {
 
       <Text style={styles.rodape}>© 2025 EcoVoucher</Text>
 
-      <ModalErro
-        visivel={erroVisivel}
-        mensagem={mensagemErro}
-        onClose={() => setErroVisivel(false)}
-      />
+      <ModalErro visivel={erroVisivel} mensagem={mensagemErro} onClose={() => setErroVisivel(false)} />
     </View>
   );
 }
@@ -264,7 +222,7 @@ const styles = StyleSheet.create({
   tipoBox: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginBottom: spacing.sm, 
+    marginBottom: spacing.sm,
     gap: 12,
   },
   tipoBotao: {
