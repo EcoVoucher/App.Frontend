@@ -1,3 +1,4 @@
+// app/(public)/cadastro.js
 import { useRouter } from 'expo-router';
 import { useState, useRef } from 'react';
 import {
@@ -53,16 +54,18 @@ export default function Cadastro() {
   const [erros, setErros] = useState({});
   const [dados, setDados] = useState(ESTADO_INICIAL);
   const [carregando, setCarregando] = useState(false);
-  const [camposBloqueados, setCamposBloqueados] = useState(true);
 
   // evita “corrida” nas buscas de CEP
   const cepAbortRef = useRef(null);
+  // guarda o CEP mais recente digitado
+  const cepValueRef = useRef('');
 
   const handleChange = (campo, valor) => {
     if (carregando) return;
 
     if (campo === 'cep') {
-      const cepLimpo = valor.replace(/\D/g, '');
+      const cepLimpo = (valor || '').replace(/\D/g, '');
+      cepValueRef.current = cepLimpo;
 
       setDados((prev) => ({ ...prev, cep: valor }));
 
@@ -72,15 +75,12 @@ export default function Cadastro() {
       return;
     }
 
-    if (['endereco', 'bairro', 'cidade', 'estado'].includes(campo) && camposBloqueados) {
-      return;
-    }
-
+    // todos os campos são editáveis (inclusive endereço/bairro/cidade/estado)
     setDados((prev) => ({ ...prev, [campo]: valor }));
 
     setErros((prev) => {
       const novosErros = { ...prev };
-      if (String(valor).trim()) delete novosErros[campo];
+      if (String(valor ?? '').trim()) delete novosErros[campo];
       return novosErros;
     });
   };
@@ -100,7 +100,9 @@ export default function Cadastro() {
       });
 
       const timeout = setTimeout(() => controller.abort(), 7000);
-      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`, { signal: controller.signal });
+      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`, {
+        signal: controller.signal,
+      });
       clearTimeout(timeout);
 
       if (!res.ok) throw new Error(`viaCEP status ${res.status}`);
@@ -108,35 +110,39 @@ export default function Cadastro() {
       const data = await res.json();
 
       // se o usuário já mudou o CEP, ignora esta resposta
-      const cepAtual = (dados.cep || '').replace(/\D/g, '');
-      if (cepAtual !== cep) return;
+      if (cepValueRef.current !== cep) return;
 
       if (data?.erro) {
-        setErros((prev) => ({ ...prev, cep: 'CEP inválido. Verifique e tente novamente.' }));
-       
+        setErros((prev) => ({
+          ...prev,
+          cep: 'CEP inválido. Verifique e tente novamente.',
+        }));
         return;
       }
 
       setDados((prev) => ({
         ...prev,
-        endereco: data.logradouro || '',
-        bairro: data.bairro || '',
-        cidade: data.localidade || '',
-        estado: data.uf || '',
+        endereco: (data.logradouro || '').toUpperCase(),
+        bairro: (data.bairro || '').toUpperCase(),
+        cidade: (data.localidade || '').toUpperCase(),
+        estado: (data.uf || '').toUpperCase(),
       }));
     } catch (e) {
       if (e?.name === 'AbortError') return; // usuário digitou outro CEP rápido
-      setErros((prev) => ({ ...prev, cep: 'Erro ao buscar endereço. Tente novamente mais tarde.' }));
-      
+      setErros((prev) => ({
+        ...prev,
+        cep: 'Erro ao buscar endereço. Tente novamente mais tarde.',
+      }));
     } finally {
       cepAbortRef.current = null;
     }
   };
 
   const camposPreenchidos = () => {
-    const obrigatorios = tipoPessoa === 'pf'
-      ? ['nome', 'dataNascimento', 'cpf']
-      : ['nomeEmpresa', 'cnpj'];
+    const obrigatorios =
+      tipoPessoa === 'pf'
+        ? ['nome', 'dataNascimento', 'cpf']
+        : ['nomeEmpresa', 'cnpj'];
 
     const comuns = [
       'telefone',
@@ -151,23 +157,47 @@ export default function Cadastro() {
       'confirmarSenha',
     ];
 
-    return [...obrigatorios, ...comuns].every((campo) => String(dados[campo] || '').trim());
+    return [...obrigatorios, ...comuns].every((campo) =>
+      String(dados[campo] || '').trim()
+    );
   };
 
   const validarCampos = () => {
-    const campos = tipoPessoa === 'pf'
-      ? [
-          'nome', 'dataNascimento', 'cpf', 'telefone', 'cep', 'endereco',
-          'bairro', 'cidade', 'estado', 'numero', 'email', 'senha', 'confirmarSenha',
-        ]
-      : [
-          'nomeEmpresa', 'cnpj', 'telefone', 'cep', 'endereco', 'bairro',
-          'cidade', 'estado', 'numero', 'email', 'senha', 'confirmarSenha',
-        ];
+    const campos =
+      tipoPessoa === 'pf'
+        ? [
+            'nome',
+            'dataNascimento',
+            'cpf',
+            'telefone',
+            'cep',
+            'endereco',
+            'bairro',
+            'cidade',
+            'estado',
+            'numero',
+            'email',
+            'senha',
+            'confirmarSenha',
+          ]
+        : [
+            'nomeEmpresa',
+            'cnpj',
+            'telefone',
+            'cep',
+            'endereco',
+            'bairro',
+            'cidade',
+            'estado',
+            'numero',
+            'email',
+            'senha',
+            'confirmarSenha',
+          ];
 
     const novoErros = validarCamposObrigatorios(dados, campos, tipoPessoa);
 
-    // senha === confirmarSenha (garantia extra caso seu validador não cubra)
+    // garantia extra para confirmar senha
     if ((dados.senha || '') !== (dados.confirmarSenha || '')) {
       novoErros.confirmarSenha = 'As senhas não coincidem.';
     }
@@ -193,9 +223,10 @@ export default function Cadastro() {
       const dadosFormatados = formatarCadastro(dados);
 
       // 2) Chamada
-      const res = tipoPessoa === 'pf'
-        ? await cadastrarPF(dadosFormatados)
-        : await cadastrarPJ(dadosFormatados);
+      const res =
+        tipoPessoa === 'pf'
+          ? await cadastrarPF(dadosFormatados)
+          : await cadastrarPJ(dadosFormatados);
 
       // 3) Erro → ModalErro
       if (!res.ok) {
@@ -250,7 +281,6 @@ export default function Cadastro() {
             mostrarConfirmarSenha={mostrarConfirmarSenha}
             setMostrarConfirmarSenha={setMostrarConfirmarSenha}
             carregando={carregando}
-            camposBloqueados={camposBloqueados} // se o Form precisar desabilitar inputs
           />
         )}
 
@@ -263,8 +293,20 @@ export default function Cadastro() {
           <View style={styles.modalBox}>
             <Text style={styles.modalTitulo}>Escolha o tipo de cadastro</Text>
             <View style={{ gap: spacing.sm, width: '100%' }}>
-              <BotaoVerde texto="Pessoa Física" onPress={() => { setTipoPessoa('pf'); setModalTipoVisivel(false); }} />
-              <BotaoVerde texto="Pessoa Jurídica" onPress={() => { setTipoPessoa('pj'); setModalTipoVisivel(false); }} />
+              <BotaoVerde
+                texto="Pessoa Física"
+                onPress={() => {
+                  setTipoPessoa('pf');
+                  setModalTipoVisivel(false);
+                }}
+              />
+              <BotaoVerde
+                texto="Pessoa Jurídica"
+                onPress={() => {
+                  setTipoPessoa('pj');
+                  setModalTipoVisivel(false);
+                }}
+              />
             </View>
           </View>
         </View>
@@ -281,41 +323,39 @@ export default function Cadastro() {
         exibirBotao={false}
         titulo="Cadastro realizado com sucesso!"
         mensagem={
-          tipoPessoa === 'pj'
-            ? (
-              <>
-                <Text style={{ textAlign: 'center', marginBottom: 8 }}>
-                  Aguarde a aprovação do administrador. Entraremos em contato.
-                </Text>
-                <BotaoVerde
-                  texto="Ir para Login"
-                  onPress={() => {
-                    setModalSucesso(false);
-                    setDados(ESTADO_INICIAL);
-                    setErros({});
-                    setTipoPessoa(null);
-                    router.replace('/login');
-                  }}
-                />
-              </>
-            )
-            : (
-              <>
-                <Text style={{ textAlign: 'center', marginBottom: 8 }}>
-                  Seu cadastro foi realizado com sucesso.
-                </Text>
-                <BotaoVerde
-                  texto="Ir para Login"
-                  onPress={() => {
-                    setModalSucesso(false);
-                    setDados(ESTADO_INICIAL);
-                    setErros({});
-                    setTipoPessoa(null);
-                    router.replace('/login');
-                  }}
-                />
-              </>
-            )
+          tipoPessoa === 'pj' ? (
+            <>
+              <Text style={{ textAlign: 'center', marginBottom: 8 }}>
+                Aguarde a aprovação do administrador. Entraremos em contato.
+              </Text>
+              <BotaoVerde
+                texto="Ir para Login"
+                onPress={() => {
+                  setModalSucesso(false);
+                  setDados(ESTADO_INICIAL);
+                  setErros({});
+                  setTipoPessoa(null);
+                  router.replace('/(public)/login');
+                }}
+              />
+            </>
+          ) : (
+            <>
+              <Text style={{ textAlign: 'center', marginBottom: 8 }}>
+                Seu cadastro foi realizado com sucesso.
+              </Text>
+              <BotaoVerde
+                texto="Ir para Login"
+                onPress={() => {
+                  setModalSucesso(false);
+                  setDados(ESTADO_INICIAL);
+                  setErros({});
+                  setTipoPessoa(null);
+                  router.replace('/(public)/login');
+                }}
+              />
+            </>
+          )
         }
       />
 

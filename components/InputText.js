@@ -32,6 +32,7 @@ export default function InputText({
        value={value ?? ''} // ✅ sempre controlado
        onChangeText={
         mask ? (masked /*, unmasked */) => onChangeText?.(masked) : onChangeText
+        
       }
         placeholder={placeholder}
         keyboardType={keyboardType}

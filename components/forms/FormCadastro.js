@@ -19,7 +19,6 @@ export default function FormCadastro({
   mostrarConfirmarSenha,
   setMostrarSenha,
   setMostrarConfirmarSenha,
-  camposBloqueados,
 }) {
   return (
     <View style={styles.formWrapper}>
@@ -88,31 +87,35 @@ export default function FormCadastro({
             keyboardType="numeric"
             error={erros.cep}
           />
-         <InputField
+
+          <InputField
             label="Endereço"
             value={dados.endereco}
-            onChangeText={(texto) => handleChange('endereco', texto.toUpperCase())}
-         
+            onChangeText={(texto) => handleChange('endereco', (texto || '').toUpperCase())}
+            error={erros.endereco}
           />
 
           <InputField
             label="Bairro"
             value={dados.bairro}
-            onChangeText={(texto) => handleChange('bairro', texto.toUpperCase())}
-        
+            onChangeText={(texto) => handleChange('bairro', (texto || '').toUpperCase())}
+            error={erros.bairro}
           />
 
           <InputField
             label="Cidade"
             value={dados.cidade}
-            onChangeText={(texto) => handleChange('cidade', texto.toUpperCase())}
-            />
+            onChangeText={(texto) => handleChange('cidade', (texto || '').toUpperCase())}
+            error={erros.cidade}
+          />
 
           <InputField
             label="Estado"
             value={dados.estado}
-            onChangeText={(texto) => handleChange('estado', texto.toUpperCase())}
+            onChangeText={(texto) => handleChange('estado', (texto || '').toUpperCase())}
+            error={erros.estado}
           />
+
 
           <InputField
             label="Número"
