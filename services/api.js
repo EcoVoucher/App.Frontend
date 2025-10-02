@@ -1,17 +1,19 @@
 // services/api.js
 import axios from "axios";
-import storage from "../utils/storage"; // nosso wrapper que unifica AsyncStorage e localStorage
+import storage from "../utils/storage";
 
 const baseURL = process.env.EXPO_PUBLIC_API_URL;
-
 if (!baseURL && __DEV__) {
-  // só loga em desenvolvimento
   // eslint-disable-next-line no-console
   console.warn("[API] EXPO_PUBLIC_API_URL não definida. Confira seu .env");
 }
 
-export const api = axios.create({
-  baseURL: baseURL ?? "http://localhost:3000", // fallback para dev local
+// Callback global para sessão inválida/expirada
+let onUnauthorized = () => {};
+export function setOnUnauthorized(fn) { onUnauthorized = fn || (() => {}); }
+
+const api = axios.create({
+  baseURL: baseURL ?? "http://localhost:3000",
   timeout: 15000,
   headers: {
     Accept: "application/json",
@@ -19,69 +21,31 @@ export const api = axios.create({
   },
 });
 
-/**
- * Request interceptor:
- * - injeta Authorization Bearer <token>
- * - mantém 'access-token' se seu backend ainda usar esse header
- */
-// coloque temporariamente em services/api.js
-api.interceptors.response.use(
-  (resp) => {
-    console.log('[API OK]', resp.config.url, resp.status, resp.data);
-    return resp;
+api.interceptors.request.use(
+  async (config) => {
+    if (!config.skipAuth) {
+      const token = await storage.getToken();
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+        // Se não precisa manter compatibilidade, remova a linha abaixo:
+        config.headers["access-token"] = token;
+      }
+    }
+    return config;
   },
+  (error) => Promise.reject(error)
+);
+
+// NÃO normaliza aqui — deixa para o http.js
+api.interceptors.response.use(
+  (res) => res,
   (err) => {
-    if (err.response) {
-      console.log('[API ERR]', err.config?.url, err.response.status, err.response.data);
-    } else {
-      console.log('[API ERR]', err.config?.url, err.code, err.message);
+    const s = err?.response?.status;
+    if (s === 401 || s === 403) {
+      try { onUnauthorized(); } catch {}
     }
     return Promise.reject(err);
   }
-);
-
-
-/**
- * Normaliza qualquer erro do Axios em um objeto único
- * -> { status, code, message, details }
- */
-function normalizeError(err) {
-  // Resposta da API com status != 2xx
-  if (err?.response) {
-    const { status, data } = err.response;
-    return {
-      status,
-      code: data?.code ?? "API_ERROR",
-      message: data?.message ?? "Erro ao processar a solicitação.",
-      details: data?.errors ?? null,
-    };
-  }
-  // Sem resposta (timeout, offline, DNS)
-  if (err?.request) {
-    return {
-      status: 0,
-      code: "NETWORK_ERROR",
-      message: "Falha de rede ou timeout. Verifique sua conexão e tente novamente.",
-      details: null,
-    };
-  }
-  // Erro ao montar requisição/configuração
-  return {
-    status: 0,
-    code: "UNKNOWN_ERROR",
-    message: err?.message ?? "Erro inesperado ao preparar a requisição.",
-    details: null,
-  };
-}
-
-/**
- * Response interceptor:
- * - devolve sucesso “cru”
- * - converte qualquer erro via normalizeError
- */
-api.interceptors.response.use(
-  (res) => res,
-  (error) => Promise.reject(normalizeError(error))
 );
 
 export default api;

@@ -1,3 +1,4 @@
+// components/InputText.jsx
 import {
   View,
   TextInput,
@@ -10,8 +11,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 import { fonts } from '../theme/fonts';
-import { Masks } from 'react-native-mask-input';
-
 
 export default function InputText({
   value,
@@ -26,25 +25,25 @@ export default function InputText({
   containerStyle,
   ...rest
 }) {
-
   const InputComponent = mask ? MaskInput : TextInput;
 
   return (
     <View style={[styles.container, containerStyle]}>
       <InputComponent
-        key={JSON.stringify(mask) === JSON.stringify(Masks.BRL_CNPJ) ? 'cnpj' : 'cpf'}
-        value={value}
-        onChangeText={mask ? (masked) => onChangeText(masked) : onChangeText}
+       value={value ?? ''}                                // ✅ garante controlado
+       onChangeText={
+         mask
+           ? (masked /*, unmasked */) => onChangeText?.(masked)
+           : onChangeText
+       }
         placeholder={placeholder}
         keyboardType={keyboardType}
         secureTextEntry={secureTextEntry}
         {...(mask ? { mask } : {})}
         placeholderTextColor={colors.cinzaClaro}
         style={[styles.input, style]}
-        {...rest}
+        {...rest}                                    
       />
-
-
 
       {typeof mostrarSenha === 'boolean' && alternarSenha && (
         <TouchableOpacity onPress={alternarSenha} style={styles.iconBox}>
@@ -75,7 +74,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: fonts.size.md,
     paddingVertical: Platform.OS === 'android' ? 10 : 12,
-    paddingRight: 36, // espaço para o ícone
+    paddingRight: 36,
     color: colors.preto,
   },
   iconBox: {

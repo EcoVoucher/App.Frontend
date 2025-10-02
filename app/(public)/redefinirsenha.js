@@ -1,4 +1,5 @@
-import { useState,useEffect } from 'react';
+
+import { useState, useEffect } from 'react';
 import {
   Text,
   StyleSheet,
@@ -20,7 +21,7 @@ import { obterMensagemErro } from '../../utils/obterMensagemErro';
 
 export default function RedefinirSenha() {
   const router = useRouter();
-  const { token } = useLocalSearchParams(); // 🔄 No futuro virá por link de email da API real
+  const { token } = useLocalSearchParams(); // vindo do link/rota
 
   const [novaSenha, setNovaSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
@@ -32,41 +33,54 @@ export default function RedefinirSenha() {
   const [mensagemErro, setMensagemErro] = useState('');
   const [carregando, setCarregando] = useState(false);
 
-  
-  // 🔄 FUTURO: validação do token com API real
+  // valida o token ao montar a tela
   useEffect(() => {
-  const verificarToken = async () => {
-    try {
-      const resposta = await AuthService.validarToken(token);
-      if (!resposta?.valido) {
-        throw new Error(resposta?.erro || 'Token inválido ou expirado.');
+    (async () => {
+      const t = String(token ?? '').trim();
+      if (!t) {
+        setMensagemErro('Link inválido. Solicite uma nova recuperação de senha.');
+        setErroVisivel(true);
+        return;
       }
-   } catch (error) {
-  const mensagem = obterMensagemErro(error, 'Ocorreu um erro. Tente novamente.');
-  setMensagemErro(mensagem);
-  setErroVisivel(true);
-}
-  };
-
-  verificarToken();
-}, [token]);
-
+      try {
+        const resp = await AuthService.validarToken(t);
+        if (!resp.ok) {
+          setMensagemErro(obterMensagemErro(resp.error, 'Token inválido ou expirado.'));
+          setErroVisivel(true);
+        }
+        // se ok: segue normalmente
+      } catch (error) {
+        setMensagemErro(obterMensagemErro(error, 'Ocorreu um erro. Tente novamente.'));
+        setErroVisivel(true);
+      }
+    })();
+  }, [token]);
 
   const handleSalvar = async () => {
-   const campos = ['novaSenha', 'confirmarSenha'];
-  const dadosValidacao = {
-  novaSenha,
-  confirmarSenha,
-};
-
-
+    const campos = ['novaSenha', 'confirmarSenha'];
+    const dadosValidacao = { novaSenha, confirmarSenha };
     const errosValidados = validarCamposObrigatorios(dadosValidacao, campos);
+
+    // garante que as senhas coincidam
+    if ((novaSenha || '') !== (confirmarSenha || '')) {
+      errosValidados.confirmarSenha = 'As senhas não coincidem.';
+    }
+
     setErros(errosValidados);
     if (Object.keys(errosValidados).length > 0) return;
 
     setCarregando(true);
     try {
-      await AuthService.redefinirSenha({ token, senha: novaSenha });
+      const resp = await AuthService.redefinirSenha({
+        token: String(token ?? '').trim(),
+        senha: novaSenha,
+      });
+
+      if (!resp.ok) {
+        setMensagemErro(obterMensagemErro(resp.error, 'Erro ao redefinir senha.'));
+        setErroVisivel(true);
+        return;
+      }
 
       setModalSucesso(true);
     } catch (error) {
@@ -78,7 +92,7 @@ export default function RedefinirSenha() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollContainer}>
+    <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.contentBox}
@@ -88,13 +102,12 @@ export default function RedefinirSenha() {
 
         <InputField
           label="Nova senha"
-          
           value={novaSenha}
           onChangeText={setNovaSenha}
           secureTextEntry={!mostrarSenha}
           mostrarSenha={mostrarSenha}
           alternarSenha={() => setMostrarSenha(!mostrarSenha)}
-           error={erros.novaSenha}
+          error={erros.novaSenha}
         />
 
         <InputField
@@ -108,9 +121,11 @@ export default function RedefinirSenha() {
         />
 
         <BotaoVerde
-          texto="Salvar nova senha"
+          texto={carregando ? "Salvando..." : "Salvar nova senha"}
           onPress={handleSalvar}
           carregando={carregando}
+          disabled={carregando}
+          style={{ marginTop: spacing.sm }}
         />
       </KeyboardAvoidingView>
 
@@ -120,7 +135,7 @@ export default function RedefinirSenha() {
         botaoTexto="Voltar ao login"
         onFechar={() => {
           setModalSucesso(false);
-          router.replace('/(public)/login');
+          router.replace('/login');
         }}
       />
 
@@ -158,16 +173,5 @@ const styles = StyleSheet.create({
     color: colors.cinza,
     textAlign: 'center',
     marginBottom: spacing.md,
-  },
-  erroBox: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.lg,
-  },
-  erroTexto: {
-    color: colors.vermelho,
-    fontSize: fonts.size.md,
-    textAlign: 'center',
   },
 });

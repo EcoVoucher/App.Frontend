@@ -1,8 +1,8 @@
 // context/AuthContext.js
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import storage from "../utils/storage";
-import api from "../services/api";            // 👈 para setar/remover Authorization
-// import { AuthService } from "../services/authService"; // opcional se quiser validar token no boot
+import api from "../services/api";
+import { AuthService } from "../services/authService";
 
 const AuthContext = createContext(null);
 
@@ -18,47 +18,68 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const hydrate = async () => {
       try {
-        const [token, user] = await Promise.all([storage.getToken(), storage.getUser()]);
-        if (token && user) {
-          setAuthHeader(token);
+        const [token, user] = await Promise.all([
+          storage.getToken(),
+          storage.getUser(),
+        ]);
 
-          // (opcional) validar token com o backend:
-          // const me = await AuthService.me();
-          // if (!me.ok) {
-          //   await storage.clearAll();
-          //   setUsuario(null);
-          //   return;
-          // }
-
-          setUsuario(user);
-        } else {
+        // sessão incompleta -> limpa
+        if (!token || !user) {
+          await storage.clearAll();
+          setAuthHeader(null);
           setUsuario(null);
+          return;
         }
+
+        setAuthHeader(token);
+
+        // valida token no backend
+        const me = await AuthService.me();
+        if (!me.ok) {
+          await storage.clearAll();
+          setAuthHeader(null);
+          setUsuario(null);
+          return;
+        }
+
+        setUsuario(user);
+      } catch {
+        // qualquer erro na hidratação => zera sessão
+        await storage.clearAll();
+        setAuthHeader(null);
+        setUsuario(null);
       } finally {
         setCarregando(false);
       }
     };
+
     hydrate();
   }, []);
 
-  const login = async ({ token, usuario, tipo }) => {
-    // normaliza isAdmin como boolean
+  // Tela chama: login({ cpfOuCnpj, senha, tipo }) -> { ok, data|error }
+  const login = async ({ cpfOuCnpj, senha, tipo }) => {
+    const resp = await AuthService.login({ cpfOuCnpj, senha, tipo });
+    if (!resp.ok) return resp;
+
+    const data = resp.data || {};
+    const usr = data.usuario || {};
     const isAdmin =
-      typeof usuario?.isAdmin === "boolean"
-        ? usuario.isAdmin
-        : String(usuario?.isAdmin).toLowerCase() === "true";
+      typeof usr?.isAdmin === "boolean"
+        ? usr.isAdmin
+        : String(usr?.isAdmin).toLowerCase() === "true";
 
-    const usuarioComTipo = { ...usuario, tipo: tipo ?? usuario?.tipo ?? "pf", isAdmin };
+    const usuarioComTipo = { ...usr, tipo: tipo ?? usr?.tipo ?? "pf", isAdmin };
 
-    await storage.setToken(token);
-    await storage.setUser(usuarioComTipo);
-    setAuthHeader(token);        // 👈 garante Authorization depois do login
+    setAuthHeader(data.token);     // AuthService já salvou token/user no storage
     setUsuario(usuarioComTipo);
+
+    return { ok: true, data: { ...data, usuario: usuarioComTipo } };
   };
 
   const logout = async () => {
+    try { await AuthService.logout(); } catch {} // opcional, não bloqueia saída
     await storage.clearAll();
-    setAuthHeader(null);         // 👈 remove Authorization
+    setAuthHeader(null);
     setUsuario(null);
   };
 
@@ -68,7 +89,7 @@ export const AuthProvider = ({ children }) => {
       carregando,
       login,
       logout,
-      setUsuario,                 // útil p/ atualizar perfil local após edição
+      setUsuario,                // útil para atualizar perfil local
       isAutenticado: !!usuario,
       isAdmin: !!usuario?.isAdmin,
       tipo: usuario?.tipo ?? null, // "pf" | "pj" | "admin"

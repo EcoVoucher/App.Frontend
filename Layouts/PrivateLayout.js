@@ -1,3 +1,4 @@
+// app/Layouts/PrivateLayout.js
 import React, { useEffect, useState } from 'react';
 import {
   ScrollView,
@@ -9,32 +10,32 @@ import {
   StatusBar,
   TouchableOpacity,
   Text,
+  ActivityIndicator,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useCarrinho } from '../context/CarrinhoContext';
+import { useCarrinho } from '../context/CarrinhoContext';           
 import RodapeNavegacao from '../components/RodapeNavegacao';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';                    
 import { useRouter, Slot, usePathname } from 'expo-router';
 import { useModalCarrinho } from '../context/ModalCarrinhoContext';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 
 export default function PrivateLayout() {
-  const { usuario } = useAuth();
+  const { usuario, carregando } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [isReady, setIsReady] = useState(false);
 
-  const { abrirResumo } = useModalCarrinho(); // 👉 Importante
+  const { abrirResumo } = useModalCarrinho();
   const { selecionados } = useCarrinho();
-  const estaNoCatalogoPF = pathname.includes('/catalogovoucherspf');
 
+  const isAdmin = usuario?.isAdmin === true || String(usuario?.isAdmin).toLowerCase() === 'true';
+
+  const estaNoCatalogoPF = pathname.includes('/catalogovoucherspf');
   const estaNaPegada = pathname.includes('/pegada');
-  const exibindoResultado =
-    estaNaPegada && usuario?.primeiroAcesso && !pathname.includes('/home');
-  const esconderRodape =
-    pathname.includes('/pegada') &&
-    (usuario?.primeiroAcesso || exibindoResultado);
+  const exibindoResultado = estaNaPegada && usuario?.primeiroAcesso && !pathname.includes('/home');
+  const esconderRodape = pathname.includes('/pegada') && (usuario?.primeiroAcesso || exibindoResultado);
 
   useEffect(() => {
     setIsReady(true);
@@ -43,41 +44,56 @@ export default function PrivateLayout() {
   useEffect(() => {
     if (!isReady) return;
 
+    // sessão ainda carregando → não decide nada
+    if (carregando) return;
+
+    // sem usuário → volta ao login
     if (!usuario) {
       router.replace('/(public)/login');
       return;
     }
 
     const rota = pathname.toLowerCase();
-    if ((usuario.isAdmin === 'true' || usuario.isAdmin === true) && !rota.endsWith('(private)/admin')) {
-  router.replace('/(private)/admin');
-  return;
-}
 
+    // admin deve ficar nas telas de admin
+    if (isAdmin && !rota.includes('/admin')) {
+      router.replace('/(private)/admin');
+      return;
+    }
 
-    if (
-      rota.includes('catalogorecompensapj') ||
-      rota.includes('validarvoucherpj') 
-    ) {
+    // rotas exclusivas de PJ
+    if (rota.includes('catalogorecompensapj') || rota.includes('validarvoucherpj')) {
       if (usuario.tipo !== 'pj') {
         router.replace('/(private)/home');
+        return;
       }
     }
 
+    // rotas exclusivas de PF
     if (
       rota.includes('pegada') ||
       rota.includes('historicopontos') ||
       rota.includes('catalogovoucherspf') ||
-      rota.includes('historicopegada')||
+      rota.includes('historicopegada') ||
       rota.includes('pontoscoleta')
     ) {
       if (usuario.tipo !== 'pf') {
         router.replace('/(private)/home');
       }
     }
-  }, [isReady, usuario, pathname]);
+  }, [isReady, carregando, usuario, pathname]);
 
-  if (!usuario) return null;
+  // Enquanto carrega ou redireciona, mostra um loading para evitar flash
+  if (carregando || !usuario) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <StatusBar barStyle="dark-content" backgroundColor={colors.fundo} />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={colors.verde} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -97,12 +113,8 @@ export default function PrivateLayout() {
           </ScrollView>
         </View>
 
-        {usuario?.isAdmin !== true && usuario?.isAdmin !== 'true' && estaNoCatalogoPF && selecionados.length > 0 && (
-
-          <TouchableOpacity
-            onPress={abrirResumo} // 🔥 Aqui faz abrir o modal de resumo
-            style={styles.botaoCarrinho}
-          >
+        {!isAdmin && estaNoCatalogoPF && selecionados.length > 0 && (
+          <TouchableOpacity onPress={abrirResumo} style={styles.botaoCarrinho}>
             <MaterialCommunityIcons name="cart" size={28} color="#fff" />
             <View style={styles.badge}>
               <Text style={styles.badgeTexto}>{selecionados.length}</Text>
@@ -110,7 +122,7 @@ export default function PrivateLayout() {
           </TouchableOpacity>
         )}
 
-        {!esconderRodape && usuario?.isAdmin !== true && usuario?.isAdmin !== 'true' && (
+        {!esconderRodape && !isAdmin && (
           <View style={styles.rodape}>
             <RodapeNavegacao ativo="menu" />
           </View>

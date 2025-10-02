@@ -1,3 +1,4 @@
+// screens/Login.js
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -11,7 +12,6 @@ import BotaoVerde from '../../components/BotaoVerde';
 import FormLogin from '../../components/forms/FormLogin';
 import ModalErro from '../../components/ModalErro';
 import { useAuth } from '../../context/AuthContext';
-import { AuthService } from '../../services/authService';
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
@@ -52,85 +52,79 @@ export default function Login() {
     return Object.keys(novoErros).length === 0;
   };
 
-const handleLogin = async () => {
-  if (carregando || bloqueado) return;
+  const handleLogin = async () => {
+    if (carregando || bloqueado) return;
 
-  if (!validarCampos()) {
-    setMensagemErro('Por favor, preencha CPF/CNPJ e senha corretamente.');
-    setErroVisivel(true);
-    return;
-  }
-
-  const cpfOuCnpj = cpf.replace(/\D/g, '');
-  if (tipoPessoa === 'pf' && cpfOuCnpj.length !== 11) {
-    setMensagemErro('Você selecionou Pessoa Física, mas o CPF está inválido.');
-    setErroVisivel(true);
-    return;
-  }
-  if (tipoPessoa === 'pj' && cpfOuCnpj.length !== 14) {
-    setMensagemErro('Você selecionou Pessoa Jurídica, mas o CNPJ está inválido.');
-    setErroVisivel(true);
-    return;
-  }
-
-  setCarregando(true);
-  try {
-    const res = await AuthService.login({ cpfOuCnpj, senha, tipo: tipoPessoa });
-
-    // 👇 IMPORTANTE: tratar { ok, data | error }
-    if (!res.ok) {
-      setMensagemErro(obterMensagemErro(res.error, 'Não foi possível acessar sua conta.'));
+    if (!validarCampos()) {
+      setMensagemErro('Por favor, preencha CPF/CNPJ e senha corretamente.');
       setErroVisivel(true);
       return;
     }
 
-    const { token, usuario } = res.data || {};
-    if (!token || !usuario) {
-      setMensagemErro('Resposta inesperada do servidor.');
+    const cpfOuCnpj = cpf.replace(/\D/g, '');
+    if (tipoPessoa === 'pf' && cpfOuCnpj.length !== 11) {
+      setMensagemErro('Você selecionou Pessoa Física, mas o CPF está inválido.');
+      setErroVisivel(true);
+      return;
+    }
+    if (tipoPessoa === 'pj' && cpfOuCnpj.length !== 14) {
+      setMensagemErro('Você selecionou Pessoa Jurídica, mas o CNPJ está inválido.');
       setErroVisivel(true);
       return;
     }
 
-    await login({ token, usuario, tipo: tipoPessoa });
+    setCarregando(true);
+    try {
+      // 👉 usa apenas o AuthContext; ele chama o service por baixo e persiste token/usuário
+      const res = await login({ cpfOuCnpj, senha, tipo: tipoPessoa }); // { ok, data|error }
+      if (!res.ok) {
+        setMensagemErro(obterMensagemErro(res.error, 'Não foi possível acessar sua conta.'));
+        setErroVisivel(true);
+        return;
+      }
 
-    setTentativas(0);
+      const usuario = res?.data?.usuario;
+      // redirecionamento conforme perfil
+      if (usuario?.isAdmin) {
+        router.replace('/admin');
+      } else if (usuario?.primeiroAcesso && usuario?.tipo === 'pf') {
+        router.replace('/pegada');
+      } else {
+        router.replace('/home');
+      }
+      setTentativas(0);
+    } catch (error) {
+      const mensagem = obterMensagemErro(error, 'Não foi possível acessar sua conta.');
 
-    if (usuario.isAdmin) {
-      router.replace('/(private)/admin');
-    } else if (usuario.primeiroAcesso && usuario.tipo === 'pf') {
-      router.replace('/(private)/pegada');
-    } else {
-      router.replace('/(private)/home');
-    }
-  } catch (error) {
-    let mensagem = obterMensagemErro(error, 'Não foi possível acessar sua conta.');
+      if (mensagem.includes('não aprovado')) {
+        setMensagemErro(mensagem);
+        setErroVisivel(true);
+        setCpf('');
+        setSenha('');
+        setCarregando(false);
+        return;
+      }
 
-    if (mensagem.includes('não aprovado')) {
-      setMensagemErro(mensagem);
+      // ✅ computa a próxima tentativa corretamente
+      setTentativas((prev) => {
+        const next = prev + 1;
+        if (next >= 5) {
+          setBloqueado(true);
+          setMensagemErro('Por segurança, sua conta foi temporariamente bloqueada. Tente novamente em 30 segundos.');
+          setTimeout(() => {
+            setTentativas(0);
+            setBloqueado(false);
+          }, 30000);
+        } else {
+          setMensagemErro(mensagem);
+        }
+        return next;
+      });
       setErroVisivel(true);
-      setCpf('');
-      setSenha('');
+    } finally {
       setCarregando(false);
-      return;
     }
-
-    setTentativas((prev) => prev + 1);
-    if (tentativas + 1 >= 5) {
-      setBloqueado(true);
-      setMensagemErro('Por segurança, sua conta foi temporariamente bloqueada. Tente novamente em 30 segundos.');
-      setTimeout(() => {
-        setTentativas(0);
-        setBloqueado(false);
-      }, 30000);
-    } else {
-      setMensagemErro(mensagem);
-    }
-    setErroVisivel(true);
-  } finally {
-    setCarregando(false);
-  }
-};
-
+  };
 
   return (
     <View style={styles.contentBox}>
@@ -181,11 +175,11 @@ const handleLogin = async () => {
         />
       )}
 
-      <TouchableOpacity onPress={() => router.push('/(public)/recuperarsenha')}>
+      <TouchableOpacity onPress={() => router.push('/recuperarsenha')}>
         <Text style={styles.esqueci}>Esqueci minha senha</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => router.push('/(public)/cadastro')}>
+      <TouchableOpacity onPress={() => router.push('/cadastro')}>
         <Text style={styles.cadastroText}>
           Não tem conta? <Text style={styles.link}>Cadastre-se</Text>
         </Text>

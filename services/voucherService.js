@@ -1,26 +1,27 @@
 // services/voucherService.js
-import api from './api';
-import { handle } from './http';
+import { http } from "./http";
 
-const limpar = (s) => String(s || '').trim();
-const soDigitos = (s) => String(s || '').replace(/\D/g, '');
+const limpar = (s) => String(s || "").trim();
+const soDigitos = (s) => String(s || "").replace(/\D/g, "");
 
-/**
- * 🔗 Service responsável pela gestão de Vouchers (PJ e PF)
- * Todos os métodos retornam { ok: true, data } ou { ok: false, error }
- */
+// Validadores reutilizáveis
+const isObj = (d) => d && typeof d === "object" && !Array.isArray(d);
+
 export const VouchersService = {
   /** 🧾 Listar vouchers emitidos pelo PJ (opcional cnpj como filtro) */
   listarVouchers(cnpj) {
     const c = soDigitos(cnpj);
-    return c
-      ? handle(api.get('/vouchers', { params: { cnpj: c } }))
-      : handle(api.get('/vouchers'));
+    return http.get("/vouchers", {
+      params: c ? { cnpj: c } : undefined,
+      validate: (d) => Array.isArray(d),
+    });
   },
 
   /** 📊 Estatísticas (totalComprados, porLote, etc.) */
   obterEstatisticas() {
-    return handle(api.get('/vouchers/estatisticas'));
+    return http.get("/vouchers/estatisticas", {
+      validate: (d) => isObj(d),
+    });
   },
 
   /**
@@ -28,40 +29,49 @@ export const VouchersService = {
    * payload: { tipo, produtos, quantidade, dataValidade(YYYY-MM-DD) }
    */
   gerarVoucher({ tipo, produtos, quantidade, dataValidade }) {
-    const qtd = parseInt(quantidade, 10);
-    return handle(
-      api.post('/vouchers', {
+    const qtd = Number.parseInt(quantidade, 10);
+    return http.post(
+      "/vouchers",
+      {
         tipo: limpar(tipo),
         produtos: Array.isArray(produtos) ? produtos : [],
         quantidade: Number.isFinite(qtd) ? qtd : 0,
         dataValidade: limpar(dataValidade),
-      })
+      },
+      { validate: (d) => isObj(d) }
     );
   },
 
   /** 🔍 Validar por código (PJ) */
   validarVoucherPorCodigo(codigo) {
     const code = encodeURIComponent(limpar(codigo));
-    return handle(api.get(`/vouchers/validar/${code}`));
+    return http.get(`/vouchers/validar/${code}`, {
+      validate: (d) => isObj(d),
+    });
   },
 
   /** 🔍 Buscar vouchers adquiridos por CPF+Tipo (PJ) */
   buscarVouchersPorCpfETipo(cpf, tipo) {
-    return handle(
-      api.get('/vouchers/adquiridos', {
-        params: { cpf: soDigitos(cpf), tipo: limpar(tipo) },
-      })
-    );
+    return http.get("/vouchers/adquiridos", {
+      params: { cpf: soDigitos(cpf), tipo: limpar(tipo) },
+      validate: (d) => Array.isArray(d),
+    });
   },
 
   /** ✅ Marcar voucher como utilizado (PJ) */
   utilizarVoucher(codigo) {
-    return handle(api.post('/vouchers/utilizar', { codigo: limpar(codigo) }));
+    return http.post(
+      "/vouchers/utilizar",
+      { codigo: limpar(codigo) },
+      { validate: (d) => d === true || isObj(d) }
+    );
   },
 
   /** 🛍️ Listar vouchers disponíveis para PF (catálogo) */
   listarVouchersDisponiveisPF() {
-    return handle(api.get('/vouchers/disponiveis'));
+    return http.get("/vouchers/disponiveis", {
+      validate: (d) => Array.isArray(d),
+    });
   },
 
   /**
@@ -69,13 +79,11 @@ export const VouchersService = {
    * cpf: string, lista: array de idLote
    */
   comprarVouchers(cpf, lista) {
-    // evita ids duplicados sem querer
     const uniqueIds = Array.from(new Set(Array.isArray(lista) ? lista : []));
-    return handle(
-      api.post('/vouchers/comprar', {
-        cpf: soDigitos(cpf),
-        vouchers: uniqueIds,
-      })
+    return http.post(
+      "/vouchers/comprar",
+      { cpf: soDigitos(cpf), vouchers: uniqueIds },
+      { validate: (d) => isObj(d) }
     );
   },
 };

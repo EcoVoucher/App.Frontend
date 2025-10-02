@@ -8,7 +8,7 @@ export default function Layout() {
     <AuthProvider>
       <CarrinhoProvider>
         <ModalCarrinhoProvider>
-          <Stack screenOptions={{ headerShown: false }} />
+          <Stack screenOptions={{ headerShown: false, animation: 'fade' }} />
         </ModalCarrinhoProvider>
       </CarrinhoProvider>
     </AuthProvider>

@@ -1,7 +1,7 @@
+// screens/Cadastro.js
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
-  Dimensions,
   Modal,
   StyleSheet,
   Text,
@@ -20,8 +20,6 @@ import { formatarCadastro } from '../../utils/formatarenvio';
 import ModalSucesso from '../../components/ModalSucesso';
 import { obterMensagemErro } from '../../utils/obterMensagemErro';
 
-const { width } = Dimensions.get('window');
-
 const ESTADO_INICIAL = {
   nome: '',
   dataNascimento: '',
@@ -38,11 +36,12 @@ const ESTADO_INICIAL = {
   cnpj: '',
   email: '',
   senha: '',
-  confirmarSenha: ''
+  confirmarSenha: '',
 };
 
 export default function Cadastro() {
   const router = useRouter();
+
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
   const [tipoPessoa, setTipoPessoa] = useState(null);
@@ -56,86 +55,85 @@ export default function Cadastro() {
   const [dados, setDados] = useState(ESTADO_INICIAL);
   const [carregando, setCarregando] = useState(false);
   const [camposBloqueados, setCamposBloqueados] = useState(true);
-  
 
-const handleChange = (campo, valor) => {
-  if (carregando) return;
+  // evita “corrida” nas buscas de CEP
+  const cepAbortRef = useRef(null);
 
-  if (campo === 'cep') {
-    const cepLimpo = valor.replace(/\D/g, '');
+  const handleChange = (campo, valor) => {
+    if (carregando) return;
 
-    setDados((prev) => ({
-      ...prev,
-      cep: valor,
-    }));
+    if (campo === 'cep') {
+      const cepLimpo = valor.replace(/\D/g, '');
 
-    if (cepLimpo.length === 8) {
-  buscarEndereco(cepLimpo);
-  }
+      setDados((prev) => ({ ...prev, cep: valor }));
 
-    return;
-  }
-
-  if (
-    ['endereco', 'bairro', 'cidade', 'estado'].includes(campo) &&
-    camposBloqueados
-  ) {
-    return;
-  }
-
-  setDados((prev) => ({
-    ...prev,
-    [campo]: valor,
-  }));
-
-  setErros((prev) => {
-    const novosErros = { ...prev };
-    if (valor.trim()) delete novosErros[campo];
-    return novosErros;
-  });
-};
-
-
- const buscarEndereco = async (cep) => {
-  try {
-    // limpa erro anterior do CEP
-    setErros((prev) => {
-      const n = { ...prev };
-      delete n.cep;
-      return n;
-    });
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-
-    const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`, { signal: controller.signal });
-    clearTimeout(timeout);
-
-    const data = await res.json();
-
-    if (data?.erro) {
-      // erro de CEP: trata inline no campo, não em modal global
-      setErros((prev) => ({ ...prev, cep: 'CEP inválido. Verifique e tente novamente.' }));
-      setCamposBloqueados(false); // libera edição manual de endereço
+      if (cepLimpo.length === 8) {
+        buscarEndereco(cepLimpo);
+      }
       return;
     }
 
-    // sucesso: preenche e mantém bloqueado (como você já fazia)
-    setDados((prev) => ({
-      ...prev,
-      endereco: data.logradouro || '',
-      bairro: data.bairro || '',
-      cidade: data.localidade || '',
-      estado: data.uf || '',
-    }));
-    setCamposBloqueados(true);
-  } catch (e) {
-    // timeout/offline: erro inline no CEP + libera edição manual
-    setErros((prev) => ({ ...prev, cep: 'Erro ao buscar endereço. Tente novamente mais tarde.' }));
-    setCamposBloqueados(false);
-  }
-};
+    if (['endereco', 'bairro', 'cidade', 'estado'].includes(campo) && camposBloqueados) {
+      return;
+    }
 
+    setDados((prev) => ({ ...prev, [campo]: valor }));
+
+    setErros((prev) => {
+      const novosErros = { ...prev };
+      if (String(valor).trim()) delete novosErros[campo];
+      return novosErros;
+    });
+  };
+
+  const buscarEndereco = async (cep) => {
+    try {
+      // cancela busca anterior (se houver)
+      if (cepAbortRef.current) cepAbortRef.current.abort();
+      const controller = new AbortController();
+      cepAbortRef.current = controller;
+
+      // limpa erro anterior do CEP
+      setErros((prev) => {
+        const n = { ...prev };
+        delete n.cep;
+        return n;
+      });
+
+      const timeout = setTimeout(() => controller.abort(), 7000);
+      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`, { signal: controller.signal });
+      clearTimeout(timeout);
+
+      if (!res.ok) throw new Error(`viaCEP status ${res.status}`);
+
+      const data = await res.json();
+
+      // se o usuário já mudou o CEP, ignora esta resposta
+      const cepAtual = (dados.cep || '').replace(/\D/g, '');
+      if (cepAtual !== cep) return;
+
+      if (data?.erro) {
+        setErros((prev) => ({ ...prev, cep: 'CEP inválido. Verifique e tente novamente.' }));
+        setCamposBloqueados(false);
+        return;
+      }
+
+      setDados((prev) => ({
+        ...prev,
+        endereco: data.logradouro || '',
+        bairro: data.bairro || '',
+        cidade: data.localidade || '',
+        estado: data.uf || '',
+      }));
+      setCamposBloqueados(true);
+    } catch (e) {
+      if (e?.name === 'AbortError') return; // usuário digitou outro CEP rápido
+      setErros((prev) => ({ ...prev, cep: 'Erro ao buscar endereço. Tente novamente mais tarde.' }));
+      setCamposBloqueados(false);
+    } finally {
+      cepAbortRef.current = null;
+    }
+  };
 
   const camposPreenchidos = () => {
     const obrigatorios = tipoPessoa === 'pf'
@@ -152,64 +150,75 @@ const handleChange = (campo, valor) => {
       'numero',
       'email',
       'senha',
-      'confirmarSenha'
+      'confirmarSenha',
     ];
 
-    return [...obrigatorios, ...comuns].every((campo) => dados[campo]?.trim());
+    return [...obrigatorios, ...comuns].every((campo) => String(dados[campo] || '').trim());
   };
 
   const validarCampos = () => {
     const campos = tipoPessoa === 'pf'
       ? [
           'nome', 'dataNascimento', 'cpf', 'telefone', 'cep', 'endereco',
-          'bairro', 'cidade', 'estado', 'numero', 'email', 'senha', 'confirmarSenha'
+          'bairro', 'cidade', 'estado', 'numero', 'email', 'senha', 'confirmarSenha',
         ]
       : [
           'nomeEmpresa', 'cnpj', 'telefone', 'cep', 'endereco', 'bairro',
-          'cidade', 'estado', 'numero', 'email', 'senha', 'confirmarSenha'
+          'cidade', 'estado', 'numero', 'email', 'senha', 'confirmarSenha',
         ];
 
     const novoErros = validarCamposObrigatorios(dados, campos, tipoPessoa);
+
+    // senha === confirmarSenha (garantia extra caso seu validador não cubra)
+    if ((dados.senha || '') !== (dados.confirmarSenha || '')) {
+      novoErros.confirmarSenha = 'As senhas não coincidem.';
+    }
+
     setErros(novoErros);
     return Object.keys(novoErros).length === 0;
   };
 
-const handleCadastro = async () => {
-  if (carregando) return;
+  const handleCadastro = async () => {
+    if (carregando) return;
 
-  // 1) Validação local: só marca campos, sem modal
-  if (!validarCampos()) return;
-
-  setCarregando(true);
-  try {
-    const dadosFormatados = formatarCadastro(dados);
-
-    // 2) Chama o service que retorna { ok, data | error }
-    const res = tipoPessoa === 'pf'
-      ? await cadastrarPF(dadosFormatados)
-      : await cadastrarPJ(dadosFormatados);
-
-    // 3) Erro do backend → ModalErro com mensagem do back (prioridade total)
-    if (!res.ok) {
-      const mensagem = obterMensagemErro(res.error);
-      setMensagemErro(mensagem);
+    if (!tipoPessoa) {
+      setMensagemErro('Selecione Pessoa Física ou Jurídica para continuar.');
       setErroVisivel(true);
-
-      // regra especial que você já usa
-      if (mensagem.includes('CNPJ')) {
-        setDados(ESTADO_INICIAL);
-        setErros({});
-      }
-      return; // <<< importante: não prosseguir pro sucesso
+      return;
     }
 
-    // 4) Sucesso garantido (200 OK) → abre ModalSucesso
-    setModalSucesso(true);
-  } finally {
-    setCarregando(false);
-  }
-};
+    // 1) Validação local
+    if (!validarCampos()) return;
 
+    setCarregando(true);
+    try {
+      const dadosFormatados = formatarCadastro(dados);
+
+      // 2) Chamada
+      const res = tipoPessoa === 'pf'
+        ? await cadastrarPF(dadosFormatados)
+        : await cadastrarPJ(dadosFormatados);
+
+      // 3) Erro → ModalErro
+      if (!res.ok) {
+        const mensagem = obterMensagemErro(res.error);
+        setMensagemErro(mensagem);
+        setErroVisivel(true);
+
+        // regra especial sua
+        if (mensagem.includes('CNPJ')) {
+          setDados(ESTADO_INICIAL);
+          setErros({});
+        }
+        return;
+      }
+
+      // 4) Sucesso → ModalSucesso
+      setModalSucesso(true);
+    } finally {
+      setCarregando(false);
+    }
+  };
 
   const limparCampos = () => {
     setDados(ESTADO_INICIAL);
@@ -237,12 +246,13 @@ const handleCadastro = async () => {
             erros={erros}
             tipoPessoa={tipoPessoa}
             onSubmit={handleCadastro}
-            desabilitado={!camposPreenchidos()}
+            desabilitado={!camposPreenchidos() || carregando}
             mostrarSenha={mostrarSenha}
             setMostrarSenha={setMostrarSenha}
             mostrarConfirmarSenha={mostrarConfirmarSenha}
             setMostrarConfirmarSenha={setMostrarConfirmarSenha}
             carregando={carregando}
+            camposBloqueados={camposBloqueados} // se o Form precisar desabilitar inputs
           />
         )}
 
@@ -262,54 +272,54 @@ const handleCadastro = async () => {
         </View>
       </Modal>
 
-<ModalSucesso
-  visivel={modalSucesso}
-  onFechar={() => {
-    setModalSucesso(false);
-    setDados(ESTADO_INICIAL);
-    setErros({});
-    setTipoPessoa(null);
-  }}
-  exibirBotao={false}
-  titulo="Cadastro realizado com sucesso!"
-  mensagem={
-    tipoPessoa === 'pj'
-      ? (
-        <>
-          <Text style={{ textAlign: 'center', marginBottom: 8 }}>
-            Aguarde a aprovação do administrador. Entraremos em contato.
-          </Text>
-          <BotaoVerde
-            texto="Ir para Login"
-            onPress={() => {
-              setModalSucesso(false);
-              setDados(ESTADO_INICIAL);
-              setErros({});
-              setTipoPessoa(null);
-              router.replace('/(public)/login');
-            }}
-          />
-        </>
-      )
-      : (
-        <>
-          <Text style={{ textAlign: 'center', marginBottom: 8 }}>
-            Seu cadastro foi realizado com sucesso.
-          </Text>
-          <BotaoVerde
-            texto="Ir para Login"
-            onPress={() => {
-              setModalSucesso(false);
-              setDados(ESTADO_INICIAL);
-              setErros({});
-              setTipoPessoa(null);
-              router.replace('/(public)/login');
-            }}
-          />
-        </>
-      )
-  }
-/>
+      <ModalSucesso
+        visivel={modalSucesso}
+        onFechar={() => {
+          setModalSucesso(false);
+          setDados(ESTADO_INICIAL);
+          setErros({});
+          setTipoPessoa(null);
+        }}
+        exibirBotao={false}
+        titulo="Cadastro realizado com sucesso!"
+        mensagem={
+          tipoPessoa === 'pj'
+            ? (
+              <>
+                <Text style={{ textAlign: 'center', marginBottom: 8 }}>
+                  Aguarde a aprovação do administrador. Entraremos em contato.
+                </Text>
+                <BotaoVerde
+                  texto="Ir para Login"
+                  onPress={() => {
+                    setModalSucesso(false);
+                    setDados(ESTADO_INICIAL);
+                    setErros({});
+                    setTipoPessoa(null);
+                    router.replace('/login');
+                  }}
+                />
+              </>
+            )
+            : (
+              <>
+                <Text style={{ textAlign: 'center', marginBottom: 8 }}>
+                  Seu cadastro foi realizado com sucesso.
+                </Text>
+                <BotaoVerde
+                  texto="Ir para Login"
+                  onPress={() => {
+                    setModalSucesso(false);
+                    setDados(ESTADO_INICIAL);
+                    setErros({});
+                    setTipoPessoa(null);
+                    router.replace('/login');
+                  }}
+                />
+              </>
+            )
+        }
+      />
 
       {/* Modal erro */}
       <ModalErro

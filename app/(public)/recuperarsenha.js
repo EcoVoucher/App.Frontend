@@ -1,3 +1,4 @@
+// screens/RecuperarSenha.js
 import { useState } from 'react';
 import {
   View,
@@ -7,10 +8,10 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { AuthService } from '../../services/authService';// ✅ Atualmente rodando no MOCK.
+import { AuthService } from '../../services/authService';
 import { Masks } from 'react-native-mask-input';
 import ModalErro from '../../components/ModalErro';
-import ModalSucesso from '../../components/ModalSucesso'; 
+import ModalSucesso from '../../components/ModalSucesso';
 import FormRecuperarSenha from '../../components/forms/FormRecuperarSenha';
 import { validarCamposObrigatorios } from '../../utils/validarCamposObrigatorios';
 import { obterMensagemErro } from '../../utils/obterMensagemErro';
@@ -20,21 +21,22 @@ import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
 
+const soDigitos = (s) => String(s || '').replace(/\D/g, '');
+
 export default function RecuperarSenha() {
   const router = useRouter();
   const [tentouEnviar, setTentouEnviar] = useState(false);
   const [erroVisivel, setErroVisivel] = useState(false);
   const [mensagemErro, setMensagemErro] = useState('');
-  const [modalSucessoVisivel, setModalSucessoVisivel] = useState(false); // ✅ uso futuro
+  const [modalSucessoVisivel, setModalSucessoVisivel] = useState(false);
   const [carregando, setCarregando] = useState(false);
   const [dados, setDados] = useState({ cpf: '' });
   const [erros, setErros] = useState({});
   const [tipoPessoa, setTipoPessoa] = useState('pf');
+
   const [codigo, setCodigo] = useState('');
   const [erroCodigo, setErroCodigo] = useState('');
   const [validandoCodigo, setValidandoCodigo] = useState(false);
-
-  
 
   const maskDocumento = tipoPessoa === 'pf' ? Masks.BRL_CPF : Masks.BRL_CNPJ;
 
@@ -47,32 +49,31 @@ export default function RecuperarSenha() {
     if (carregando) return;
     setTentouEnviar(true);
 
-    //🔗 === Validação na API REAL (usar no futuro) ===
-  const campos = ['cpfOuCnpj'];
-  const dadosValidacao = {
-    cpfOuCnpj: dados.cpf,
-  };
-
+    // validações locais
+    const campos = ['cpfOuCnpj'];
+    const dadosValidacao = { cpfOuCnpj: dados.cpf };
     const novoErros = validarCamposObrigatorios(dadosValidacao, campos, tipoPessoa);
     setErros(novoErros);
     if (Object.keys(novoErros).length > 0) return;
 
+    const doc = soDigitos(dados.cpf);
+    if ((tipoPessoa === 'pf' && doc.length !== 11) || (tipoPessoa === 'pj' && doc.length !== 14)) {
+      setErros((prev) => ({ ...prev, cpf: 'Documento inválido para o tipo selecionado.' }));
+      return;
+    }
+
     setCarregando(true);
     try {
-    
-//🔗 === MODO API REAL (ativar no futuro) ===
-const resposta = await AuthService.recuperarSenha({
-   cpfOuCnpj: dados.cpf, 
-});
-
-if (resposta?.sucesso) {
-  setModalSucessoVisivel(true); 
-} else {
-  throw new Error(resposta?.erro || 'Erro ao recuperar senha.');
-}
+      const resp = await AuthService.recuperarSenha({ cpfOuCnpj: doc });
+      if (!resp.ok) {
+        setMensagemErro(obterMensagemErro(resp.error, 'Erro ao recuperar senha.'));
+        setErroVisivel(true);
+        return;
+      }
+      // sucesso → abrir modal para digitar o código recebido
+      setModalSucessoVisivel(true);
     } catch (error) {
-      console.error(error);
-      setMensagemErro(obterMensagemErro(error,'Erro ao recuperar senha.'));
+      setMensagemErro(obterMensagemErro(error, 'Erro ao recuperar senha.'));
       setErroVisivel(true);
     } finally {
       setCarregando(false);
@@ -128,95 +129,90 @@ if (resposta?.sucesso) {
         onClose={() => setErroVisivel(false)}
       />
 
-      {/* ✅ Modal de sucesso FUTURO (com API real) */}
       <ModalSucesso
-    visivel={modalSucessoVisivel}
-    onFechar={() => {
-      setCodigo('');
-      setErroCodigo('');
-      setModalSucessoVisivel(false);
-    }}
-  exibirBotao={false}
-  mensagem={
-    <View style={{ width: '100%', alignItems: 'center' }}>
-      <Text style={{ textAlign: 'center', marginBottom: 12 }}>
-        Enviamos um código para seu e-mail. Digite abaixo para continuar:
-      </Text>
+        visivel={modalSucessoVisivel}
+        onFechar={() => {
+          setCodigo('');
+          setErroCodigo('');
+          setModalSucessoVisivel(false);
+        }}
+        exibirBotao={false}
+        mensagem={
+          <View style={{ width: '100%', alignItems: 'center' }}>
+            <Text style={{ textAlign: 'center', marginBottom: 12 }}>
+              Enviamos um código para seu e-mail. Digite abaixo para continuar:
+            </Text>
 
-      <InputField
-            placeholder="Código recebido"
-            value={codigo}
-            onChangeText={(val) => {
-              setCodigo(val);
-              setErroCodigo('');
-            }}
-            error={erroCodigo}
-            containerStyle={{
-              width: '100%',
-              maxWidth: 280,
-              alignSelf: 'center',
-              marginBottom: spacing.sm,
-            }}
-          />
-      <TouchableOpacity
-       disabled={validandoCodigo}
-        onPress={async () => {
-          if (!codigo || codigo.length < 4) {
-            setErroCodigo('Código inválido.');
-            return;
-          }
-            try {
-              setValidandoCodigo(true);
-              const resposta = await AuthService.validarToken(codigo);
+            <InputField
+              placeholder="Código recebido"
+              value={codigo}
+              onChangeText={(val) => {
+                setCodigo(val);
+                setErroCodigo('');
+              }}
+              error={erroCodigo}
+              containerStyle={{
+                width: '100%',
+                maxWidth: 280,
+                alignSelf: 'center',
+                marginBottom: spacing.sm,
+              }}
+            />
 
-              if (resposta?.valido) {
+            <TouchableOpacity
+              disabled={validandoCodigo}
+              onPress={async () => {
+                if (!codigo || codigo.trim().length < 4) {
+                  setErroCodigo('Código inválido.');
+                  return;
+                }
+                try {
+                  setValidandoCodigo(true);
+                  const resp = await AuthService.validarToken(codigo.trim());
+                  if (!resp.ok) {
+                    setErroCodigo(obterMensagemErro(resp.error, 'Código inválido ou expirado.'));
+                    return;
+                  }
+                  // ok → segue para redefinir senha
+                  setModalSucessoVisivel(false);
+                  router.replace({
+                    pathname: '/redefinirsenha',
+                    params: { token: codigo.trim() },
+                  });
+                } catch (error) {
+                  setMensagemErro(obterMensagemErro(error, 'Erro ao validar o código.'));
+                  setErroVisivel(true);
+                } finally {
+                  setValidandoCodigo(false);
+                }
+              }}
+              style={{
+                backgroundColor: colors.verde,
+                paddingVertical: spacing.sm,
+                paddingHorizontal: spacing.xl,
+                borderRadius: 12,
+                marginTop: spacing.sm,
+                opacity: validandoCodigo ? 0.7 : 1,
+              }}
+            >
+              <Text style={{ color: colors.branco, fontWeight: 'bold' }}>
+                {validandoCodigo ? 'Validando...' : 'OK'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => {
+                setCodigo('');
+                setErroCodigo('');
                 setModalSucessoVisivel(false);
-                router.replace({
-                  pathname: '/(public)/redefinirsenha',
-                  params: { token: codigo },
-                });
-              } else {
-                setErroCodigo('Código inválido ou expirado.');
-              }
-            } catch (error) {
-              console.error(error);
-              setMensagemErro(obterMensagemErro(error,'Erro ao validar o código.'));
-              setErroVisivel(true);
-            }
-
-
-          }}
-        style={{
-
-          backgroundColor: colors.verde,
-          paddingVertical: spacing.sm,
-          paddingHorizontal: spacing.xl,
-          borderRadius: 12,
-          marginTop: spacing.sm,
-        }}
-        
-      >
-    <Text style={{ color: colors.branco, fontWeight: 'bold' }}>OK</Text>
-      </TouchableOpacity>
-
-      {/* Botão Cancelar */}
-      <TouchableOpacity
-        onPress={() => {
-              setCodigo('');
-              setErroCodigo('');
-              setModalSucessoVisivel(false);
-            }}
-        style={{
-          paddingVertical: spacing.sm,
-          marginTop: spacing.sm,
-        }}
-      >
-        <Text style={{ color: colors.erro, fontWeight: 'bold' }}>Cancelar</Text>
-      </TouchableOpacity>
-    </View>
-  }
-/>
-
+              }}
+              style={{ paddingVertical: spacing.sm, marginTop: spacing.sm }}
+            >
+              <Text style={{ color: colors.erro, fontWeight: 'bold' }}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        }
+      />
     </>
   );
 }
