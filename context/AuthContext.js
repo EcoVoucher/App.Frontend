@@ -34,17 +34,23 @@ export const AuthProvider = ({ children }) => {
         setAuthHeader(token);
 
         // valida token no backend
-        const me = await AuthService.me();
-        if (!me.ok) {
+        const me = await AuthService.me(); // { ok, data | error }
+        if (me.ok) {
+          // opcional: se o backend devolver dados atualizados do usuário, você pode mesclar aqui
+          setUsuario(user);
+        } else if (me.error?.status === 401) {
+          // token inválido → sair (limpa também o header)
           await storage.clearAll();
-          setAuthHeader(null);
+          setAuthHeader(null);                 // 👈 adicionado
           setUsuario(null);
-          return;
+        } else {
+          // 404/500/etc → não derruba sessão
+          console.warn("[Auth] /auth/me falhou:", me.error);
+          setUsuario(user);
         }
-
-        setUsuario(user);
-      } catch {
-        // qualquer erro na hidratação => zera sessão
+      } catch (err) {
+        // qualquer erro na hidratação => zera sessão (modo estrito)
+        console.warn("[Auth] hydrate error:", err);
         await storage.clearAll();
         setAuthHeader(null);
         setUsuario(null);
@@ -70,14 +76,17 @@ export const AuthProvider = ({ children }) => {
 
     const usuarioComTipo = { ...usr, tipo: tipo ?? usr?.tipo ?? "pf", isAdmin };
 
-    setAuthHeader(data.token);     // AuthService já salvou token/user no storage
+    // AuthService.login já salvou token/usuario no storage
+    setAuthHeader(data.token);
     setUsuario(usuarioComTipo);
 
     return { ok: true, data: { ...data, usuario: usuarioComTipo } };
   };
 
   const logout = async () => {
-    try { await AuthService.logout(); } catch {} // opcional, não bloqueia saída
+    try {
+      await AuthService.logout(); // opcional, não bloqueia saída
+    } catch {}
     await storage.clearAll();
     setAuthHeader(null);
     setUsuario(null);
@@ -89,7 +98,7 @@ export const AuthProvider = ({ children }) => {
       carregando,
       login,
       logout,
-      setUsuario,                // útil para atualizar perfil local
+      setUsuario, // útil p/ atualizar perfil local
       isAutenticado: !!usuario,
       isAdmin: !!usuario?.isAdmin,
       tipo: usuario?.tipo ?? null, // "pf" | "pj" | "admin"

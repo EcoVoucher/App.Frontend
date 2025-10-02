@@ -41,17 +41,12 @@ export default function PrivateLayout() {
     setIsReady(true);
   }, []);
 
-  useEffect(() => {
-    if (!isReady) return;
-
-    // sessão ainda carregando → não decide nada
-    if (carregando) return;
-
-    // sem usuário → volta ao login
-    if (!usuario) {
-      router.replace('/(public)/login');
-      return;
-    }
+   useEffect(() => {
+   if (!isReady || carregando) return;     // ✅ espere o boot
+   if (!usuario) {
+    router.replace('/(public)/login');
+   return;
+   }
 
     const rota = pathname.toLowerCase();
 

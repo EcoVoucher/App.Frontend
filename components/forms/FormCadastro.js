@@ -92,36 +92,26 @@ export default function FormCadastro({
             label="Endereço"
             value={dados.endereco}
             onChangeText={(texto) => handleChange('endereco', texto.toUpperCase())}
-            error={erros.endereco}
-            editable={!camposBloqueados}
-            style={camposBloqueados ? { backgroundColor: '#f0f0f0' } : {}}
+         
           />
 
           <InputField
             label="Bairro"
             value={dados.bairro}
             onChangeText={(texto) => handleChange('bairro', texto.toUpperCase())}
-            error={erros.bairro}
-            editable={!camposBloqueados}
-            style={camposBloqueados ? { backgroundColor: '#f0f0f0' } : {}}
+        
           />
 
           <InputField
             label="Cidade"
             value={dados.cidade}
             onChangeText={(texto) => handleChange('cidade', texto.toUpperCase())}
-            error={erros.cidade}
-            editable={!camposBloqueados}
-            style={camposBloqueados ? { backgroundColor: '#f0f0f0' } : {}}
-          />
+            />
 
           <InputField
             label="Estado"
             value={dados.estado}
             onChangeText={(texto) => handleChange('estado', texto.toUpperCase())}
-            error={erros.estado}
-            editable={!camposBloqueados}
-            style={camposBloqueados ? { backgroundColor: '#f0f0f0' } : {}}
           />
 
           <InputField

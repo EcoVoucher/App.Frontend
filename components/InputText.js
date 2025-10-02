@@ -1,4 +1,3 @@
-// components/InputText.jsx
 import {
   View,
   TextInput,
@@ -30,19 +29,17 @@ export default function InputText({
   return (
     <View style={[styles.container, containerStyle]}>
       <InputComponent
-       value={value ?? ''}                                // ✅ garante controlado
+       value={value ?? ''} // ✅ sempre controlado
        onChangeText={
-         mask
-           ? (masked /*, unmasked */) => onChangeText?.(masked)
-           : onChangeText
-       }
+        mask ? (masked /*, unmasked */) => onChangeText?.(masked) : onChangeText
+      }
         placeholder={placeholder}
         keyboardType={keyboardType}
         secureTextEntry={secureTextEntry}
         {...(mask ? { mask } : {})}
         placeholderTextColor={colors.cinzaClaro}
         style={[styles.input, style]}
-        {...rest}                                    
+        {...rest} // inclui editable
       />
 
       {typeof mostrarSenha === 'boolean' && alternarSenha && (
@@ -77,9 +74,5 @@ const styles = StyleSheet.create({
     paddingRight: 36,
     color: colors.preto,
   },
-  iconBox: {
-    position: 'absolute',
-    right: 12,
-    padding: 4,
-  },
+  iconBox: { position: 'absolute', right: 12, padding: 4 },
 });

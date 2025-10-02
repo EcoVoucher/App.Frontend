@@ -1,4 +1,3 @@
-// screens/Cadastro.js
 import { useRouter } from 'expo-router';
 import { useState, useRef } from 'react';
 import {
@@ -114,7 +113,7 @@ export default function Cadastro() {
 
       if (data?.erro) {
         setErros((prev) => ({ ...prev, cep: 'CEP inválido. Verifique e tente novamente.' }));
-        setCamposBloqueados(false);
+       
         return;
       }
 
@@ -125,11 +124,10 @@ export default function Cadastro() {
         cidade: data.localidade || '',
         estado: data.uf || '',
       }));
-      setCamposBloqueados(true);
     } catch (e) {
       if (e?.name === 'AbortError') return; // usuário digitou outro CEP rápido
       setErros((prev) => ({ ...prev, cep: 'Erro ao buscar endereço. Tente novamente mais tarde.' }));
-      setCamposBloqueados(false);
+      
     } finally {
       cepAbortRef.current = null;
     }

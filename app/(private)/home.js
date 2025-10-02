@@ -62,61 +62,71 @@ const abrirWhatsApp = async () => {
   ];
 
 useEffect(() => {
-  if (!usuario) return;
+  if (!usuario) {
+    setCarregando(false);
+    return;
+  }
+
   let intervalo;
 
   const carregarDados = async () => {
     try {
-      setCarregando(true); //Começa carregando
-      const documento = apenasNumeros(usuario.cpf || usuario.cnpj)
+      setCarregando(true);
 
-      const usuarioAtualizado = await UsuarioService.obterPorId(documento);
-      setPontos(usuarioAtualizado.pontos ?? 0);
-      if (usuario.tipo === 'pf') {
-     
-        setPegada(usuarioAtualizado?.pontuacao ?? 0);
+      const documento = apenasNumeros(usuario.cpf ?? usuario.cnpj ?? "");
 
-        setIcones([
-          { imagem: require('../../assets/imagensEco/historicoIcon.png'), rota: '/(private)/historicopontos', label: 'Histórico \nde Pontos' },
-          { imagem: require('../../assets/imagensEco/catalogoIcon.png'), rota: '/(private)/catalogovoucherspf', label: 'Vouchers \npara Troca' },
-          { imagem: require('../../assets/imagensEco/pontoColetaIcon.png'), rota: '/(private)/pontoscoleta', label: 'Pontos \nde Coleta' },
-        ]);
+      // -- Usuário (PF/PJ)
+      const u = await UsuarioService.obterPorId(documento);
+      if (u.ok) {
+        setPontos(u.data?.pontos ?? 0);
+
+        if (usuario.tipo === "pf") {
+          setPegada(u.data?.pontuacao ?? 0);
+
+          setIcones([
+            { imagem: require("../../assets/imagensEco/historicoIcon.png"), rota: "/historicopontos", label: "Histórico \nde Pontos" },
+            { imagem: require("../../assets/imagensEco/catalogoIcon.png"), rota: "/catalogovoucherspf", label: "Vouchers \npara Troca" },
+            { imagem: require("../../assets/imagensEco/pontoColetaIcon.png"), rota: "/pontoscoleta", label: "Pontos \nde Coleta" },
+          ]);
+        }
+      } else {
+        console.warn("Home obterPorId:", u.error);
       }
 
-           if (usuario.tipo ==='pj') {
-          const [vouchers, estatisticas] = await Promise.all([
-            VouchersService.listarVouchers(),
-            VouchersService.obterEstatisticas(),
-          ]);
+      // -- Estatísticas PJ
+      if (usuario.tipo === "pj") {
+        const [lv, est] = await Promise.all([
+          VouchersService.listarVouchers(),
+          VouchersService.obterEstatisticas(),
+        ]);
 
-          const totalGerados = vouchers?.reduce((acc, v) => acc + (v.quantidade || 0), 0) ?? 0;
-          setQtdVouchers(totalGerados);
+        const totalGerados = lv.ok
+          ? (lv.data ?? []).reduce((acc, v) => acc + (v.quantidade || 0), 0)
+          : 0;
+        setQtdVouchers(totalGerados);
 
-          setVouchersUtilizados(estatisticas?.totalComprados ?? 0);
+        setVouchersUtilizados(est.ok ? est.data?.totalComprados ?? 0 : 0);
 
         setIcones([
-          { imagem: require('../../assets/imagensEco/gerarVoucherIcon.png'), rota: '/(private)/catalogorecompensapj', label: 'Gerar Voucher' },
-          { imagem: require('../../assets/imagensEco/validarVoucherIcon.png'), rota: '/(private)/validarvoucherpj', label: 'Validar Voucher' },
+          { imagem: require("../../assets/imagensEco/gerarVoucherIcon.png"), rota: "/catalogorecompensapj", label: "Gerar Voucher" },
+          { imagem: require("../../assets/imagensEco/validarVoucherIcon.png"), rota: "/validarvoucherpj", label: "Validar Voucher" },
           {
-            imagem: require('../../assets/imagensEco/faleConoscoIcon.png'),
-            label: 'Contato',
-            onPress:abrirWhatsApp,
-            }
+            imagem: require("../../assets/imagensEco/faleConoscoIcon.png"),
+            label: "Contato",
+            onPress: abrirWhatsApp,
+          },
         ]);
       }
     } catch (error) {
-      const mensagem = obterMensagemErro(error, 'Erro ao carregar dados da Home.');
-      console.warn('⚠️ Erro na Home:', mensagem);
+      const mensagem = obterMensagemErro(error, "Erro ao carregar dados da Home.");
+      console.warn("⚠️ Erro na Home:", mensagem);
     } finally {
       setCarregando(false);
     }
   };
 
   carregarDados();
-
-  intervalo = setInterval(() => {
-    carregarDados();
-  }, 10000);
+  intervalo = setInterval(carregarDados, 10000);
 
   return () => {
     clearInterval(intervalo);
@@ -127,6 +137,7 @@ useEffect(() => {
     setIcones([]);
   };
 }, [usuario]);
+
 
   return (
     <View style={styles.container}>
@@ -147,7 +158,7 @@ useEffect(() => {
               {pegada && (
                 <Text style={styles.destaqueItemDesc}><Text style={{ fontStyle: 'italic' }}>{obterComparativoPegada(pegada)}</Text></Text>
               )}
-              <TouchableOpacity onPress={() => router.push('/(private)/pegada')} style={[styles.botaoPrincipal, { width: isLargeScreen ? 220 : 180 }]}>
+              <TouchableOpacity onPress={() => router.push('/pegada')} style={[styles.botaoPrincipal, { width: isLargeScreen ? 220 : 180 }]}>
                 <Text style={[styles.botaoPrincipalTexto, { fontSize: isLargeScreen ? fonts.size.md : fonts.size.sm }]}>Atualizar Pegada</Text>
               </TouchableOpacity>
             </>
