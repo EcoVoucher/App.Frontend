@@ -1,31 +1,56 @@
-import api from './api';
+// services/pegadaService.js
+import { http } from './http';
+
+const soDigitos = (s) => String(s ?? '').replace(/\D/g, '');
+const isObj = (d) => d && typeof d === 'object' && !Array.isArray(d);
 
 export const PegadaService = {
   /**
-   * 🔍 Busca a última pontuação de pegada — usado na Home.
+   * 🔍 Última pontuação de pegada (PF) — usado na Home
+   * GET /pegada/:documento
    */
- async obterUltimaPontuacao(documento) {
-  const response = await api.get(`/pegada/${documento}`);
-  return response.data;
-},
-
-
-  /**
-   * 📜 Busca o histórico completo de pegada — usado na tela Histórico de Pegada.
-   */
-  async obterHistorico(documento) {
-    const response = await api.get(`/pegada/historico/${documento}`);
-    return response.data;
+  obterUltimaPontuacao(documento) {
+    const doc = soDigitos(documento);
+    if (!doc) {
+      return Promise.resolve({
+        ok: false,
+        error: { http: 400, code: 'INVALID_IDENTIFIER', message: 'Documento inválido.' },
+      });
+    }
+    return http.get(`/pegada/${doc}`, {
+      // aceita objeto (ex.: { pontuacao: 123 }) ou número direto
+      validate: (d) => isObj(d) || Number.isFinite(d),
+    });
   },
 
   /**
-   * 💾 Salva uma nova pontuação de pegada — usado na tela de questionário da Pegada.
+   * 📜 Histórico completo — usado na tela Histórico de Pegada
+   * GET /pegada/historico/:documento
    */
-  async salvarPontuacao({ documento, pontuacao }) {
-    const response = await api.post('/pegada/salvar', {
-      documento,
-      pontuacao,
+  obterHistorico(documento) {
+    const doc = soDigitos(documento);
+    if (!doc) {
+      return Promise.resolve({
+        ok: false,
+        error: { http: 400, code: 'INVALID_IDENTIFIER', message: 'Documento inválido.' },
+      });
+    }
+    return http.get(`/pegada/historico/${doc}`, {
+      validate: (d) => Array.isArray(d),
     });
-    return response.data;
+  },
+
+  /**
+   * 💾 Salva nova pontuação — usado no questionário da Pegada
+   * POST /pegada/salvar  { documento, pontuacao }
+   */
+  salvarPontuacao({ documento, pontuacao }) {
+    const doc = soDigitos(documento);
+    const score = Number(pontuacao);
+    return http.post(
+      '/pegada/salvar',
+      { documento: doc, pontuacao: score },
+      { validate: (d) => d === true || isObj(d) } // aceita boolean ou objeto
+    );
   },
 };

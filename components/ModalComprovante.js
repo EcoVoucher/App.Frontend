@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  Modal, View, Text, StyleSheet, Alert, Image,
+  Modal, View, Text, StyleSheet, Alert, Image, Platform,
 } from 'react-native';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -11,63 +11,73 @@ import BotaoVerde from './BotaoVerde';
 import logoEcoApp from '../assets/imagensEco/eco-novo.jpeg';
 import { carregarLogoBase64 } from '../utils/converterImagem.js';
 
-
 export default function ModalComprovante({ visible, onClose, extrato }) {
   if (!extrato) return null;
-  
 
-const gerarHtml = (logoBase64) => {
-  const { cpf, dataHora, codigo, materiais, total } = extrato;
+  const gerarHtml = (logoBase64) => {
+    const { cpf, dataHora, codigo, materiais = [], total } = extrato;
+    return `
+      <html>
+        <head>
+          <meta charset="UTF-8" />
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; text-align: center; background-color: #fff; }
+            h1 { color: #076921; margin-top: 0; }
+            ul { padding-left: 16px; text-align: left; display: inline-block; }
+            .total { font-weight: bold; margin-top: 16px; color: #076921; }
+            .info { margin-top: 10px; font-size: 14px; color: #333; }
+          </style>
+        </head>
+        <body>
+          <div style="text-align:center;">
+            <img src="${logoBase64}" width="150" style="margin-bottom:10px;" />
+            <h1>Comprovante de Depósito</h1>
+            <p class="info"><strong>Código:</strong> ${codigo}</p>
+            <p class="info"><strong>CPF:</strong> ${cpf}</p>
+            <p class="info"><strong>Data/Hora:</strong> ${dataHora}</p>
+            <ul>
+              ${materiais
+                .map(
+                  (item) =>
+                    `<li>${item.nome}: ${item.quantidade} x ${item.pontos} pts = ${
+                      item.quantidade * item.pontos
+                    } pts</li>`
+                )
+                .join('')}
+            </ul>
+            <p class="total">Total: ${total} pontos</p>
+          </div>
+        </body>
+      </html>
+    `;
+  };
 
-  return `
-    <html>
-      <head>
-        <meta charset="UTF-8" />
-        <style>
-          body { 
-            font-family: Arial, sans-serif; 
-            padding: 20px; 
-            text-align: center;
-            background-color: #fff;
-          }
-          h1 { color: #076921; margin-top: 0; }
-          ul { padding-left: 16px; text-align: left; display: inline-block; }
-          .total { font-weight: bold; margin-top: 16px; color: #076921; }
-          .info { margin-top: 10px; font-size: 14px; color: #333; }
-        </style>
-      </head>
-      <body>
-        <div style="text-align:center;">
-          <img src="${logoBase64}" width="150" style="margin-bottom:10px;" />
-          <h1>Comprovante de Depósito</h1>
-          <p class="info"><strong>Código:</strong> ${codigo}</p>
-          <p class="info"><strong>CPF:</strong> ${cpf}</p>
-          <p class="info"><strong>Data/Hora:</strong> ${dataHora}</p>
-          <ul>
-            ${materiais.map(item => `
-              <li>${item.nome}: ${item.quantidade} x ${item.pontos} pts = ${item.quantidade * item.pontos} pts</li>
-            `).join('')}
-          </ul>
-          <p class="total">Total: ${total} pontos</p>
-        </div>
-      </body>
-    </html>
-  `;
-};
   const imprimirComprovante = async () => {
-  try {
-    const logoBase64 = await carregarLogoBase64(); // 👈 pega logo da pasta
-    const html = gerarHtml(logoBase64);
+    try {
+      const logoBase64 = await carregarLogoBase64();
+      const html = gerarHtml(logoBase64);
 
-    const result = await Print.printToFileAsync({ html });
-    if (!result?.uri) throw new Error('Falha ao gerar PDF.');
+      // web: abre diálogo de impressão direto
+      if (Platform.OS === 'web') {
+        await Print.printAsync({ html });
+        return;
+      }
 
-    await Sharing.shareAsync(result.uri);
-  } catch (error) {
-    Alert.alert('Erro ao gerar PDF', error.message);
-  }
-};
+      // mobile: gera arquivo e compartilha
+      const result = await Print.printToFileAsync({ html });
+      if (!result?.uri) throw new Error('Falha ao gerar PDF.');
 
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(result.uri);
+      } else {
+        // fallback: abre diálogo de impressão
+        await Print.printAsync({ html });
+      }
+    } catch (error) {
+      Alert.alert('Erro ao gerar PDF', error?.message || 'Tente novamente.');
+    }
+  };
 
   return (
     <Modal visible={visible} transparent animationType="slide">
@@ -81,7 +91,7 @@ const gerarHtml = (logoBase64) => {
           <Text style={styles.info}>CPF: {extrato.cpf}</Text>
           <Text style={styles.info}>Data/Hora: {extrato.dataHora}</Text>
 
-          {extrato.materiais.map((item, idx) => (
+          {(extrato.materiais || []).map((item, idx) => (
             <Text key={idx} style={styles.texto}>
               {item.nome}: {item.quantidade} x {item.pontos} pts = {item.quantidade * item.pontos} pts
             </Text>
@@ -93,7 +103,9 @@ const gerarHtml = (logoBase64) => {
             <BotaoVerde texto="Imprimir PDF" onPress={imprimirComprovante} />
           </View>
 
-          <Text style={styles.fechar} onPress={onClose}>Fechar</Text>
+          <Text style={styles.fechar} onPress={onClose}>
+            Fechar
+          </Text>
         </View>
       </View>
     </Modal>

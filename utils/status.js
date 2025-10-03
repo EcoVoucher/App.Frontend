@@ -15,27 +15,44 @@ export const corStatus = {
   indefinido: colors.cinza,
 };
 
-function zerarHora(d) {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
+// Parse seguro para 'YYYY-MM-DD' como data local (evita off-by-one por timezone)
+function parseDataLocal(dateLike) {
+  if (!dateLike) return null;
+  if (typeof dateLike === 'string') {
+    const iso = dateLike.split('T')[0]; // 'YYYY-MM-DD'
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+    if (m) {
+      const [, y, mo, d] = m;
+      return new Date(Number(y), Number(mo) - 1, Number(d), 0, 0, 0, 0);
+    }
+  }
+  const dt = new Date(dateLike);
+  return Number.isNaN(dt.getTime()) ? null : new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), 0, 0, 0, 0);
 }
 
 export const obterStatus = (lote) => {
-  const hoje = zerarHora(new Date());
-  const validade = zerarHora(lote.dataValidade);
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
 
-  // Expirado somente por data
+  const validade = parseDataLocal(lote?.dataValidade);
+
+  // Se não houver data ou for inválida, considera válido para não "matar" o lote indevidamente
+  if (!validade) {
+    const total = Number(lote?.quantidade) || 0;
+    const disponiveis = Array.isArray(lote?.codigos) ? lote.codigos.length : 0;
+    const usados = Math.max(0, total - disponiveis);
+    if (usados === 0) return 'validos';
+    if (usados > 0 && usados < total) return 'parcial';
+    return 'expirado'; // esgotado -> mantém seu comportamento como expirado
+  }
+
   if (validade < hoje) return 'expirado';
 
-  const total = Number(lote.quantidade) || 0;
-  const disponiveis = Array.isArray(lote.codigos) ? lote.codigos.length : 0; // fallback seguro
+  const total = Number(lote?.quantidade) || 0;
+  const disponiveis = Array.isArray(lote?.codigos) ? lote.codigos.length : 0;
   const usados = Math.max(0, total - disponiveis);
 
   if (usados === 0) return 'validos';
   if (usados > 0 && usados < total) return 'parcial';
-
-  // ⚠️ Aqui você já marcava como 'expirado' quando esgotou.
-  // Mantive igual para NÃO mudar seu comportamento.
-  return 'expirado';
+  return 'expirado'; // esgotado -> mantém como expirado
 };

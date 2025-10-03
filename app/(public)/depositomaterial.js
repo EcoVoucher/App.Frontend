@@ -5,23 +5,20 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  ScrollView
+  ScrollView,
 } from 'react-native';
 
-import { DepositoService } from '../../services/depositoService'; 
-import { apenasNumeros } from '../../utils/formatarenvio'; 
+import { DepositoService } from '../../services/depositoService';
+import { apenasNumeros } from '../../utils/formatarenvio';
 import { Masks } from 'react-native-mask-input';
 import InputField from '../../components/InputField';
 import ModalComprovante from '../../components/ModalComprovante';
 import ModalErro from '../../components/ModalErro';
 import { obterMensagemErro } from '../../utils/obterMensagemErro';
-
-
 import { validarCamposObrigatorios } from '../../utils/validarCamposObrigatorios';
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
-
 
 const materiaisDisponiveis = [
   { nome: 'Plástico', pontos: 10 },
@@ -31,15 +28,11 @@ const materiaisDisponiveis = [
   { nome: 'Orgânico', pontos: 2 },
 ];
 
-const gerarSimulacao = () => {
-  return materiaisDisponiveis
+const gerarSimulacao = () =>
+  materiaisDisponiveis
     .sort(() => 0.5 - Math.random())
     .slice(0, 3)
-    .map((m) => ({
-      ...m,
-      quantidade: Math.floor(Math.random() * 10) + 1,
-    }));
-};
+    .map((m) => ({ ...m, quantidade: Math.floor(Math.random() * 10) + 1 }));
 
 export default function DepositoMaterial() {
   const [cpf, setCpf] = useState('');
@@ -48,8 +41,12 @@ export default function DepositoMaterial() {
   const [modalVisivel, setModalVisivel] = useState(false);
   const [erroVisivel, setErroVisivel] = useState(false);
   const [mensagemErro, setMensagemErro] = useState('');
+  const [carregando, setCarregando] = useState(false);
 
   const handleDeposito = async () => {
+    if (carregando) return;
+
+    // validação local do CPF
     const dados = { cpf };
     const campos = ['cpf'];
     const errosValidacao = validarCamposObrigatorios(dados, campos, 'pf');
@@ -60,37 +57,49 @@ export default function DepositoMaterial() {
       setErroVisivel(true);
       return;
     }
+
     const cpfLimpo = apenasNumeros(cpf);
 
+    // zera estados de feedback
+    setExtrato(null);
+    setErroVisivel(false);
+    setMensagemErro('');
+    setCarregando(true);
+
     try {
-     
-
-      // 🔗 API — Validação de CPF na API (ATIVAR no futuro)
+      // valida CPF no backend
       const usuario = await DepositoService.consultarUsuarioPorCPF(cpfLimpo);
-
       if (!usuario) {
         setMensagemErro('CPF não cadastrado no sistema.');
         setErroVisivel(true);
         return;
       }
 
-      // 🔄 MOCK — Simulação de materiais e geração de código local
+      // simulação de materiais
       const simulados = gerarSimulacao();
       const total = simulados.reduce(
-        (acc, item) => acc + item.quantidade * item.pontos,
+        (acc, item) => acc + (Number(item.quantidade) || 0) * (Number(item.pontos) || 0),
         0
       );
-        
+
+      if (total <= 0) {
+        setMensagemErro('Nenhum material válido para pontuação.');
+        setErroVisivel(true);
+        return;
+      }
+
+      // registra depósito
       const comprovante = await DepositoService.realizarDeposito(cpfLimpo, simulados, total);
 
-      const codigo = comprovante.deposito?.codigo 
-                  ?? comprovante.deposito?._id 
-                  ?? '---';
+      const codigo =
+        comprovante?.deposito?.codigo ??
+        comprovante?.deposito?._id ??
+        '---';
 
-      const dataHora = new Date(comprovante.deposito?.data).toLocaleString('pt-BR');
+      const dataHora = new Date(
+        comprovante?.deposito?.data ?? Date.now()
+      ).toLocaleString('pt-BR');
 
-
-      // 🔸 Atualiza estado para exibir no modal de comprovante (funciona igual no mock e na API)
       setExtrato({
         cpf,
         materiais: simulados,
@@ -100,53 +109,59 @@ export default function DepositoMaterial() {
       });
 
       setModalVisivel(true);
-      setCpf('');
+      setCpf(''); // limpa somente após sucesso
     } catch (error) {
-      console.error(error);
       setMensagemErro(obterMensagemErro(error, 'Erro ao registrar o depósito.'));
       setErroVisivel(true);
+    } finally {
+      setCarregando(false);
     }
   };
 
   return (
-  <KeyboardAvoidingView
-    style={{ flex: 1 }}
-    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-  >
-     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <Text style={styles.titulo}>Depósito de Materiais</Text>
-      <Text style={styles.subtitulo}>Simule seu depósito e ganhe pontos!</Text>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <Text style={styles.titulo}>Depósito de Materiais</Text>
+        <Text style={styles.subtitulo}>Simule seu depósito e ganhe pontos!</Text>
 
-      <InputField
-        label="CPF"
-        value={cpf}
-        onChangeText={(v) => {
-          setCpf(v);
-          setExtrato(null);
-          setErros({});
-        }}
-        error={erros.cpf}
-        mask={Masks.BRL_CPF}
-        keyboardType="numeric"
-      />
+        <InputField
+          label="CPF"
+          value={cpf}
+          onChangeText={(v) => {
+            setCpf(v);
+            setExtrato(null);
+            setErros({});
+          }}
+          error={erros.cpf}
+          mask={Masks.BRL_CPF}
+          keyboardType="numeric"
+        />
 
-      <TouchableOpacity style={styles.botao} onPress={handleDeposito}>
-        <Text style={styles.botaoTexto}>Confirmar Depósito</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.botao, carregando && { opacity: 0.7 }]}
+          onPress={handleDeposito}
+          disabled={carregando}
+        >
+          <Text style={styles.botaoTexto}>{carregando ? 'Registrando...' : 'Confirmar Depósito'}</Text>
+        </TouchableOpacity>
 
-      <ModalComprovante
-        visible={modalVisivel}
-        extrato={extrato}
-        onClose={() => setModalVisivel(false)}
-      />
-      <ModalErro
-        visivel={erroVisivel}
-        mensagem={mensagemErro}
-        onClose={() => setErroVisivel(false)}
-      />
-       </ScrollView>
- </KeyboardAvoidingView>
-);
+        <ModalComprovante
+          visible={modalVisivel}
+          extrato={extrato}
+          onClose={() => setModalVisivel(false)}
+        />
+
+        <ModalErro
+          visivel={erroVisivel}
+          mensagem={mensagemErro}
+          onClose={() => setErroVisivel(false)}
+        />
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -175,12 +190,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     borderRadius: 8,
     marginTop: spacing.md,
-    alignItems:'center'
+    alignItems: 'center',
   },
   botaoTexto: {
     color: colors.branco,
     fontWeight: 'bold',
     fontSize: fonts.size.md,
-    alignItems:'center'
   },
 });

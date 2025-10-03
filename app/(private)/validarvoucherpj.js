@@ -17,7 +17,6 @@ import ModalErro from '../../components/ModalErro';
 
 import { obterMensagemErro } from '../../utils/obterMensagemErro';
 import { validarCamposObrigatorios } from '../../utils/validarCamposObrigatorios';
-
 import { VouchersService } from '../../services/voucherService';
 
 import { colors } from '../../theme/colors';
@@ -31,13 +30,11 @@ import { useAuth } from '../../context/AuthContext';
 const soDigitos = (s) => (s ? String(s).replace(/\D/g, '') : '');
 
 function determinarStatus(v) {
-  // Prioriza status vindo da API, se existir.
   const s = String(v?.status || '').toLowerCase();
   if (s === 'utilizado') return 'utilizado';
   if (s === 'expirado') return 'expirado';
   if (s === 'válido' || s === 'valido') return 'válido';
 
-  // Fallback: calcula por validade (aceita v.validade ou v.dataValidade)
   const hoje = new Date();
   const validadeBruta = v?.validade || v?.dataValidade;
   const validade = validadeBruta ? new Date(validadeBruta) : null;
@@ -49,7 +46,6 @@ export default function ValidarVoucherPJ() {
   const { usuario } = useAuth();
 
   const [codigo, setCodigo] = useState('');
-  const [status, setStatus] = useState('');
   const [modoBusca, setModoBusca] = useState('codigo');
   const [cpfBusca, setCpfBusca] = useState('');
   const [tipoBusca, setTipoBusca] = useState('');
@@ -66,6 +62,11 @@ export default function ValidarVoucherPJ() {
   const [modalResultadoVisivel, setModalResultadoVisivel] = useState(false);
 
   if (!usuario?.cnpj) return null;
+
+  const fecharModalResultado = () => {
+    setModalResultadoVisivel(false);
+    setVouchersEncontrados([]);
+  };
 
   const validarCodigo = async () => {
     if (!codigo.trim()) {
@@ -85,12 +86,9 @@ export default function ValidarVoucherPJ() {
       }
 
       const resultado = res.data;
-      const statusFinal = determinarStatus(resultado);
-      setStatus(statusFinal);
       setVouchersEncontrados([resultado]);
-
-      setModalResultadoVisivel(true); // abre modal somente com resultado válido
-      setCodigo(''); // limpa após sucesso
+      setModalResultadoVisivel(true);
+      setCodigo('');
     } finally {
       setValidando(false);
     }
@@ -108,17 +106,16 @@ export default function ValidarVoucherPJ() {
         return;
       }
 
-      const res = await VouchersService.utilizarVoucher(codigoAlvo);
+      const res = await VouchersService.utilizarVoucher(String(codigoAlvo).trim());
       if (!res.ok) {
         setMensagemErro(obterMensagemErro(res.error, 'Erro ao confirmar uso.'));
         setErroVisivel(true);
         return;
       }
 
-      setCodigo('');
       setVouchersEncontrados((prev) => prev.filter((v) => v.codigo !== codigoAlvo));
       setModalResultadoVisivel(false);
-      setModalVisivel(true); // sucesso
+      setModalVisivel(true);
     } finally {
       setConfirmando(false);
     }
@@ -128,7 +125,6 @@ export default function ValidarVoucherPJ() {
     if (buscando) return;
     setBuscando(true);
 
-    // validação local
     const dados = { cpf: cpfBusca };
     const campos = ['cpf'];
     const errosValidacao = validarCamposObrigatorios(dados, campos, 'pf');
@@ -203,12 +199,20 @@ export default function ValidarVoucherPJ() {
       <View style={styles.switchContainer}>
         <BotaoVerdePequeno
           texto="Por Código"
-          onPress={() => setModoBusca('codigo')}
+          onPress={() => {
+            setModoBusca('codigo');
+            setErros({});
+            setVouchersEncontrados([]);
+          }}
           ativo={modoBusca === 'codigo'}
         />
         <BotaoVerdePequeno
           texto="Por CPF + Tipo"
-          onPress={() => setModoBusca('cpf')}
+          onPress={() => {
+            setModoBusca('cpf');
+            setErros({});
+            setVouchersEncontrados([]);
+          }}
           ativo={modoBusca === 'cpf'}
         />
       </View>
@@ -228,14 +232,14 @@ export default function ValidarVoucherPJ() {
               disabled={validando}
             />
 
-            {/* Resultado por código (mesma UI reaproveitada) */}
             <ModalResultado
               visivel={modalResultadoVisivel}
-              onFechar={() => setModalResultadoVisivel(false)}
+              onFechar={fecharModalResultado}
               titulo="Resultado da validação"
             >
               {vouchersEncontrados.map((item) => {
                 const validade = item.validade || item.dataValidade;
+                const st = determinarStatus(item);
                 return (
                   <View key={item.codigo} style={styles.detalhes}>
                     <Text style={styles.info}>Código: {item.codigo}</Text>
@@ -245,8 +249,8 @@ export default function ValidarVoucherPJ() {
                     <Text style={styles.info}>
                       Validade: {validade ? new Date(validade).toLocaleDateString('pt-BR') : '---'}
                     </Text>
-                    <StatusBadge status={determinarStatus(item)} />
-                    {determinarStatus(item) === 'válido' && (
+                    <StatusBadge status={st} />
+                    {st === 'válido' && (
                       <BotaoVerde
                         texto={confirmando ? 'Confirmando...' : 'Confirmar uso'}
                         onPress={() => confirmarUso(item?.codigo)}
@@ -292,11 +296,12 @@ export default function ValidarVoucherPJ() {
 
             <ModalResultado
               visivel={modalResultadoVisivel}
-              onFechar={() => setModalResultadoVisivel(false)}
+              onFechar={fecharModalResultado}
               titulo="Vouchers encontrados"
             >
               {vouchersEncontrados.map((item) => {
                 const validade = item.validade || item.dataValidade;
+                const st = determinarStatus(item);
                 return (
                   <View key={item.codigo} style={styles.detalhes}>
                     <Text style={styles.info}>Código: {item.codigo}</Text>
@@ -306,8 +311,8 @@ export default function ValidarVoucherPJ() {
                     <Text style={styles.info}>
                       Validade: {validade ? new Date(validade).toLocaleDateString('pt-BR') : '---'}
                     </Text>
-                    <StatusBadge status={determinarStatus(item)} />
-                    {determinarStatus(item) === 'válido' && (
+                    <StatusBadge status={st} />
+                    {st === 'válido' && (
                       <BotaoVerde
                         texto={confirmando ? 'Confirmando...' : 'Confirmar uso'}
                         onPress={() => confirmarUso(item?.codigo)}

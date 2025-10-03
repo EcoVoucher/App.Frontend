@@ -1,19 +1,16 @@
 // services/usuarioService.js
 import { http } from "./http";
 
-
-// Helpers locais
 const limparId = (id) => String(id || "").replace(/\D/g, "");
 const isCPF = (id) => limparId(id).length === 11;
 const isCNPJ = (id) => limparId(id).length === 14;
+const isObj = (d) => d && typeof d === "object" && !Array.isArray(d);
 
-
-// 📝 Cadastro PF/PJ (validação mínima de payload como objeto)
+// 📝 Cadastro PF/PJ
 export const cadastrarPF = (dados) =>
-  http.post("/cadastro/pf", dados, { validate: (d) => d && typeof d === "object" });
-
+  http.post("/cadastro/pf", dados, { validate: (d) => d === true || isObj(d) }); // 👈 aceita boolean
 export const cadastrarPJ = (dados) =>
-  http.post("/cadastro/pj", dados, { validate: (d) => d && typeof d === "object" });
+  http.post("/cadastro/pj", dados, { validate: (d) => d === true || isObj(d) }); // 👈 aceita boolean
 
 export const UsuarioService = {
   // 🔎 Busca por CPF OU CNPJ
@@ -23,20 +20,24 @@ export const UsuarioService = {
     if (!isCPF(id) && !isCNPJ(id)) {
       return {
         ok: false,
-        error: { http: 400, code: "INVALID_IDENTIFIER" },
+        error: {
+          http: 400,
+          code: "INVALID_IDENTIFIER",
+          message: "Identificador inválido: informe um CPF ou CNPJ válido.", // 👈 mensagem amigável
+        },
       };
     }
 
     // ✅ sempre envia SEM máscara
     if (isCPF(id)) {
-      // se seu endpoint de histórico retorna lista:
+      // CPF → histórico (lista)
       return http.get(`/usuarios/historico/${id}`, {
         validate: (d) => Array.isArray(d),
       });
     }
-    // para CNPJ, espera objeto de empresa/usuário PJ
+    // CNPJ → entidade PJ (objeto)
     return http.get(`/usuarios/${id}`, {
-      validate: (d) => d && typeof d === "object",
+      validate: (d) => isObj(d),
     });
   },
 
@@ -46,7 +47,7 @@ export const UsuarioService = {
     return http.post(
       "/usuarios/alterar-senha",
       { cpfOuCnpj: id, senhaAtual, novaSenha },
-      { validate: (d) => d && typeof d === "object" }
+      { validate: (d) => d === true || isObj(d) } // 👈 aceita boolean
     );
   },
 };

@@ -21,10 +21,9 @@ import { obterComparativoPegada, apenasNumeros } from '../../utils/formatadores'
 import { useRouter } from 'expo-router';
 import { obterMensagemErro } from '../../utils/obterMensagemErro';
 
-
 export default function Pegada() {
   const router = useRouter();
-  const { usuario, login } = useAuth();
+  const { usuario } = useAuth();
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
   const [respostas, setRespostas] = useState({});
@@ -34,55 +33,66 @@ export default function Pegada() {
   const [ultimaPontuacao, setUltimaPontuacao] = useState(null);
   const [indiceAtual, setIndiceAtual] = useState(0);
   const [mostrarModal, setMostrarModal] = useState(false);
-  const [mensagemErro, setMensagemErro] = useState('');
-  const [erroVisivel, setErroVisivel] = useState(false);
 
- useEffect(() => {
-  if (resultado) {
-    setMostrarModal(true);
-    setTimeout(() => {
-      setMostrarModal(false);
-      router.replace('/(private)/home');
-    }, 4000);
-  }
-}, [resultado]);
+  useEffect(() => {
+    if (resultado) {
+      setMostrarModal(true);
+      const t = setTimeout(() => {
+        setMostrarModal(false);
+        router.replace('/(private)/home');
+      }, 4000);
+      return () => clearTimeout(t);
+    }
+  }, [resultado, router]);
 
-useEffect(() => {
-  const carregarUltimaPegada = async () => {
-    try {
-      const documento = apenasNumeros(usuario?.cpf);
-      const ultima = await PegadaService.obterUltimaPontuacao(documento);
-      setUltimaPontuacao(ultima?.pontuacao ?? null);
-    } catch (error) {
-  const mensagem = obterMensagemErro(error, 'Erro ao carregar sua última pegada.');
-  setMensagemErro(mensagem);
-  setErroVisivel(true);
-}
-};
+  useEffect(() => {
+    let ativo = true;
 
-  carregarUltimaPegada();
-}, []);
+    const carregarUltimaPegada = async () => {
+      try {
+        const documento = apenasNumeros(usuario?.cpf || usuario?.cnpj);
+        if (!documento) return;
 
+        const res = await PegadaService.obterUltimaPontuacao(documento);
+        if (!ativo) return;
+
+        if (res.ok) {
+          const d = res.data;
+          const valor = typeof d === 'number' ? d : d?.pontuacao;
+          setUltimaPontuacao(Number.isFinite(valor) ? valor : null);
+        } else {
+          // Não derruba fluxo; apenas loga para diagnóstico
+          console.warn('[Pegada] obterUltimaPontuacao erro:', res.error);
+        }
+      } catch (error) {
+        Alert.alert('Erro', obterMensagemErro(error, 'Erro ao carregar sua última pegada.'));
+      }
+    };
+
+    carregarUltimaPegada();
+    return () => {
+      ativo = false;
+    };
+  }, [usuario]);
 
   const perguntaAtual = perguntas[indiceAtual];
   const chaveAtual = `q${indiceAtual + 1}`;
 
- const handleChange = (campo, valor) => {
-  setRespostas((prev) => ({ ...prev, [campo]: valor }));
-  setErros((prev) => {
-    const novosErros = { ...prev };
-    delete novosErros[campo];
-    return novosErros;
-  });
+  const handleChange = (campo, valor) => {
+    setRespostas((prev) => ({ ...prev, [campo]: valor }));
+    setErros((prev) => {
+      const novosErros = { ...prev };
+      delete novosErros[campo];
+      return novosErros;
+    });
 
-  // 🔥 Espera 200ms para mostrar a seleção antes de avançar
-  if (indiceAtual < perguntas.length - 1) {
-    setTimeout(() => {
-      avancar();
-    }, 200);
-  }
-};
-
+    // Dá um pequeno tempo para o usuário ver a seleção antes de avançar
+    if (indiceAtual < perguntas.length - 1) {
+      setTimeout(() => {
+        avancar();
+      }, 200);
+    }
+  };
 
   const avancar = () => {
     if (indiceAtual < perguntas.length - 1) {
@@ -90,7 +100,7 @@ useEffect(() => {
         Animated.timing(fadeAnim, {
           toValue: 0,
           duration: 200,
-          useNativeDriver: true,  
+          useNativeDriver: true,
         }),
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -110,55 +120,52 @@ useEffect(() => {
   };
 
   const calcularPegada = async () => {
-  if (carregando) return;
-  setCarregando(true); 
+    if (carregando) return;
+    setCarregando(true);
 
-  try {
-    const todasRespondidas = perguntas.every((_, i) => {
-      const chave = `q${i + 1}`;
-      return respostas[chave] !== undefined && respostas[chave] !== '';
-    });
+    try {
+      const todasRespondidas = perguntas.every((_, i) => {
+        const chave = `q${i + 1}`;
+        return respostas[chave] !== undefined && respostas[chave] !== '';
+      });
 
-    if (!todasRespondidas) {
-      Alert.alert('Atenção', 'Por favor, responda todas as perguntas.');
+      if (!todasRespondidas) {
+        Alert.alert('Atenção', 'Por favor, responda todas as perguntas.');
+        setCarregando(false);
+        return;
+      }
+
+      const soma = Object.values(respostas).reduce(
+        (acc, val) => acc + (parseInt(val) || 0),
+        0
+      );
+
+      if (ultimaPontuacao !== null && soma === ultimaPontuacao) {
+        Alert.alert('Pegada já salva', 'Você já salvou essa pegada.');
+        setCarregando(false);
+        return;
+      }
+
+      const comparativo = obterComparativoPegada(soma);
+      const documento = apenasNumeros(usuario?.cpf || usuario?.cnpj);
+
+      const resp = await PegadaService.salvarPontuacao({ documento, pontuacao: soma });
+      if (!resp.ok) {
+        Alert.alert('Erro', obterMensagemErro(resp.error, 'Erro ao salvar pegada.'));
+        setCarregando(false);
+        return;
+      }
+
+      setResultado({ pontos: soma, comparativo });
+      setUltimaPontuacao(soma);
+    } catch (error) {
+      Alert.alert('Erro', obterMensagemErro(error, 'Erro ao salvar pegada.'));
+    } finally {
       setCarregando(false);
-      return;
     }
-
-    const soma = Object.values(respostas).reduce(
-      (acc, val) => acc + (parseInt(val) || 0),
-      0
-    );
-
-   if (ultimaPontuacao !== null && soma === ultimaPontuacao) {
-      Alert.alert('Pegada já salva', 'Você já salvou essa pegada.');
-      setCarregando(false);
-      return;
-    }
-
-    const comparativo = obterComparativoPegada(soma);
-    const documento = apenasNumeros(usuario?.cpf || usuario?.cnpj);
-
-
-    // 🔗 API real — ativar no futuro
-    await PegadaService.salvarPontuacao({ documento, pontuacao: soma });
-
-
-    setResultado({ pontos: soma, comparativo });
-    setUltimaPontuacao(soma);
-
-  } catch (error) {
-    console.error(error);
-   Alert.alert('Erro', obterMensagemErro(error, 'Erro ao salvar pegada.'));
-
-  } finally {
-    setCarregando(false);
-  } 
-};
+  };
 
   const progresso = `${indiceAtual + 1} de ${perguntas.length}`;
-
-
 
   return (
     <ScrollView
@@ -232,6 +239,7 @@ useEffect(() => {
           )}
         </View>
       </View>
+
       <ModalSucesso
         visivel={mostrarModal}
         exibirBotao={false}
@@ -245,14 +253,12 @@ useEffect(() => {
             <Text style={{ marginBottom: 8 }}>
               {resultado?.comparativo}
             </Text>
-            
             <Text style={{ fontSize: fonts.size.sm, color: colors.cinza }}>
               Redirecionando para a Home...
             </Text>
           </>
         }
-/>
-
+      />
     </ScrollView>
   );
 }

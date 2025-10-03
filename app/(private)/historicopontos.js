@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TextInput,
-  ScrollView,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { UsuarioService } from '../../services/usuarioService';
@@ -13,10 +12,9 @@ import { obterMensagemErro } from '../../utils/obterMensagemErro';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { fonts } from '../../theme/fonts';
-import BotaoVerdePequeno from '../../components/BotaoVerdePequeno';
 import VerMaisMenos from '../../components/VerMaisMenos';
 import ModalErro from '../../components/ModalErro';
-
+import { apenasNumeros } from '../../utils/formatarenvio';
 
 export default function HistoricoPontos() {
   const { usuario } = useAuth();
@@ -33,9 +31,6 @@ export default function HistoricoPontos() {
   const [erroVisivel, setErroVisivel] = useState(false);
   const [mensagemErro, setMensagemErro] = useState('');
 
- 
-
-
   const opcoesFiltro = [
     'todos',
     'entrada',
@@ -44,16 +39,45 @@ export default function HistoricoPontos() {
     'vouchers expirados',
   ];
 
+  // calcula saldo quando API não devolver "pontos"
+  const calcularSaldo = (movs) => {
+    return (movs || []).reduce((acc, m) => {
+      if (m.tipo === 'entrada') return acc + (m.pontos || 0);
+      if (m.tipo === 'saida') return acc - (m.pontos || 0); // conta qualquer saída
+      return acc;
+    }, 0);
+  };
 
-    const carregarDados = async () => {
+  const ordenarMovs = (arr) =>
+    [...(arr || [])].sort((a, b) => {
+      const ta = new Date(a?.timestamp || a?.data || 0).getTime();
+      const tb = new Date(b?.timestamp || b?.data || 0).getTime();
+      return tb - ta;
+    });
+
+  const carregarDados = async () => {
     try {
       setCarregando(true);
-      const dados = await UsuarioService.obterPorId(usuario.cpf);
-      const movimentacoesOrdenadas = (dados.movimentacoes || []).sort(
-        (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
-      );
-      setHistorico(movimentacoesOrdenadas);
-      setPontos(dados.pontos || 0);
+
+      const doc = apenasNumeros(usuario?.cpf || '');
+      const resp = await UsuarioService.obterPorId(doc);
+
+      if (!resp.ok) {
+        throw resp.error;
+      }
+
+      const data = resp.data;
+
+      // Suporta os dois formatos: {pontos, movimentacoes} OU array direto
+      if (data && Array.isArray(data)) {
+        const movs = ordenarMovs(data);
+        setHistorico(movs);
+        setPontos(calcularSaldo(movs));
+      } else {
+        const movs = ordenarMovs(data?.movimentacoes || []);
+        setHistorico(movs);
+        setPontos(Number.isFinite(data?.pontos) ? data.pontos : calcularSaldo(movs));
+      }
     } catch (error) {
       const mensagem = obterMensagemErro(error, 'Erro ao carregar histórico.');
       setMensagemErro(mensagem);
@@ -62,31 +86,31 @@ export default function HistoricoPontos() {
       setCarregando(false);
     }
   };
-   
-    useEffect(() => {
+
+  useEffect(() => {
     if (usuario?.cpf) {
       carregarDados();
     }
-  }, [usuario]);
-
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usuario?.cpf]);
 
   const carregarMais = () => {
-  if (carregandoMais) return; 
-  setCarregandoMais(true);
-  setTimeout(() => {
-    setMostrarTodos(true);
-    setCarregandoMais(false);
-  }, 300);
-};
+    if (carregandoMais) return;
+    setCarregandoMais(true);
+    setTimeout(() => {
+      setMostrarTodos(true);
+      setCarregandoMais(false);
+    }, 300);
+  };
 
- const verMenos = () => {
-  if (carregandoMais) return;
-  setCarregandoMais(true);
-  setTimeout(() => {
-    setMostrarTodos(false);
-    setCarregandoMais(false);
-  }, 300);
-};
+  const verMenos = () => {
+    if (carregandoMais) return;
+    setCarregandoMais(true);
+    setTimeout(() => {
+      setMostrarTodos(false);
+      setCarregandoMais(false);
+    }, 300);
+  };
 
   const totalEntradas = historico.filter((h) => h.tipo === 'entrada').length;
   const totalSaidas = historico.filter((h) => h.tipo === 'saida' && h.status === 'valido').length;
@@ -102,11 +126,16 @@ export default function HistoricoPontos() {
     if (!atendeBusca) return false;
 
     switch (filtro) {
-      case 'entrada': return item.tipo === 'entrada';
-      case 'vouchers adquiridos': return item.tipo === 'saida' && item.status === 'valido';
-      case 'vouchers utilizados': return item.tipo === 'saida' && item.status === 'utilizado';
-      case 'vouchers expirados': return item.tipo === 'saida' && item.status === 'expirado';
-      default: return true;
+      case 'entrada':
+        return item.tipo === 'entrada';
+      case 'vouchers adquiridos':
+        return item.tipo === 'saida' && item.status === 'valido';
+      case 'vouchers utilizados':
+        return item.tipo === 'saida' && item.status === 'utilizado';
+      case 'vouchers expirados':
+        return item.tipo === 'saida' && item.status === 'expirado';
+      default:
+        return true;
     }
   };
 
@@ -128,8 +157,11 @@ export default function HistoricoPontos() {
 
     return (
       <View style={[styles.card, isVoucher ? styles.voucher : styles.ponto]}>
-        <Text style={styles.data}>📅 {item.data}</Text>
-        <Text style={styles.pontos}>{item.tipo === 'entrada' ? '+' : '-'}{item.pontos} pontos</Text>
+        <Text style={styles.data}>📅 {item.data || item.timestamp}</Text>
+        <Text style={styles.pontos}>
+          {item.tipo === 'entrada' ? '+' : '-'}
+          {item.pontos} pontos
+        </Text>
         <Text style={styles.descricao}>
           {item.tipo === 'entrada'
             ? item.descricao
@@ -139,8 +171,16 @@ export default function HistoricoPontos() {
         {item.produtos && <Text style={styles.info}>📦 Produtos: {item.produtos.join(', ')}</Text>}
         {item.empresa && <Text style={styles.info}>🏢 Empresa: {item.empresa}</Text>}
         {item.endereco && <Text style={styles.info}>📍 Endereço: {item.endereco}</Text>}
-        {item.validade && <Text style={styles.info}>📅 Validade: {new Date(item.validade).toLocaleDateString('pt-BR')}</Text>}
-        {item.status && <Text style={[styles.info, { color: corStatus }]}>{iconeStatus} Status: {item.status}</Text>}
+        {item.validade && (
+          <Text style={styles.info}>
+            📅 Validade: {new Date(item.validade).toLocaleDateString('pt-BR')}
+          </Text>
+        )}
+        {item.status && (
+          <Text style={[styles.info, { color: corStatus }]}>
+            {iconeStatus} Status: {item.status}
+          </Text>
+        )}
       </View>
     );
   };
@@ -156,6 +196,7 @@ export default function HistoricoPontos() {
           tipoSelecionado={filtro}
           onSelecionarTipo={setFiltro}
         />
+
         <TextInput
           placeholder="Buscar..."
           value={busca}
@@ -172,26 +213,30 @@ export default function HistoricoPontos() {
             <View key={index}>{renderItem({ item })}</View>
           ))
         )}
-      <VerMaisMenos
-        mostrarTodos={mostrarTodos}
-        temMais={temMais}
-        onVerMais={carregarMais}
-        onVerMenos={verMenos}
-        carregando={carregandoMais}
-      />
+
+        <VerMaisMenos
+          mostrarTodos={mostrarTodos}
+          temMais={temMais}
+          onVerMais={carregarMais}
+          onVerMenos={verMenos}
+          carregando={carregandoMais}
+        />
       </View>
-      
-    {/* 🚩 Modal de erro */}
-    <ModalErro
-      visivel={erroVisivel}
-      mensagem={mensagemErro}
-      onClose={() => setErroVisivel(false)}
-    />
+
+      <ModalErro
+        visivel={erroVisivel}
+        mensagem={mensagemErro}
+        onClose={() => setErroVisivel(false)}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.xl,
+  },
   contentBox: {
     width: '100%',
     maxWidth: 700,
@@ -250,15 +295,6 @@ const styles = StyleSheet.create({
     fontSize: fonts.size.sm,
     color: colors.cinzaEscuro,
     marginTop: 2,
-  },
-  filtrosLinhaHorizontal: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xs,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  botaoFiltroHorizontal: {
-    marginRight: spacing.sm,
   },
   campoBusca: {
     backgroundColor: colors.branco,

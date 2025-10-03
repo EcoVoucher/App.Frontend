@@ -26,6 +26,7 @@ import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
 import { obterMensagemErro } from '../../utils/obterMensagemErro';
+import { apenasNumeros } from '../../utils/formatarenvio';
 
 const { width, height } = Dimensions.get('window');
 const tipos = ['Todos', 'Alimentacao', 'Transporte', 'Higiene'];
@@ -52,24 +53,49 @@ export default function CatalogoVouchersPF() {
     totalPontos,
   } = useCarrinho();
 
+  const calcularSaldo = (movs) =>
+    (movs || []).reduce((acc, m) => {
+      if (m.tipo === 'entrada') return acc + (m.pontos || 0);
+      if (m.tipo === 'saida') return acc - (m.pontos || 0);
+      return acc;
+    }, 0);
+
   const carregarSaldoAtualizado = async () => {
-    const res = await UsuarioService.obterPorId(usuario.cpf);
-    if (res?.ok === false) {
-      // opcional: setModalErro(obterMensagemErro(res.error, 'Não foi possível carregar seu saldo.'));
+    try {
+      const doc = apenasNumeros(usuario?.cpf || '');
+      const res = await UsuarioService.obterPorId(doc);
+      if (!res?.ok) {
+        setSaldoAtual(0);
+        // opcional mostrar erro:
+        // setModalErro(obterMensagemErro(res?.error, 'Não foi possível carregar seu saldo.'));
+        return;
+      }
+      const data = res.data;
+      if (Array.isArray(data)) {
+        // backend retornou apenas o histórico → calcula saldo
+        setSaldoAtual(calcularSaldo(data));
+      } else {
+        setSaldoAtual(data?.pontos ?? 0);
+      }
+    } catch (error) {
       setSaldoAtual(0);
-    } else {
-      const data = res?.data ?? res; // compatível com service antigo/novo
-      setSaldoAtual(data?.pontos ?? 0);
+      setModalErro(obterMensagemErro(error, 'Não foi possível carregar seu saldo.'));
     }
   };
 
   const carregarVouchers = async () => {
-    const res = await VouchersService.listarVouchersDisponiveisPF();
-    if (res?.ok === false) {
-      setModalErro(obterMensagemErro(res.error, 'Erro ao carregar catálogo.'));
-    } else {
-      const data = res?.data ?? res; // compatível com service antigo/novo
+    try {
+      const res = await VouchersService.listarVouchersDisponiveisPF();
+      if (!res?.ok) {
+        setModalErro(obterMensagemErro(res?.error, 'Erro ao carregar catálogo.'));
+        setVouchers([]);
+        return;
+      }
+      const data = res.data;
       setVouchers(Array.isArray(data) ? data : []);
+    } catch (error) {
+      setModalErro(obterMensagemErro(error, 'Erro ao carregar catálogo.'));
+      setVouchers([]);
     }
   };
 
@@ -95,39 +121,33 @@ export default function CatalogoVouchersPF() {
 
     if (totalPontos > saldoAtual) {
       setModalErro('Você não possui pontos suficientes para essa compra.');
-      // não fecha/limpa; deixa o usuário ajustar
       return;
     }
 
     setComprando(true);
     try {
-      // info rica para o modal
       const itensComprados = selecionados.map((item) => ({
         idLote: item.idLote,
         tipo: item.tipo,
       }));
 
-      // payload: ids dos lotes
       const listaFinal = selecionados.map((item) => item.idLote);
+      const cpfLimpo = apenasNumeros(usuario?.cpf || '');
 
-      const res = await VouchersService.comprarVouchers(usuario.cpf, listaFinal);
-
-      if (res?.ok === false) {
-        setModalErro(
-          obterMensagemErro(res.error, 'Ocorreu um erro na compra. Tente novamente.')
-        );
+      const res = await VouchersService.comprarVouchers(cpfLimpo, listaFinal);
+      if (!res?.ok) {
+        setModalErro(obterMensagemErro(res?.error, 'Ocorreu um erro na compra. Tente novamente.'));
         return;
       }
 
-      const resultado = res?.data ?? res;
+      const resultado = res.data;
 
-      // atualiza dados na tela
+      // atualiza catálogo e saldo
       await Promise.all([carregarVouchers(), carregarSaldoAtualizado()]);
 
-      // saldo local só para exibir imediatamente no modal
+      // saldo local para exibir no modal imediatamente
       const novoSaldoLocal = Math.max(0, (saldoAtual || 0) - totalPontos);
 
-      // sucesso: agora sim limpa/fecha
       limparCarrinho();
       fecharResumo();
 
@@ -161,13 +181,16 @@ export default function CatalogoVouchersPF() {
         ),
       });
     } catch (error) {
-      const mensagemApi = error?.message || '';
+      const msg = obterMensagemErro(
+        error,
+        'Ocorreu um erro na compra. Tente novamente ou verifique seus pontos.'
+      ).toLowerCase();
 
-      if (mensagemApi.includes('já adquiriu')) {
+      if (msg.includes('já adquiriu')) {
         setModalErro('Você já adquiriu este voucher. Só é permitido 1 unidade por lote.');
-      } else if (mensagemApi.includes('Pontos insuficientes')) {
+      } else if (msg.includes('pontos insuficientes')) {
         setModalErro('Você não possui pontos suficientes para essa compra.');
-      } else if (mensagemApi.includes('Sem códigos disponíveis')) {
+      } else if (msg.includes('sem códigos disponíveis') || msg.includes('esgotado')) {
         setModalErro('Este voucher está esgotado no momento.');
       } else {
         setModalErro(
@@ -220,8 +243,6 @@ export default function CatalogoVouchersPF() {
           tipos={tipos}
           tipoSelecionado={tipoSelecionado}
           onSelecionarTipo={setTipoSelecionado}
-          // se quiser abrir o resumo por aqui:
-          // onAbrirResumo={abrirModalResumo}
         />
 
         <FlatList

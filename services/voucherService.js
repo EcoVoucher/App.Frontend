@@ -3,8 +3,6 @@ import { http } from "./http";
 
 const limpar = (s) => String(s || "").trim();
 const soDigitos = (s) => String(s || "").replace(/\D/g, "");
-
-// Validadores reutilizáveis
 const isObj = (d) => d && typeof d === "object" && !Array.isArray(d);
 
 export const VouchersService = {
@@ -53,7 +51,7 @@ export const VouchersService = {
   /** 🔍 Buscar vouchers adquiridos por CPF+Tipo (PJ) */
   buscarVouchersPorCpfETipo(cpf, tipo) {
     return http.get("/vouchers/adquiridos", {
-      params: { cpf: soDigitos(cpf), tipo: limpar(tipo) },
+      params: { cpf: soDigitos(cpf), tipo: limpar(tipo).toLowerCase() }, // 👈 normalize
       validate: (d) => Array.isArray(d),
     });
   },
@@ -63,7 +61,7 @@ export const VouchersService = {
     return http.post(
       "/vouchers/utilizar",
       { codigo: limpar(codigo) },
-      { validate: (d) => d === true || isObj(d) }
+      { validate: (d) => d === true || isObj(d) } // 👈 aceita boolean ou objeto
     );
   },
 

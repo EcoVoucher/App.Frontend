@@ -11,29 +11,36 @@ export default function SelectField({
   onValueChange,
   options,
   error,
+  placeholder = 'Selecione uma opção',     // opcional
+  containerStyle,                           // opcional
+  enabled = true,                           // opcional
+  ...rest
 }) {
-  const isValid = selectedValue && !error;
+  const isValid = !!selectedValue && !error;
 
-  const containerStyle = [
+  const containerSty = [
     styles.pickerContainer,
     isValid
       ? { borderColor: colors.sucesso }
       : error
       ? { borderColor: colors.erro }
       : { borderColor: colors.borda },
+    containerStyle,
   ];
 
   return (
     <View style={styles.wrapper}>
       {label && <Text style={styles.label}>{label}</Text>}
-      <View style={containerStyle}>
+      <View style={containerSty}>
         <Picker
           selectedValue={selectedValue}
           onValueChange={onValueChange}
           style={styles.picker}
           dropdownIconColor={colors.preto}
+          enabled={enabled}
+          {...rest}
         >
-          <Picker.Item label="Selecione uma opção" value="" />
+          <Picker.Item label={placeholder} value="" />
           {options.map((opcao, index) => (
             <Picker.Item key={index} label={opcao.label} value={opcao.value} />
           ))}

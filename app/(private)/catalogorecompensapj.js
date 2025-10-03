@@ -21,14 +21,14 @@ import ModalSucesso from '../../components/ModalSucesso';
 import ModalErro from '../../components/ModalErro';
 import SelectField from '../../components/SelectField';
 import { useAuth } from '../../context/AuthContext';
-import { VouchersService } from '../../services/voucherService'; // <- service no padrão Result
+import { VouchersService } from '../../services/voucherService';
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import { spacing } from '../../theme/spacing';
 import { validarCamposObrigatorios } from '../../utils/validarCamposObrigatorios';
 import VerMaisMenos from '../../components/VerMaisMenos';
 import { obterStatus, textoStatus, corStatus } from '../../utils/status';
-import { obterMensagemErro } from '../../utils/obterMensagemErro'; // <- import correto
+import { obterMensagemErro } from '../../utils/obterMensagemErro';
 
 const { width, height } = Dimensions.get('window');
 
@@ -64,9 +64,9 @@ export default function CatalogoRecompensaPJ() {
   const [mostrarTodos, setMostrarTodos] = useState(false);
   const [erroVisivel, setErroVisivel] = useState(false);
   const [mensagemErro, setMensagemErro] = useState('');
-  const [isLoading, setIsLoading] = useState(false);        // <- carregamento inicial
-  const [isSubmitting, setIsSubmitting] = useState(false);  // <- envio do form
-  const [erroCarregamento, setErroCarregamento] = useState(''); // <- banner inline, sem modal no mount
+  const [isLoading, setIsLoading] = useState(false);          // carregamento inicial
+  const [isSubmitting, setIsSubmitting] = useState(false);    // envio do form
+  const [erroCarregamento, setErroCarregamento] = useState(''); // banner inline
 
   const itensPorPagina = 5;
 
@@ -85,25 +85,29 @@ export default function CatalogoRecompensaPJ() {
     }
   };
 
- const carregarDados = async () => {
-  try {
-    const [vRes, eRes] = await Promise.all([
-      VouchersService.listarVouchers(),
-      VouchersService.obterEstatisticas(),
-    ]);
+  const carregarDados = async () => {
+    try {
+      setIsLoading(true);
+      setErroCarregamento('');
+      const [vRes, eRes] = await Promise.all([
+        VouchersService.listarVouchers(),
+        VouchersService.obterEstatisticas(),
+      ]);
 
-    if (!vRes.ok) throw vRes.error;
-    if (!eRes.ok) throw eRes.error;
+      if (!vRes.ok) throw vRes.error;
+      if (!eRes.ok) throw eRes.error;
 
-    setVouchersGerados(vRes.data);
-    setQtdAdquiridos(eRes.data.totalComprados);
-    setAdquiridosPorLote(eRes.data.porLote);
-  } catch (error) {
-    const mensagem = obterMensagemErro(error, 'Erro ao carregar dados.');
-    setMensagemErro(mensagem);
-    setErroVisivel(true);
-  }
-};
+      setVouchersGerados(Array.isArray(vRes.data) ? vRes.data : []);
+      setQtdAdquiridos(Number(eRes.data?.totalComprados || 0));
+      setAdquiridosPorLote(eRes.data?.porLote || {});
+    } catch (error) {
+      const mensagem = obterMensagemErro(error, 'Erro ao carregar dados.');
+      // banner inline no mount
+      setErroCarregamento(mensagem);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (usuario) carregarDados();
@@ -127,7 +131,7 @@ export default function CatalogoRecompensaPJ() {
   const [dia, mes, ano] = partesData;
   const validadeFormatada = `${ano}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
 
-  if (gerandoVoucher) return;
+  if (isSubmitting) return; // <- aqui
 
   const dados = { tipo, produtos, quantidade, dataValidade };
   const errosValidacao = validarCamposObrigatorios(dados, ['tipo', 'produtos', 'quantidade', 'dataValidade']);
@@ -136,7 +140,7 @@ export default function CatalogoRecompensaPJ() {
     return;
   }
 
-  setGerandoVoucher(true);
+  setIsSubmitting(true); // <- e aqui
   try {
     const res = await VouchersService.gerarVoucher({
       tipo,
@@ -158,9 +162,9 @@ export default function CatalogoRecompensaPJ() {
     setQuantidade('');
     setDataValidade('');
     setErros({});
-    carregarDados(); // mantém seu reload
+    carregarDados();
   } finally {
-    setGerandoVoucher(false);
+    setIsSubmitting(false); // <- e aqui
   }
 };
 
@@ -168,9 +172,9 @@ export default function CatalogoRecompensaPJ() {
   const vouchersFiltrados = useMemo(() => {
     return vouchersGerados
       .filter((item) => {
-        const status = obterStatus(item);
-        if (filtroStatus === 'validos') return status === 'validos';
-        if (filtroStatus === 'expirado') return status === 'expirado';
+        const st = obterStatus(item);
+        if (filtroStatus === 'validos') return st === 'validos';
+        if (filtroStatus === 'expirado') return st === 'expirado';
         return true; // 'todos'
       })
       .sort((a, b) => {
@@ -187,19 +191,29 @@ export default function CatalogoRecompensaPJ() {
   }, [vouchersGerados, filtroStatus, criterioOrdenacao]);
 
   const totalLotes = vouchersFiltrados.length;
-  const totalVouchers = vouchersFiltrados.reduce((acc, v) => acc + v.quantidade, 0);
-  const qtdAtivos = totalVouchers - qtdAdquiridos;
+  const totalVouchers = vouchersFiltrados.reduce((acc, v) => acc + (v.quantidade || 0), 0);
+  const qtdAtivos = Math.max(0, totalVouchers - (qtdAdquiridos || 0));
 
   return (
     <View style={styles.container}>
       <View style={styles.contentBox}>
-
         {/* Banner de erro de carregamento (sem modal no mount) */}
         {!!erroCarregamento && (
-          <View style={{ backgroundColor: '#FFF3CD', borderColor: '#FFEEBA', borderWidth: 1, padding: 8, borderRadius: 8, marginVertical: 8 }}>
+          <View
+            style={{
+              backgroundColor: '#FFF3CD',
+              borderColor: '#FFEEBA',
+              borderWidth: 1,
+              padding: 8,
+              borderRadius: 8,
+              marginVertical: 8,
+            }}
+          >
             <Text style={{ color: '#856404', textAlign: 'center' }}>{erroCarregamento}</Text>
             <TouchableOpacity onPress={carregarDados} style={{ alignSelf: 'center', marginTop: 6 }}>
-              <Text style={{ color: colors.verde, textDecorationLine: 'underline' }}>Tentar novamente</Text>
+              <Text style={{ color: colors.verde, textDecorationLine: 'underline' }}>
+                Tentar novamente
+              </Text>
             </TouchableOpacity>
           </View>
         )}
@@ -212,7 +226,7 @@ export default function CatalogoRecompensaPJ() {
               {['todos', 'validos', 'expirado'].map((value) => (
                 <View key={value} style={styles.botaoFiltroBox}>
                   <BotaoVerdePequeno
-                    texto={textoStatus[value]}
+                    texto={textoStatus[value] || (value === 'todos' ? 'Todos' : value)}
                     onPress={() => setFiltroStatus(value)}
                     ativo={filtroStatus === value}
                   />
@@ -238,7 +252,11 @@ export default function CatalogoRecompensaPJ() {
                 />
               </View>
 
-              <TouchableOpacity style={styles.botaoCadastrar} onPress={handleAbrirModal} disabled={isLoading}>
+              <TouchableOpacity
+                style={styles.botaoCadastrar}
+                onPress={handleAbrirModal}
+                disabled={isLoading}
+              >
                 <Ionicons name="add-circle" size={20} color={colors.branco} />
                 <Text style={styles.textoCadastrar}>Cadastrar novo voucher</Text>
               </TouchableOpacity>
@@ -251,10 +269,10 @@ export default function CatalogoRecompensaPJ() {
           keyExtractor={(item) => item.idLote}
           scrollEnabled={false}
           renderItem={({ item }) => {
-            const total = item.quantidade;
+            const total = item.quantidade || 0;
             const usados = adquiridosPorLote[item.idLote] || 0;
-
             const percentual = total > 0 ? (usados / total) * 100 : 0;
+
             const corFundo = percentual === 100 ? '#f5f5f5' : percentual > 0 ? '#fffbe5' : '#e6ffed';
             const corBorda = percentual === 100 ? '#ccc' : percentual > 0 ? '#f0c674' : '#6acc8b';
 
@@ -262,22 +280,20 @@ export default function CatalogoRecompensaPJ() {
               <View style={[styles.card, { backgroundColor: corFundo, borderLeftColor: corBorda }]}>
                 <View style={styles.headerCard}>
                   <Text style={styles.cardTitulo}>{item.tipo}</Text>
-                  <Badge
-                    texto={textoStatus[obterStatus(item)]}
-                    corFundo={corStatus[obterStatus(item)]}
-                  />
+                  <Badge texto={textoStatus[obterStatus(item)]} corFundo={corStatus[obterStatus(item)]} />
                 </View>
                 <Text style={styles.cardInfo}>🧾 Produtos: {item.produtos.join(', ')}</Text>
                 <Text style={styles.cardInfo}>📅 Validade: {formatarData(item.dataValidade)}</Text>
                 <Text style={styles.cardInfo}>🏢 Empresa: {item.empresa}</Text>
                 <Text style={styles.cardInfo}>📍 Endereço: {item.endereco}</Text>
-                <Text style={styles.cardInfo}>🔁 Adquiridos: {adquiridosPorLote[item.idLote] || 0} de {item.quantidade}</Text>
                 <Text style={styles.cardInfo}>
-                  🔑 Último código: {(
-                    item.codigos.length > 0 && typeof item.codigos[item.codigos.length - 1] === 'object'
-                      ? item.codigos[item.codigos.length - 1].codigo
-                      : item.codigos[item.codigos.length - 1] || '---'
-                  )}
+                  🔁 Adquiridos: {adquiridosPorLote[item.idLote] || 0} de {total}
+                </Text>
+                <Text style={styles.cardInfo}>
+                  🔑 Último código:{' '}
+                  {item.codigos.length > 0 && typeof item.codigos[item.codigos.length - 1] === 'object'
+                    ? item.codigos[item.codigos.length - 1].codigo
+                    : item.codigos[item.codigos.length - 1] || '---'}
                 </Text>
               </View>
             );
@@ -295,12 +311,7 @@ export default function CatalogoRecompensaPJ() {
       </View>
 
       {/* Modal explicativo */}
-      <Modal
-        visible={modalInfo}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setModalInfo(false)}
-      >
+      <Modal visible={modalInfo} transparent animationType="fade" onRequestClose={() => setModalInfo(false)}>
         <View style={styles.overlay}>
           <View style={styles.box}>
             <Text style={styles.modalTitulo}>Legenda dos Status</Text>
@@ -349,10 +360,7 @@ export default function CatalogoRecompensaPJ() {
                         setProdutos(atualizados);
                         setErros((prev) => ({ ...prev, produtos: undefined }));
                       }}
-                      style={[
-                        styles.produtoItem,
-                        produtos.includes(prod) && styles.produtoSelecionado,
-                      ]}
+                      style={[styles.produtoItem, produtos.includes(prod) && styles.produtoSelecionado]}
                     >
                       <Text style={produtos.includes(prod) && { fontWeight: 'bold' }}>{prod}</Text>
                     </TouchableOpacity>
@@ -403,7 +411,7 @@ export default function CatalogoRecompensaPJ() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Modais globais (não abrem no mount) */}
+      {/* Modais globais (ações) */}
       <ModalErro visivel={erroVisivel} mensagem={mensagemErro} onClose={() => setErroVisivel(false)} />
 
       <ModalSucesso
@@ -568,40 +576,34 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
     alignSelf: 'flex-start',
   },
-
   statusTexto: {
     color: colors.branco,
     fontSize: fonts.size.xs,
     fontWeight: 'bold',
   },
-
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   box: {
     backgroundColor: colors.branco,
     padding: spacing.lg,
     borderRadius: 12,
     width: '80%',
   },
-
   modalInfo: {
     fontSize: fonts.size.sm,
     marginBottom: spacing.sm,
     color: colors.textDark,
   },
-
   botaoFechar: {
     marginTop: spacing.md,
     backgroundColor: colors.verde,
@@ -609,7 +611,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignSelf: 'center',
   },
-
   textoFechar: {
     color: colors.branco,
     fontWeight: 'bold',

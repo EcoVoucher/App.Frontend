@@ -1,30 +1,33 @@
-import api from './api';
+// services/depositoService.js
+import { http } from './http';
+
+const soDigitos = (s) => String(s ?? '').replace(/\D/g, '');
+const isObj = (d) => d && typeof d === 'object' && !Array.isArray(d);
 
 export const DepositoService = {
   /**
    * Realiza um depósito de materiais.
-   * @param {string} cpf - CPF do usuário (sem máscara).
-   * @param {Array} materiais - Lista de materiais com nome, quantidade e pontos.
-   * @param {number} totalPontos - Total de pontos do depósito.
-   * @returns {Promise<object>} - Dados do comprovante do depósito.
+   * payload: { cpf, materiais, totalPontos }
+   * POST /depositos
    */
-  realizarDeposito: async (cpf, materiais, totalPontos) => {
+  realizarDeposito(cpf, materiais, totalPontos) {
     const payload = {
-      cpf,
-      materiais,
-      totalPontos,
+      cpf: soDigitos(cpf),
+      materiais: Array.isArray(materiais) ? materiais : [],
+      totalPontos: Number(totalPontos) || 0,
     };
-    const response = await api.post('/depositos', payload);
-    return response.data;
+    return http.post('/depositos', payload, {
+      validate: (d) => isObj(d) || d === true, // aceita objeto de comprovante ou boolean
+    });
   },
 
   /**
    * Consulta CPF para validação se está cadastrado.
-   * @param {string} cpf
-   * @returns {Promise<object>} - Dados do usuário
+   * GET /usuarios/cpf/:cpf
    */
-  consultarUsuarioPorCPF: async (cpf) => {
-    const response = await api.get(`/usuarios/cpf/${cpf}`);
-    return response.data;
+  consultarUsuarioPorCPF(cpf) {
+    return http.get(`/usuarios/cpf/${soDigitos(cpf)}`, {
+      validate: (d) => isObj(d),
+    });
   },
 };
