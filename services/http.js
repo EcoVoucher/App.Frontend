@@ -50,7 +50,10 @@ export const http = {
     httpRequest({ url, method: "POST", data: body, ...(config || {}) }),
   put: (url, body, config) =>
     httpRequest({ url, method: "PUT", data: body, ...(config || {}) }),
+  patch: (url, body, config) =>                    // 👈 ADICIONE
+    httpRequest({ url, method: "PATCH", data: body, ...(config || {}) }),
   del: (url, config) => httpRequest({ url, method: "DELETE", ...(config || {}) }),
+
 };
 
 /**
