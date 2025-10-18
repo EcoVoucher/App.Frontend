@@ -1,7 +1,8 @@
 // context/AuthContext.js
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "expo-router";
 import storage from "../utils/storage";
-import api from "../services/api";
+import api, { setOnUnauthorized } from "../services/api";   // 👈 importa o setter
 import { AuthService } from "../services/authService";
 
 const AuthContext = createContext(null);
@@ -12,48 +13,73 @@ const setAuthHeader = (token) => {
 };
 
 export const AuthProvider = ({ children }) => {
+  const router = useRouter();
   const [usuario, setUsuario] = useState(null);
   const [carregando, setCarregando] = useState(true);
 
+  // evita múltiplos redirects em rajada de 401
+  const handlingUnauthorizedRef = useRef(false);
+
+  const goLogin = () => {
+    setTimeout(() => {
+      try { router.replace("/(public)/login"); } catch {}
+    }, 0);
+  };
+
+  // ✅ registra listener global para 401/403 do axios (services/api.js)
+  useEffect(() => {
+    const handler = async () => {
+      if (handlingUnauthorizedRef.current) return;
+      handlingUnauthorizedRef.current = true;
+
+      try {
+        await storage.clearAll();
+      } finally {
+        setAuthHeader(null);
+        setUsuario(null);
+        goLogin();
+        // libera novo redirect após um curto intervalo
+        setTimeout(() => { handlingUnauthorizedRef.current = false; }, 1000);
+      }
+    };
+
+    setOnUnauthorized(handler);
+    return () => setOnUnauthorized(null); // cleanup
+  }, []);
+  
   useEffect(() => {
     const hydrate = async () => {
       try {
-        const [token, user] = await Promise.all([
-          storage.getToken(),
-          storage.getUser(),
-        ]);
+        const [token, user] = await Promise.all([storage.getToken(), storage.getUser()]);
 
-        // sessão incompleta -> limpa
         if (!token || !user) {
           await storage.clearAll();
           setAuthHeader(null);
           setUsuario(null);
+          goLogin();
           return;
         }
 
         setAuthHeader(token);
+        const me = await AuthService.me();
 
-        // valida token no backend
-        const me = await AuthService.me(); // { ok, data | error }
         if (me.ok) {
-          // opcional: se o backend devolver dados atualizados do usuário, você pode mesclar aqui
           setUsuario(user);
         } else if (me.error?.status === 401) {
-          // token inválido → sair (limpa também o header)
           await storage.clearAll();
-          setAuthHeader(null);                 // 👈 adicionado
+          setAuthHeader(null);
           setUsuario(null);
+          goLogin();
         } else {
-          // 404/500/etc → não derruba sessão
           console.warn("[Auth] /auth/me falhou:", me.error);
           setUsuario(user);
         }
       } catch (err) {
-        // qualquer erro na hidratação => zera sessão (modo estrito)
         console.warn("[Auth] hydrate error:", err);
         await storage.clearAll();
         setAuthHeader(null);
         setUsuario(null);
+        goLogin();
       } finally {
         setCarregando(false);
       }
@@ -62,7 +88,6 @@ export const AuthProvider = ({ children }) => {
     hydrate();
   }, []);
 
-  // Tela chama: login({ cpfOuCnpj, senha, tipo }) -> { ok, data|error }
   const login = async ({ cpfOuCnpj, senha, tipo }) => {
     const resp = await AuthService.login({ cpfOuCnpj, senha, tipo });
     if (!resp.ok) return resp;
@@ -76,7 +101,6 @@ export const AuthProvider = ({ children }) => {
 
     const usuarioComTipo = { ...usr, tipo: tipo ?? usr?.tipo ?? "pf", isAdmin };
 
-    // AuthService.login já salvou token/usuario no storage
     setAuthHeader(data.token);
     setUsuario(usuarioComTipo);
 
@@ -84,12 +108,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
-    try {
-      await AuthService.logout(); // opcional, não bloqueia saída
-    } catch {}
+    try { await AuthService.logout(); } catch {}
     await storage.clearAll();
     setAuthHeader(null);
     setUsuario(null);
+    goLogin();
   };
 
   const value = useMemo(
@@ -98,10 +121,10 @@ export const AuthProvider = ({ children }) => {
       carregando,
       login,
       logout,
-      setUsuario, // útil p/ atualizar perfil local
+      setUsuario,
       isAutenticado: !!usuario,
       isAdmin: !!usuario?.isAdmin,
-      tipo: usuario?.tipo ?? null, // "pf" | "pj" | "admin"
+      tipo: usuario?.tipo ?? null,
       isPF: usuario?.tipo === "pf",
       isPJ: usuario?.tipo === "pj",
     }),

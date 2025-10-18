@@ -167,33 +167,40 @@ export default function Home() {
     <View style={styles.container}>
       <View style={styles.blocoInformativo}>
         <View style={styles.cabecalho}>
-          <Image
-            source={require('../../assets/imagensEco/ecoVoucherIcon.png')}
-            style={styles.logo}
-          />
-          <View className={styles.boasVindas}>
-            <Text
-              style={[
-                styles.titulo,
-                { fontSize: isLargeScreen ? fonts.size.xl : fonts.size.lg },
-              ]}
-            >
-              Olá,{' '}
-              {(usuario?.nome || usuario?.nomeEmpresa || '').replace(
-                /\b\w/g,
-                (l) => l.toUpperCase()
-              )}
-            </Text>
-            <Text
-              style={[
-                styles.subtitulo,
-                { fontSize: isLargeScreen ? fonts.size.md : fonts.size.sm },
-              ]}
-            >
-              Transforme suas ações em benefícios.
-            </Text>
-          </View>
-        </View>
+  <Image
+    source={require('../../assets/imagensEco/ecoVoucherIcon.png')}
+    style={styles.logo}
+  />
+
+  {/* Wrapper do texto COM minWidth:0 para truncar corretamente no RN Web */}
+  <View style={styles.boasVindas}>
+      <Text
+        style={[
+          styles.titulo,
+          { fontSize: isLargeScreen ? fonts.size.xl : fonts.size.lg },
+        ]}
+        numberOfLines={1}
+        ellipsizeMode="tail"
+        adjustsFontSizeToFit
+        minimumFontScale={0.85}
+      >
+        Olá, {(usuario?.nome || usuario?.nomeEmpresa || '')
+          .toLowerCase()
+          .replace(/\b\w/g, l => l.toUpperCase())}
+      </Text>
+
+      <Text
+        style={[
+          styles.subtitulo,
+          { fontSize: isLargeScreen ? fonts.size.md : fonts.size.sm },
+        ]}
+        numberOfLines={1}
+        ellipsizeMode="tail"
+      >
+        Transforme suas ações em benefícios.
+      </Text>
+    </View>
+  </View>
 
         {usuario?.tipo === 'pf' ? (
           <>
@@ -299,11 +306,27 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     elevation: 2,
   },
-  cabecalho: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md },
-  logo: { width: 60, height: 60, resizeMode: 'contain', marginRight: spacing.sm },
-  boasVindas: { flex: 1 },
-  titulo: { fontSize: fonts.size.lg, fontWeight: fonts.weight.bold, color: colors.verde },
-  subtitulo: { fontSize: fonts.size.sm, color: colors.cinza },
+   cabecalho: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  logo: { width: 60, height: 60, resizeMode: 'contain', marginRight: spacing.sm, flexShrink: 0 },
+  boasVindas: {
+    flex: 1,
+    minWidth: 0,       
+  },
+  titulo: {
+    fontSize: fonts.size.lg,
+    fontWeight: fonts.weight.bold,
+    color: colors.verde,
+    lineHeight: Math.round(fonts.size.lg * 1.2), 
+  },
+  subtitulo: {
+    fontSize: fonts.size.sm,
+    color: colors.cinza,
+    lineHeight: Math.round(fonts.size.sm * 1.3),
+  },
   destaqueItem: { fontSize: fonts.size.md, color: colors.verde, marginBottom: 4 },
   destaqueItemDesc: { fontSize: fonts.size.sm, color: colors.cinza, marginBottom: 8 },
   valor: { fontWeight: 'bold' },

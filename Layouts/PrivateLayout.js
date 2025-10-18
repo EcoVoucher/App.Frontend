@@ -1,21 +1,13 @@
 // app/Layouts/PrivateLayout.js
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  ScrollView,
-  View,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
-  StatusBar,
-  TouchableOpacity,
-  Text,
-  ActivityIndicator,
+  ScrollView, View, StyleSheet, KeyboardAvoidingView, Platform,
+  SafeAreaView, StatusBar, TouchableOpacity, Text, ActivityIndicator,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useCarrinho } from '../context/CarrinhoContext';           
+import { useCarrinho } from '../context/CarrinhoContext';
 import RodapeNavegacao from '../components/RodapeNavegacao';
-import { useAuth } from '../context/AuthContext';                    
+import { useAuth } from '../context/AuthContext';
 import { useRouter, Slot, usePathname } from 'expo-router';
 import { useModalCarrinho } from '../context/ModalCarrinhoContext';
 import { colors } from '../theme/colors';
@@ -30,41 +22,56 @@ export default function PrivateLayout() {
   const { abrirResumo } = useModalCarrinho();
   const { selecionados } = useCarrinho();
 
-  const isAdmin = usuario?.isAdmin === true || String(usuario?.isAdmin).toLowerCase() === 'true';
+  const isAdmin =
+    usuario?.isAdmin === true || String(usuario?.isAdmin).toLowerCase() === 'true';
 
-  const estaNoCatalogoPF = pathname.includes('/catalogovoucherspf');
-  const estaNaPegada = pathname.includes('/pegada');
-  const exibindoResultado = estaNaPegada && usuario?.primeiroAcesso && !pathname.includes('/home');
-  const esconderRodape = pathname.includes('/pegada') && (usuario?.primeiroAcesso || exibindoResultado);
+  const rota = (pathname || '').toLowerCase();
+  const estaNoCatalogoPF = rota.includes('/catalogovoucherspf');
+  const estaNaPegada = rota.includes('/pegada');
+  const exibindoResultado = estaNaPegada && usuario?.primeiroAcesso && !rota.includes('/home');
+  const esconderRodape = rota.includes('/pegada') && (usuario?.primeiroAcesso || exibindoResultado);
+
+  // ===== go seguro: evita replace para a mesma rota e limpa timer no unmount =====
+  const timerRef = useRef(null);
+  const go = (path) => {
+    const alvo = (path || '').toLowerCase();
+    if (alvo === rota) return;                     // já está na rota alvo
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      try { router.replace(path); } catch {}
+    }, 0);
+  };
+  useEffect(() => () => {                          // cleanup ao desmontar
+    if (timerRef.current) clearTimeout(timerRef.current);
+  }, []);
+  // =============================================================================
+
+  useEffect(() => { setIsReady(true); }, []);
 
   useEffect(() => {
-    setIsReady(true);
-  }, []);
+    if (!isReady || carregando) return;
 
-   useEffect(() => {
-   if (!isReady || carregando) return;     // ✅ espere o boot
-   if (!usuario) {
-    router.replace('/(public)/login');
-   return;
-   }
-
-    const rota = pathname.toLowerCase();
-
-    // admin deve ficar nas telas de admin
-    if (isAdmin && !rota.includes('/admin')) {
-      router.replace('/(private)/admin');
+    // 1) sem sessão -> login
+    if (!usuario) {
+      go('/(public)/login');
       return;
     }
 
-    // rotas exclusivas de PJ
+    // 2) admin deve ficar no espaço admin
+    if (isAdmin && !rota.includes('/admin')) {
+      go('/(private)/admin');
+      return;
+    }
+
+    // 3) rotas exclusivas de PJ
     if (rota.includes('catalogorecompensapj') || rota.includes('validarvoucherpj')) {
-      if (usuario.tipo !== 'pj') {
-        router.replace('/(private)/home');
+      if (usuario?.tipo !== 'pj') {
+        go('/(private)/home');
         return;
       }
     }
 
-    // rotas exclusivas de PF
+    // 4) rotas exclusivas de PF
     if (
       rota.includes('pegada') ||
       rota.includes('historicopontos') ||
@@ -72,23 +79,24 @@ export default function PrivateLayout() {
       rota.includes('historicopegada') ||
       rota.includes('pontoscoleta')
     ) {
-      if (usuario.tipo !== 'pf') {
-        router.replace('/(private)/home');
+      if (usuario?.tipo !== 'pf') {
+        go('/(private)/home');
       }
     }
-  }, [isReady, carregando, usuario, pathname]);
+  }, [isReady, carregando, usuario, rota]);
 
-  // Enquanto carrega ou redireciona, mostra um loading para evitar flash
-  if (carregando || !usuario) {
+  // Enquanto hidrata, mostra splash
+  if (!isReady || carregando) {
     return (
       <SafeAreaView style={styles.safe}>
         <StatusBar barStyle="dark-content" backgroundColor={colors.fundo} />
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={colors.verde} />
-        </View>
+        <View style={styles.center}><ActivityIndicator size="large" color={colors.verde} /></View>
       </SafeAreaView>
     );
   }
+
+  // Se já detectou ausência de usuário, evita “flash” até o replace acontecer
+  if (!usuario) return null;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -108,7 +116,7 @@ export default function PrivateLayout() {
           </ScrollView>
         </View>
 
-        {!isAdmin && estaNoCatalogoPF && selecionados.length > 0 && (
+        {!isAdmin && estaNoCatalogoPF && (selecionados?.length ?? 0) > 0 && (
           <TouchableOpacity onPress={abrirResumo} style={styles.botaoCarrinho}>
             <MaterialCommunityIcons name="cart" size={28} color="#fff" />
             <View style={styles.badge}>
@@ -128,53 +136,22 @@ export default function PrivateLayout() {
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.fundo,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: colors.fundo,
-    paddingTop: spacing.lg,
-  },
-  conteudoWrapper: {
-    flex: 1,
-  },
-  conteudo: {
-    flexGrow: 1,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 48,
-  },
+  safe: { flex: 1, backgroundColor: colors.fundo },
+  container: { flex: 1, backgroundColor: colors.fundo, paddingTop: spacing.lg },
+  conteudoWrapper: { flex: 1 },
+  conteudo: { flexGrow: 1, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 48 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   botaoCarrinho: {
-    position: 'absolute',
-    bottom: Platform.OS === 'web' ? 100 : 110,
-    right: 20,
-    backgroundColor: colors.verde,
-    padding: 16,
-    borderRadius: 50,
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    zIndex: 9999,
+    position: 'absolute', bottom: Platform.OS === 'web' ? 100 : 110, right: 20,
+    backgroundColor: colors.verde, padding: 16, borderRadius: 50, elevation: 6,
+    shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 }, zIndex: 9999,
   },
   badge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: colors.vermelho,
-    borderRadius: 12,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
+    position: 'absolute', top: 4, right: 4, backgroundColor: colors.vermelho,
+    borderRadius: 12, paddingHorizontal: 6, paddingVertical: 2,
+    justifyContent: 'center', alignItems: 'center',
   },
-  badgeTexto: {
-    color: colors.branco,
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
+  badgeTexto: { color: colors.branco, fontSize: 12, fontWeight: 'bold' },
   rodape: {},
 });
