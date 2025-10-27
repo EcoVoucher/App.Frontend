@@ -184,11 +184,6 @@ export default function AdminDevScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: spacing.lg,
-    backgroundColor: colors.fundo,
-    alignItems: 'center',
-  },
   vazio: {
     color: colors.cinza,
     marginBottom: spacing.md,

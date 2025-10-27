@@ -1,111 +1,63 @@
 import React from 'react';
 import {
-  Modal, View, Text, StyleSheet, Alert, Image, Platform,
+  Modal,
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  TouchableOpacity,
 } from 'react-native';
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { spacing } from '../theme/spacing';
-import BotaoVerde from './BotaoVerde';
 import logoEcoApp from '../assets/imagensEco/eco-novo.jpeg';
-import { carregarLogoBase64 } from '../utils/converterImagem.js';
 
 export default function ModalComprovante({ visible, onClose, extrato }) {
-  if (!extrato) return null;
+  if (!visible || !extrato) return null;
 
-  const gerarHtml = (logoBase64) => {
-    const { cpf, dataHora, codigo, materiais = [], total } = extrato;
-    return `
-      <html>
-        <head>
-          <meta charset="UTF-8" />
-          <style>
-            body { font-family: Arial, sans-serif; padding: 20px; text-align: center; background-color: #fff; }
-            h1 { color: #076921; margin-top: 0; }
-            ul { padding-left: 16px; text-align: left; display: inline-block; }
-            .total { font-weight: bold; margin-top: 16px; color: #076921; }
-            .info { margin-top: 10px; font-size: 14px; color: #333; }
-          </style>
-        </head>
-        <body>
-          <div style="text-align:center;">
-            <img src="${logoBase64}" width="150" style="margin-bottom:10px;" />
-            <h1>Comprovante de Depósito</h1>
-            <p class="info"><strong>Código:</strong> ${codigo}</p>
-            <p class="info"><strong>CPF:</strong> ${cpf}</p>
-            <p class="info"><strong>Data/Hora:</strong> ${dataHora}</p>
-            <ul>
-              ${materiais
-                .map(
-                  (item) =>
-                    `<li>${item.nome}: ${item.quantidade} x ${item.pontos} pts = ${
-                      item.quantidade * item.pontos
-                    } pts</li>`
-                )
-                .join('')}
-            </ul>
-            <p class="total">Total: ${total} pontos</p>
-          </div>
-        </body>
-      </html>
-    `;
-  };
-
-  const imprimirComprovante = async () => {
-    try {
-      const logoBase64 = await carregarLogoBase64();
-      const html = gerarHtml(logoBase64);
-
-      // web: abre diálogo de impressão direto
-      if (Platform.OS === 'web') {
-        await Print.printAsync({ html });
-        return;
-      }
-
-      // mobile: gera arquivo e compartilha
-      const result = await Print.printToFileAsync({ html });
-      if (!result?.uri) throw new Error('Falha ao gerar PDF.');
-
-      const canShare = await Sharing.isAvailableAsync();
-      if (canShare) {
-        await Sharing.shareAsync(result.uri);
-      } else {
-        // fallback: abre diálogo de impressão
-        await Print.printAsync({ html });
-      }
-    } catch (error) {
-      Alert.alert('Erro ao gerar PDF', error?.message || 'Tente novamente.');
-    }
-  };
+  const materiais = Array.isArray(extrato.materiais) ? extrato.materiais : [];
+  const total = Number(extrato.total) || 0;
 
   return (
-    <Modal visible={visible} transparent animationType="slide">
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={styles.modalBox}>
+          {/* Logo */}
           <Image source={logoEcoApp} style={styles.logo} resizeMode="contain" />
 
+          {/* Título */}
           <Text style={styles.titulo}>✅ Depósito Registrado com Sucesso!</Text>
-          <Text style={styles.codigo}>Código: {extrato.codigo ?? extrato._id ?? '---'}</Text>
 
-          <Text style={styles.info}>CPF: {extrato.cpf}</Text>
-          <Text style={styles.info}>Data/Hora: {extrato.dataHora}</Text>
-
-          {(extrato.materiais || []).map((item, idx) => (
-            <Text key={idx} style={styles.texto}>
-              {item.nome}: {item.quantidade} x {item.pontos} pts = {item.quantidade * item.pontos} pts
-            </Text>
-          ))}
-
-          <Text style={styles.total}>Total: {extrato.total} pontos</Text>
-
-          <View style={styles.botoesContainer}>
-            <BotaoVerde texto="Imprimir PDF" onPress={imprimirComprovante} />
-          </View>
-
-          <Text style={styles.fechar} onPress={onClose}>
-            Fechar
+          {/* Mensagem fixa */}
+          <Text style={styles.mensagemEmail}>
+            O comprovante foi enviado para o e-mail cadastrado.
           </Text>
+
+          {/* Informações principais */}
+          {extrato.cpf ? <Text style={styles.info}>CPF: {extrato.cpf}</Text> : null}
+          {extrato.dataHora ? (
+            <Text style={styles.info}>Data/Hora: {extrato.dataHora}</Text>
+          ) : null}
+
+          {/* Materiais depositados */}
+          {materiais.map((item, idx) => {
+            const qtd = Number(item.quantidade) || 0;
+            const pts = Number(item.pontos) || 0;
+            const subtotal = qtd * pts;
+            return (
+              <Text key={idx} style={styles.item}>
+                {item.nome}: {qtd} x {pts} pts = {subtotal} pts
+              </Text>
+            );
+          })}
+
+          {/* Total */}
+          <Text style={styles.total}>Total: {total} pontos</Text>
+
+          {/* Botão Fechar */}
+          <TouchableOpacity onPress={onClose}>
+            <Text style={styles.fechar}>Fechar</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </Modal>
@@ -115,64 +67,62 @@ export default function ModalComprovante({ visible, onClose, extrato }) {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: spacing.md,
   },
   modalBox: {
     backgroundColor: colors.branco,
-    padding: spacing.lg,
     borderRadius: 10,
     width: '90%',
-    maxWidth: 500,
+    maxWidth: 480,
+    padding: spacing.lg,
     alignItems: 'center',
+    elevation: 5,
   },
   logo: {
-    width: 120,
-    height: 90,
+    width: 110,
+    height: 80,
     marginBottom: spacing.md,
   },
   titulo: {
     fontSize: fonts.size.lg,
     fontWeight: fonts.weight.bold,
     color: colors.verde,
-    marginBottom: spacing.sm,
     textAlign: 'center',
-  },
-  codigo: {
-    fontSize: fonts.size.sm,
-    fontWeight: 'bold',
-    color: colors.textDark,
     marginBottom: spacing.xs,
+  },
+  mensagemEmail: {
+    fontSize: fonts.size.md,
+    color: colors.verde,
     textAlign: 'center',
+    marginBottom: spacing.md,
   },
   info: {
     fontSize: fonts.size.sm,
     color: colors.textDark,
-    marginBottom: spacing.xs,
-    textAlign: 'center',
-  },
-  texto: {
-    fontSize: fonts.size.sm,
     marginBottom: 4,
     textAlign: 'center',
   },
+  item: {
+    fontSize: fonts.size.sm,
+    color: colors.textDark,
+    textAlign: 'center',
+    marginBottom: 2,
+  },
   total: {
-    fontWeight: 'bold',
-    marginTop: spacing.md,
     fontSize: fonts.size.md,
     color: colors.verde,
+    fontWeight: 'bold',
+    marginTop: spacing.sm,
     textAlign: 'center',
-  },
-  botoesContainer: {
-    marginTop: spacing.md,
-    width: '100%',
   },
   fechar: {
     marginTop: spacing.md,
-    textAlign: 'center',
+    fontSize: fonts.size.sm,
     color: colors.cinza,
     textDecorationLine: 'underline',
-    fontSize: fonts.size.sm,
+    textAlign: 'center',
   },
 });

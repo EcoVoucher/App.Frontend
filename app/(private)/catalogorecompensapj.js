@@ -426,7 +426,6 @@ export default function CatalogoRecompensaPJ() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingBottom: spacing.xl,
     minHeight: height,
     alignItems: 'center',
   },

@@ -282,10 +282,6 @@ export default function Perfil() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    paddingBottom: spacing.xxl,
-    paddingHorizontal: spacing.md,
-  },
   header: {
     marginTop: spacing.xl,
     flexDirection: 'row',

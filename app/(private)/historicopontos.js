@@ -188,15 +188,45 @@ export default function HistoricoPontos() {
   return (
     <View style={styles.container}>
       <View style={styles.contentBox}>
-        <HeaderComFiltros
-          titulo="Histórico Pontos e Vouchers"
-          subtitulo={`Total de pontos disponíveis: ${pontos}`}
-          saldo={`➕ Entradas: ${totalEntradas} · 🎁 Vouchers: ${totalSaidas} · ✅ Utilizados: ${totalUtilizados} · ⏰ Expirados: ${totalExpirados}`}
-          tipos={opcoesFiltro}
-          tipoSelecionado={filtro}
-          onSelecionarTipo={setFiltro}
-        />
+      <HeaderComFiltros
+  titulo="Histórico Pontos e Vouchers"
+  subtitulo={`Total de pontos disponíveis: ${pontos}`}
+  saldo={undefined} // escondemos a linha corrida para usar o grid 2x2
+  tipos={opcoesFiltro}
+  tipoSelecionado={filtro}
+  onSelecionarTipo={setFiltro}
+  children={
+    <View style={styles.kpiGrid}>
+      <View style={styles.kpiItem}>
+        <Text style={styles.kpiLabel}>
+          <Text style={styles.kpiIcon}>➕</Text> Entradas
+        </Text>
+        <Text style={styles.kpiValue}>{totalEntradas}</Text>
+      </View>
 
+      <View style={styles.kpiItem}>
+        <Text style={styles.kpiLabel}>
+          <Text style={styles.kpiIcon}>🎁</Text> Vouchers
+        </Text>
+        <Text style={styles.kpiValue}>{totalSaidas}</Text>
+      </View>
+
+      <View style={styles.kpiItem}>
+        <Text style={styles.kpiLabel}>
+          <Text style={styles.kpiIcon}>✅</Text> Utilizados
+        </Text>
+        <Text style={styles.kpiValue}>{totalUtilizados}</Text>
+      </View>
+
+      <View style={styles.kpiItem}>
+        <Text style={styles.kpiLabel}>
+          <Text style={styles.kpiIcon}>⏰</Text> Expirados
+        </Text>
+        <Text style={styles.kpiValue}>{totalExpirados}</Text>
+      </View>
+    </View>
+  }
+/>
         <TextInput
           placeholder="Buscar..."
           value={busca}
@@ -233,14 +263,24 @@ export default function HistoricoPontos() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.xl,
-  },
   contentBox: {
     width: '100%',
-    maxWidth: 700,
     alignSelf: 'center',
+  },
+  kpiLabel: {
+    fontSize: fonts.size.sm,
+    color: colors.verde,
+    marginBottom: 2,
+    textAlign: 'center',
+  },
+  kpiIcon: {
+    color: colors.verde,
+  },
+  kpiValue: {
+    fontSize: fonts.size.md,
+    fontWeight: fonts.weight.bold,
+    color: colors.verde,     // número verde
+    textAlign: 'center',
   },
   vazio: {
     textAlign: 'center',

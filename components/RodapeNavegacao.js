@@ -9,8 +9,6 @@ import {
   Pressable,
   Linking,
 } from 'react-native';
-// import apiMock from '../../services/apiMock';
-// import { AuthService } from '../../services/authService';
 import { useRouter, usePathname } from 'expo-router';
 import { FontAwesome, Entypo, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';

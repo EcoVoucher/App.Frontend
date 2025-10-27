@@ -136,17 +136,24 @@ export default function PrivateLayout() {
 }
 
 const styles = StyleSheet.create({
+
   safe: { flex: 1, backgroundColor: colors.fundo },
+
   container: { flex: 1, backgroundColor: colors.fundo, paddingTop: spacing.lg },
+
   conteudoWrapper: { flex: 1 },
+
   conteudo: { flexGrow: 1, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 48 },
+
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+
   botaoCarrinho: {
     position: 'absolute', bottom: Platform.OS === 'web' ? 100 : 110, right: 20,
     backgroundColor: colors.verde, padding: 16, borderRadius: 50, elevation: 6,
     shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 }, zIndex: 9999,
   },
+  
   badge: {
     position: 'absolute', top: 4, right: 4, backgroundColor: colors.vermelho,
     borderRadius: 12, paddingHorizontal: 6, paddingVertical: 2,

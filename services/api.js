@@ -1,10 +1,8 @@
-// services/api.js
 import axios from "axios";
 import storage from "../utils/storage";
 
 const baseURL = process.env.EXPO_PUBLIC_API_URL;
 if (!baseURL && __DEV__) {
-  // eslint-disable-next-line no-console
   console.warn("[API] EXPO_PUBLIC_API_URL não definida. Confira seu .env");
 }
 
@@ -15,10 +13,7 @@ export function setOnUnauthorized(fn) { onUnauthorized = fn || (() => {}); }
 const api = axios.create({
   baseURL: baseURL ?? "http://localhost:3000",
   timeout: 15000,
-  headers: {
-    Accept: "application/json",
-    "Content-Type": "application/json",
-  },
+  headers: { Accept: "application/json", "Content-Type": "application/json" },
 });
 
 api.interceptors.request.use(
@@ -27,8 +22,7 @@ api.interceptors.request.use(
       const token = await storage.getToken();
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
-        // Se não precisa manter compatibilidade, remova a linha abaixo:
-        config.headers["access-token"] = token;
+        config.headers["access-token"] = token; // opcional
       }
     }
     return config;
@@ -36,12 +30,17 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// NÃO normaliza aqui — deixa para o http.js
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    const s = err?.response?.status;
-    if (s === 401 || s === 403) {
+    const status = err?.response?.status;
+    const cfg = err?.config || {};
+    const url = String(cfg.url || "").toLowerCase();
+
+    const isAuthLogin = url.includes("/auth/login");
+    const askedToSkip = cfg.skipUnauthorized === true;
+
+    if ((status === 401 || status === 403) && !isAuthLogin && !askedToSkip) {
       try { onUnauthorized(); } catch {}
     }
     return Promise.reject(err);

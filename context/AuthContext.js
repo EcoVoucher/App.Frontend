@@ -2,14 +2,17 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "expo-router";
 import storage from "../utils/storage";
-import api, { setOnUnauthorized } from "../services/api";   // 👈 importa o setter
+import api, { setOnUnauthorized } from "../services/api";
 import { AuthService } from "../services/authService";
 
 const AuthContext = createContext(null);
 
 const setAuthHeader = (token) => {
-  if (token) api.defaults.headers.common.Authorization = `Bearer ${token}`;
-  else delete api.defaults.headers.common.Authorization;
+  if (token) {
+    api.defaults.headers.common.Authorization = `Bearer ${token}`;
+  } else {
+    delete api.defaults.headers.common.Authorization;
+  }
 };
 
 export const AuthProvider = ({ children }) => {
@@ -17,18 +20,89 @@ export const AuthProvider = ({ children }) => {
   const [usuario, setUsuario] = useState(null);
   const [carregando, setCarregando] = useState(true);
 
-  // evita múltiplos redirects em rajada de 401
+  // evita rajada de redirect por 401
   const handlingUnauthorizedRef = useRef(false);
 
+  // navegação centralizada pro login público
   const goLogin = () => {
     setTimeout(() => {
-      try { router.replace("/(public)/login"); } catch {}
+      try {
+        router.replace("/(public)/login");
+      } catch {}
     }, 0);
   };
 
-  // ✅ registra listener global para 401/403 do axios (services/api.js)
+  // =========================
+  // monta/rehidrata sessão
+  // =========================
+  useEffect(() => {
+    const hydrate = async () => {
+      try {
+        const [token, user] = await Promise.all([
+          storage.getToken(),
+          storage.getUser(),
+        ]);
+
+        // não tem sessão salva -> deixa app em modo público
+        if (!token || !user) {
+          await storage.clearAll();
+          setAuthHeader(null);
+          setUsuario(null);
+          return;
+        }
+
+        // temos algum token+user salvo
+        setAuthHeader(token);
+
+        // tenta validar sessão no backend
+        let me;
+        try {
+          me = await AuthService.me();
+        } catch (e) {
+          me = { ok: false, error: { code: "ME_NOT_IMPLEMENTED" } };
+        }
+
+        if (me.ok) {
+          // sessão confirmada
+          setUsuario(user);
+        } else if (me?.error?.http === 401) {
+          // backend disse que expirou
+          await storage.clearAll();
+          setAuthHeader(null);
+          setUsuario(null);
+          goLogin();
+        } else {
+          // erro 404/500/etc -> vamos confiar localmente
+          console.warn("[Auth] /auth/me falhou:", me.error);
+          setUsuario(user);
+        }
+      } catch (err) {
+        console.warn("[Auth] hydrate error:", err);
+        // fallback seguro: considerar deslogado
+        await storage.clearAll();
+        setAuthHeader(null);
+        setUsuario(null);
+      } finally {
+        setCarregando(false);
+      }
+    };
+
+    hydrate();
+  }, []);
+
+  // =========================
+  // listener global de 401/403 vindo do axios
+  // =========================
   useEffect(() => {
     const handler = async () => {
+      // Se já não temos usuário (já estamos públicos), só garante header limpo e vai pro login.
+      if (!usuario) {
+        setAuthHeader(null);
+        goLogin();
+        return;
+      }
+
+      // se já estamos processando um 401, ignora rajada
       if (handlingUnauthorizedRef.current) return;
       handlingUnauthorizedRef.current = true;
 
@@ -38,83 +112,72 @@ export const AuthProvider = ({ children }) => {
         setAuthHeader(null);
         setUsuario(null);
         goLogin();
-        // libera novo redirect após um curto intervalo
-        setTimeout(() => { handlingUnauthorizedRef.current = false; }, 1000);
+
+        // libera depois de um curto intervalo
+        setTimeout(() => {
+          handlingUnauthorizedRef.current = false;
+        }, 1000);
       }
     };
 
     setOnUnauthorized(handler);
-    return () => setOnUnauthorized(null); // cleanup
-  }, []);
-  
-  useEffect(() => {
-    const hydrate = async () => {
-      try {
-        const [token, user] = await Promise.all([storage.getToken(), storage.getUser()]);
+    return () => setOnUnauthorized(null);
+  }, [usuario]); // importante: amarrar ao estado atual
 
-        if (!token || !user) {
-          await storage.clearAll();
-          setAuthHeader(null);
-          setUsuario(null);
-          goLogin();
-          return;
-        }
-
-        setAuthHeader(token);
-        const me = await AuthService.me();
-
-        if (me.ok) {
-          setUsuario(user);
-        } else if (me.error?.status === 401) {
-          await storage.clearAll();
-          setAuthHeader(null);
-          setUsuario(null);
-          goLogin();
-        } else {
-          console.warn("[Auth] /auth/me falhou:", me.error);
-          setUsuario(user);
-        }
-      } catch (err) {
-        console.warn("[Auth] hydrate error:", err);
-        await storage.clearAll();
-        setAuthHeader(null);
-        setUsuario(null);
-        goLogin();
-      } finally {
-        setCarregando(false);
-      }
-    };
-
-    hydrate();
-  }, []);
-
+  // =========================
+  // login
+  // =========================
   const login = async ({ cpfOuCnpj, senha, tipo }) => {
     const resp = await AuthService.login({ cpfOuCnpj, senha, tipo });
     if (!resp.ok) return resp;
 
     const data = resp.data || {};
     const usr = data.usuario || {};
+
+    // normaliza isAdmin vindo do mock/BE
     const isAdmin =
       typeof usr?.isAdmin === "boolean"
         ? usr.isAdmin
         : String(usr?.isAdmin).toLowerCase() === "true";
 
-    const usuarioComTipo = { ...usr, tipo: tipo ?? usr?.tipo ?? "pf", isAdmin };
+    const usuarioComTipo = {
+      ...usr,
+      tipo: tipo ?? usr?.tipo ?? "pf",
+      isAdmin,
+    };
 
+    // 1. salva token e user no storage (ESSENCIAL p/ interceptor funcionar)
+    await storage.setToken(data.token);
+    await storage.setUser(usuarioComTipo);
+
+    // 2. atualiza header global do axios
     setAuthHeader(data.token);
+
+    // 3. atualiza estado em memória
     setUsuario(usuarioComTipo);
 
     return { ok: true, data: { ...data, usuario: usuarioComTipo } };
   };
 
+  // =========================
+  // logout
+  // =========================
   const logout = async () => {
-    try { await AuthService.logout(); } catch {}
+    try {
+      await AuthService.logout();
+    } catch {}
+
     await storage.clearAll();
     setAuthHeader(null);
     setUsuario(null);
+
+    // libera o rate limiter de 401 pra próxima sessão não herdar estado sujo
+    handlingUnauthorizedRef.current = false;
+
     goLogin();
   };
 
+  // contexto exposto
   const value = useMemo(
     () => ({
       usuario,
@@ -131,7 +194,9 @@ export const AuthProvider = ({ children }) => {
     [usuario, carregando]
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => useContext(AuthContext);

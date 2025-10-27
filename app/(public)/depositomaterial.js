@@ -88,28 +88,23 @@ export default function DepositoMaterial() {
         return;
       }
 
-      // registra depósito
+      // registra depósito (o backend enviará o e-mail com o comprovante)
       const comprovante = await DepositoService.realizarDeposito(cpfLimpo, simulados, total);
-
-      const codigo =
-        comprovante?.deposito?.codigo ??
-        comprovante?.deposito?._id ??
-        '---';
 
       const dataHora = new Date(
         comprovante?.deposito?.data ?? Date.now()
       ).toLocaleString('pt-BR');
 
+      // Extrato sem código e sem e-mail — apenas dados para exibir no modal
       setExtrato({
-        cpf,
+        cpf,            // formatado como digitado (com máscara)
         materiais: simulados,
         total,
         dataHora,
-        codigo,
       });
 
       setModalVisivel(true);
-      setCpf(''); // limpa somente após sucesso
+      setCpf(''); // limpa apenas após sucesso
     } catch (error) {
       setMensagemErro(obterMensagemErro(error, 'Erro ao registrar o depósito.'));
       setErroVisivel(true);
@@ -145,12 +140,15 @@ export default function DepositoMaterial() {
           onPress={handleDeposito}
           disabled={carregando}
         >
-          <Text style={styles.botaoTexto}>{carregando ? 'Registrando...' : 'Confirmar Depósito'}</Text>
+          <Text style={styles.botaoTexto}>
+            {carregando ? 'Registrando...' : 'Confirmar Depósito'}
+          </Text>
         </TouchableOpacity>
 
         <ModalComprovante
           visible={modalVisivel}
           extrato={extrato}
+          // mostrarCodigo removido: o modal não exibe mais código nem botão de imprimir
           onClose={() => setModalVisivel(false)}
         />
 

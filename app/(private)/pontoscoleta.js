@@ -178,9 +178,6 @@ export default function BuscarPontosColeta() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
  content: {
   flexGrow:1,
   padding: spacing.medium,
