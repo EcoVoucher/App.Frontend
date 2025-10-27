@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import {
   Text,
@@ -45,12 +44,15 @@ export default function RedefinirSenha() {
       try {
         const resp = await AuthService.validarToken(t);
         if (!resp.ok) {
-          setMensagemErro(obterMensagemErro(resp.error, 'Token inválido ou expirado.'));
+          setMensagemErro(
+            obterMensagemErro(resp.error, 'Token inválido ou expirado.')
+          );
           setErroVisivel(true);
         }
-        // se ok: segue normalmente
       } catch (error) {
-        setMensagemErro(obterMensagemErro(error, 'Ocorreu um erro. Tente novamente.'));
+        setMensagemErro(
+          obterMensagemErro(error, 'Ocorreu um erro. Tente novamente.')
+        );
         setErroVisivel(true);
       }
     })();
@@ -77,14 +79,18 @@ export default function RedefinirSenha() {
       });
 
       if (!resp.ok) {
-        setMensagemErro(obterMensagemErro(resp.error, 'Erro ao redefinir senha.'));
+        setMensagemErro(
+          obterMensagemErro(resp.error, 'Erro ao redefinir senha.')
+        );
         setErroVisivel(true);
         return;
       }
 
       setModalSucesso(true);
     } catch (error) {
-      setMensagemErro(obterMensagemErro(error, 'Erro ao redefinir senha.'));
+      setMensagemErro(
+        obterMensagemErro(error, 'Erro ao redefinir senha.')
+      );
       setErroVisivel(true);
     } finally {
       setCarregando(false);
@@ -92,7 +98,10 @@ export default function RedefinirSenha() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      contentContainerStyle={styles.scrollContainer}
+      keyboardShouldPersistTaps="handled"
+    >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.contentBox}
@@ -108,6 +117,8 @@ export default function RedefinirSenha() {
           mostrarSenha={mostrarSenha}
           alternarSenha={() => setMostrarSenha(!mostrarSenha)}
           error={erros.novaSenha}
+          autoCapitalize="none"
+          autoCorrect={false}
         />
 
         <InputField
@@ -118,10 +129,12 @@ export default function RedefinirSenha() {
           mostrarSenha={mostrarConfirmar}
           alternarSenha={() => setMostrarConfirmar(!mostrarConfirmar)}
           error={erros.confirmarSenha}
+          autoCapitalize="none"
+          autoCorrect={false}
         />
 
         <BotaoVerde
-          texto={carregando ? "Salvando..." : "Salvar nova senha"}
+          texto={carregando ? 'Salvando...' : 'Salvar nova senha'}
           onPress={handleSalvar}
           carregando={carregando}
           disabled={carregando}
@@ -135,7 +148,7 @@ export default function RedefinirSenha() {
         botaoTexto="Voltar ao login"
         onFechar={() => {
           setModalSucesso(false);
-          router.replace('/login');
+          router.replace('/(public)/login');
         }}
       />
 

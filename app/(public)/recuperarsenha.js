@@ -57,8 +57,14 @@ export default function RecuperarSenha() {
     if (Object.keys(novoErros).length > 0) return;
 
     const doc = soDigitos(dados.cpf);
-    if ((tipoPessoa === 'pf' && doc.length !== 11) || (tipoPessoa === 'pj' && doc.length !== 14)) {
-      setErros((prev) => ({ ...prev, cpf: 'Documento inválido para o tipo selecionado.' }));
+    if (
+      (tipoPessoa === 'pf' && doc.length !== 11) ||
+      (tipoPessoa === 'pj' && doc.length !== 14)
+    ) {
+      setErros((prev) => ({
+        ...prev,
+        cpf: 'Documento inválido para o tipo selecionado.',
+      }));
       return;
     }
 
@@ -66,14 +72,18 @@ export default function RecuperarSenha() {
     try {
       const resp = await AuthService.recuperarSenha({ cpfOuCnpj: doc });
       if (!resp.ok) {
-        setMensagemErro(obterMensagemErro(resp.error, 'Erro ao recuperar senha.'));
+        setMensagemErro(
+          obterMensagemErro(resp.error, 'Erro ao recuperar senha.')
+        );
         setErroVisivel(true);
         return;
       }
       // sucesso → abrir modal para digitar o código recebido
       setModalSucessoVisivel(true);
     } catch (error) {
-      setMensagemErro(obterMensagemErro(error, 'Erro ao recuperar senha.'));
+      setMensagemErro(
+        obterMensagemErro(error, 'Erro ao recuperar senha.')
+      );
       setErroVisivel(true);
     } finally {
       setCarregando(false);
@@ -88,23 +98,41 @@ export default function RecuperarSenha() {
       >
         <View style={styles.contentBox}>
           <Text style={styles.titulo}>Recuperar senha</Text>
-          <Text style={styles.subtitulo}>Preencha CPF/CNPJ para continuar</Text>
+          <Text style={styles.subtitulo}>
+            Preencha CPF/CNPJ para continuar
+          </Text>
 
           <View style={styles.tipoBox}>
             <TouchableOpacity
-              style={[styles.tipoBotao, tipoPessoa === 'pf' && styles.tipoSelecionado]}
+              style={[
+                styles.tipoBotao,
+                tipoPessoa === 'pf' && styles.tipoSelecionado,
+              ]}
               onPress={() => setTipoPessoa('pf')}
             >
-              <Text style={[styles.tipoTexto, tipoPessoa === 'pf' && styles.tipoTextoSelecionado]}>
+              <Text
+                style={[
+                  styles.tipoTexto,
+                  tipoPessoa === 'pf' && styles.tipoTextoSelecionado,
+                ]}
+              >
                 Pessoa Física
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.tipoBotao, tipoPessoa === 'pj' && styles.tipoSelecionado]}
+              style={[
+                styles.tipoBotao,
+                tipoPessoa === 'pj' && styles.tipoSelecionado,
+              ]}
               onPress={() => setTipoPessoa('pj')}
             >
-              <Text style={[styles.tipoTexto, tipoPessoa === 'pj' && styles.tipoTextoSelecionado]}>
+              <Text
+                style={[
+                  styles.tipoTexto,
+                  tipoPessoa === 'pj' && styles.tipoTextoSelecionado,
+                ]}
+              >
                 Pessoa Jurídica
               </Text>
             </TouchableOpacity>
@@ -146,8 +174,13 @@ export default function RecuperarSenha() {
             <InputField
               placeholder="Código recebido"
               value={codigo}
+              keyboardType="number-pad"         // abre teclado numérico no mobile
+              maxLength={24}                     // limite de dígitos (ajuste se precisar)
               onChangeText={(val) => {
-                setCodigo(val);
+                const limpo = String(val)
+                  .replace(/\s+/g, '')    // remove todos os espaços/quebras
+                  .replace(/[^0-9]/g, ''); // mantém só dígitos
+                setCodigo(limpo);
                 setErroCodigo('');
               }}
               error={erroCodigo}
@@ -170,7 +203,12 @@ export default function RecuperarSenha() {
                   setValidandoCodigo(true);
                   const resp = await AuthService.validarToken(codigo.trim());
                   if (!resp.ok) {
-                    setErroCodigo(obterMensagemErro(resp.error, 'Código inválido ou expirado.'));
+                    setErroCodigo(
+                      obterMensagemErro(
+                        resp.error,
+                        'Código inválido ou expirado.'
+                      )
+                    );
                     return;
                   }
                   // ok → segue para redefinir senha
@@ -180,7 +218,9 @@ export default function RecuperarSenha() {
                     params: { token: codigo.trim() },
                   });
                 } catch (error) {
-                  setMensagemErro(obterMensagemErro(error, 'Erro ao validar o código.'));
+                  setMensagemErro(
+                    obterMensagemErro(error, 'Erro ao validar o código.')
+                  );
                   setErroVisivel(true);
                 } finally {
                   setValidandoCodigo(false);
@@ -195,7 +235,12 @@ export default function RecuperarSenha() {
                 opacity: validandoCodigo ? 0.7 : 1,
               }}
             >
-              <Text style={{ color: colors.branco, fontWeight: 'bold' }}>
+              <Text
+                style={{
+                  color: colors.branco,
+                  fontWeight: 'bold',
+                }}
+              >
                 {validandoCodigo ? 'Validando...' : 'OK'}
               </Text>
             </TouchableOpacity>
@@ -208,7 +253,9 @@ export default function RecuperarSenha() {
               }}
               style={{ paddingVertical: spacing.sm, marginTop: spacing.sm }}
             >
-              <Text style={{ color: colors.erro, fontWeight: 'bold' }}>Cancelar</Text>
+              <Text style={{ color: colors.erro, fontWeight: 'bold' }}>
+                Cancelar
+              </Text>
             </TouchableOpacity>
           </View>
         }
