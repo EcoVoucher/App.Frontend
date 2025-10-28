@@ -57,7 +57,7 @@ export default function Pegada() {
 
       const t = setTimeout(() => {
         setMostrarModal(false);
-        router.replace('/(private)/home');
+        router.replace('/home');
       }, 4000);
 
       return () => clearTimeout(t);
@@ -70,7 +70,7 @@ export default function Pegada() {
       setRedirecionando(true); // bloqueia botões e escurece fundo
 
       const t = setTimeout(() => {
-        router.replace('/(private)/home');
+        router.replace('/home');
       }, 4000);
 
       return () => clearTimeout(t);

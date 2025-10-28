@@ -148,7 +148,7 @@ export default function RedefinirSenha() {
         botaoTexto="Voltar ao login"
         onFechar={() => {
           setModalSucesso(false);
-          router.replace('/(public)/login');
+          router.replace('/login');
         }}
       />
 

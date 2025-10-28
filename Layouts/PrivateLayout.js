@@ -59,20 +59,20 @@ export default function PrivateLayout() {
 
     // 1) sem sessão -> login
     if (!usuario) {
-      go('/(public)/login');
+      go('/login');
       return;
     }
 
     // 2) admin deve ficar no espaço admin
     if (isAdmin && !rota.includes('/admin')) {
-      go('/(private)/admin');
+      go('/admin');
       return;
     }
 
     // 3) rotas exclusivas de PJ
     if (rota.includes('catalogorecompensapj') || rota.includes('validarvoucherpj')) {
       if (usuario?.tipo !== 'pj') {
-        go('/(private)/home');
+        go('/home');
         return;
       }
     }
@@ -86,7 +86,7 @@ export default function PrivateLayout() {
       rota.includes('pontoscoleta')
     ) {
       if (usuario?.tipo !== 'pf') {
-        go('/(private)/home');
+        go('/home');
       }
     }
   }, [isReady, carregando, usuario, rota]);

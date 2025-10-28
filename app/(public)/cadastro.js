@@ -1,4 +1,4 @@
-// app/(public)/cadastro.js
+// app/cadastro.js
 import { useRouter } from 'expo-router';
 import { useState, useRef } from 'react';
 import {
@@ -335,7 +335,7 @@ export default function Cadastro() {
                   setDados(ESTADO_INICIAL);
                   setErros({});
                   setTipoPessoa(null);
-                  router.replace('/(public)/login');
+                  router.replace('/login');
                 }}
               />
             </>
@@ -351,7 +351,7 @@ export default function Cadastro() {
                   setDados(ESTADO_INICIAL);
                   setErros({});
                   setTipoPessoa(null);
-                  router.replace('/(public)/login');
+                  router.replace('/login');
                 }}
               />
             </>

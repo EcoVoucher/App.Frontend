@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }) => {
   const goLogin = () => {
     setTimeout(() => {
       try {
-        router.replace("/(public)/login");
+        router.replace("/login");
       } catch {}
     }, 0);
   };

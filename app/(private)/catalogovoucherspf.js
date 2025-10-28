@@ -173,7 +173,7 @@ export default function CatalogoVouchersPF() {
               texto="Ir para o Histórico"
               onPress={() => {
                 setModalSucesso({ titulo: '', conteudo: null });
-                router.push('/(private)/historicopontos');
+                router.push('/historicopontos');
               }}
               style={{ backgroundColor: '#66BB6A', marginTop: 16 }}
             />

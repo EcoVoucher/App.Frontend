@@ -224,7 +224,7 @@ export default function OnboardingCarousel({ visible, onClose, tipo = 'pf' }) {
           'O EcoVoucher transforma ações sustentáveis em benefícios reais. Você recicla, acumula pontos e troca por vantagens locais.',
         extra: (
           <View style={{ alignItems: 'center', width: '100%' }}>
-            <VideoPreview url="https://youtu.be/SEU_VIDEO_AQUI" />
+            <VideoPreview url="https://youtu.be/uur_Qz6eobs" />
 
             <Text style={styles.descMenor}>
               Você também pode ver essa apresentação depois em
@@ -235,7 +235,7 @@ export default function OnboardingCarousel({ visible, onClose, tipo = 'pf' }) {
       },
       {
         tipoLayout: 'rodape',
-        titulo: 'Navegação Principal',
+        titulo: 'Navegação Principal/Rodapé',
         desc:
           'Esta é sua barra fixa. Use para acessar a Home, buscar parceiros e pontos de coleta, sair da conta e abrir mais opções.',
         extra: <RodapePreview />,
@@ -410,9 +410,9 @@ export default function OnboardingCarousel({ visible, onClose, tipo = 'pf' }) {
 
     // dispara navegação inicial se quiser garantir landing
     if (acaoPrimaria === 'homePF') {
-      router.replace('/(private)/home');
+      router.replace('/home');
     } else if (acaoPrimaria === 'homePJ') {
-      router.replace('/(private)/home'); // ajuste aqui se PJ tiver rota própria
+      router.replace('/home'); // ajuste aqui se PJ tiver rota própria
     }
 
     onClose?.();

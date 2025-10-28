@@ -1,10 +1,15 @@
+// app/index.js
 import { Redirect } from 'expo-router';
 import { useAuth } from '../context/AuthContext';
 
 export default function Index() {
-  const { usuario, carregando } = useAuth();
+  const auth = useAuth();
 
-  if (carregando) return null;
+  // ainda carregando contexto/AuthProvider? não renderiza nada
+  if (!auth || auth.carregando) return null;
 
-  return <Redirect href={usuario ? '/(private)/home' : '/(public)/login'} />;
+  const { usuario } = auth;
+
+  // escolhe a tela certa pra usuário logado
+  return <Redirect href={usuario ? '/home' : '/login'} />;
 }

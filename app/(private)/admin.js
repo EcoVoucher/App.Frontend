@@ -26,7 +26,7 @@ export default function AdminDevScreen() {
   // Garante que só admin veja esta tela e carrega a lista
   useEffect(() => {
     if (!usuario?.isAdmin) {
-      router.replace('/(public)/login');
+      router.replace('/login');
       return;
     }
     carregarUsuarios();

@@ -19,14 +19,14 @@ export default function RodapeNavegacao() {
   const pathname = usePathname();
   const { usuario, logout } = useAuth();
   const menuItems = usuario?.tipo === 'pj' ? [
-  { texto: 'Conheça o Eco Voucher', icone: 'recycle', rota:'/(private)/ecoempresa' },
-  { texto: 'Seu Perfil', icone: 'account', rota:'/(private)/perfil' },
+  { texto: 'Conheça o Eco Voucher', icone: 'recycle', rota:'/ecoempresa' },
+  { texto: 'Seu Perfil', icone: 'account', rota:'/perfil' },
 
 ] : [
-  { texto: 'Conheça o Eco Voucher', icone: 'recycle', rota:'/(private)/ecoempresa' },
+  { texto: 'Conheça o Eco Voucher', icone: 'recycle', rota:'/ecoempresa' },
   { texto: 'Fale pelo WhatsApp', icone: 'whatsapp', link: 'https://wa.me/5515996893760?text=Olá!%20Gostaria%20de%20saber%20mais%20sobre%20o%20projeto%20EcoVoucher.' },
-  { texto: 'Histórico Pegada', icone: 'history', rota: '/(private)/historicopegada' },
-  { texto: 'Seu Perfil', icone: 'account', rota:'/(private)/perfil' },
+  { texto: 'Histórico Pegada', icone: 'history', rota: '/historicopegada' },
+  { texto: 'Seu Perfil', icone: 'account', rota:'/perfil' },
   
 ];
 
@@ -52,7 +52,7 @@ export default function RodapeNavegacao() {
       nome: 'home',
       icone: 'home',
       texto: 'Home',
-      acao: () => router.push('/(private)/home'),
+      acao: () => router.push('/home'),
     },
     {
       nome: 'buscar',
@@ -78,9 +78,9 @@ export default function RodapeNavegacao() {
     await logout();
 
     // 🚪 Redireciona para login
-    router.replace('/(public)/login');
+    router.replace('/login');
   } else {
-    router.push('/(public)/login');
+    router.push('/login');
   }
 },
     },
