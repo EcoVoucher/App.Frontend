@@ -13,11 +13,17 @@ import { useModalCarrinho } from '../context/ModalCarrinhoContext';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
 
+// ⬇️ IMPORTAMOS O ONBOARDING
+import OnboardingCarousel from '../components/OnboardingCarousel';
+
 export default function PrivateLayout() {
   const { usuario, carregando } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [isReady, setIsReady] = useState(false);
+
+  // ⬇️ CONTROLE DO ONBOARDING (modal)
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const { abrirResumo } = useModalCarrinho();
   const { selecionados } = useCarrinho();
@@ -85,6 +91,45 @@ export default function PrivateLayout() {
     }
   }, [isReady, carregando, usuario, rota]);
 
+  // ⬇️ MOSTRAR OU NÃO O ONBOARDING
+  useEffect(() => {
+    if (!isReady || carregando || !usuario) return;
+
+    // Regras de exibição:
+    // - Admin não vê onboarding
+    if (isAdmin) {
+      setShowOnboarding(false);
+      return;
+    }
+
+    // - PF em primeiro acesso ainda está na etapa obrigatória "pegada":
+    //   não mostramos onboarding em cima da tela da pegada
+    if (usuario?.tipo === 'pf' && usuario?.primeiroAcesso) {
+      // se o usuário está em primeiro acesso, ele é mandado pra /pegada
+      // queremos que o onboarding apareça SÓ depois disso
+      // então aqui: não abre
+      setShowOnboarding(false);
+      return;
+    }
+
+    // - Se chegou aqui: pode mostrar onboarding
+    //   FORÇADO: sempre que logar / acessar área privada
+    setShowOnboarding(true);
+
+    // Quando você quiser "só na primeira vez", troca o bloco acima por algo tipo:
+    //
+    // async function check() {
+    //   const chave = usuario.tipo === 'pj' ? '@onboardingVistoPJ' : '@onboardingVistoPF';
+    //   const jaViu = await AsyncStorage.getItem(chave);
+    //   if (!jaViu) {
+    //     setShowOnboarding(true);
+    //   } else {
+    //     setShowOnboarding(false);
+    //   }
+    // }
+    // check();
+  }, [isReady, carregando, usuario, isAdmin]);
+
   // Enquanto hidrata, mostra splash
   if (!isReady || carregando) {
     return (
@@ -130,6 +175,13 @@ export default function PrivateLayout() {
             <RodapeNavegacao ativo="menu" />
           </View>
         )}
+
+        {/* ⬇️ ONBOARDING: FICA POR ÚLTIMO PRA FICAR POR CIMA DE TUDO */}
+        <OnboardingCarousel
+          visible={showOnboarding}
+          tipo={usuario?.tipo === 'pj' ? 'pj' : 'pf'}
+          onClose={() => setShowOnboarding(false)}
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
