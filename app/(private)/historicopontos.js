@@ -121,7 +121,7 @@ export default function HistoricoPontos() {
     const textoBusca = busca.toLowerCase();
     const atendeBusca =
       item.descricao?.toLowerCase().includes(textoBusca) ||
-      item.codigo?.toLowerCase().includes(textoBusca);
+      item.codigoVoucher?.toLowerCase().includes(textoBusca);
 
     if (!atendeBusca) return false;
 
@@ -167,7 +167,7 @@ export default function HistoricoPontos() {
             ? item.descricao
             : `Troca por voucher de ${item.tipoVoucher || 'benefício'}`}
         </Text>
-        {item.codigo && <Text style={styles.comparativo}>🔑 Código: {item.codigo}</Text>}
+        {item.codigoVoucher && <Text style={styles.comparativo}>🔑 Código: {item.codigoVoucher}</Text>}
         {item.produtos && <Text style={styles.info}>📦 Produtos: {item.produtos.join(', ')}</Text>}
         {item.empresa && <Text style={styles.info}>🏢 Empresa: {item.empresa}</Text>}
         {item.endereco && <Text style={styles.info}>📍 Endereço: {item.endereco}</Text>}
