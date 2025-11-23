@@ -24,7 +24,7 @@ export default function RodapeNavegacao() {
 
 ] : [
   { texto: 'Conheça o Eco Voucher', icone: 'recycle', rota:'/ecoempresa' },
-  { texto: 'Fale pelo WhatsApp', icone: 'whatsapp', link: 'https://wa.me/5515996893760?text=Olá!%20Gostaria%20de%20saber%20mais%20sobre%20o%20projeto%20EcoVoucher.' },
+  { texto: 'Assistente Virtual', icone: 'robot', rota: '/chatbot' }, 
   { texto: 'Histórico Pegada', icone: 'history', rota: '/historicopegada' },
   { texto: 'Seu Perfil', icone: 'account', rota:'/perfil' },
   
