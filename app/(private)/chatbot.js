@@ -1,34 +1,32 @@
 // app/chatbot.js
-import React, { useState, useRef, useEffect } from 'react';
+import { FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useEffect, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
-  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
-import { FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from '../../theme/colors';
-import { spacing } from '../../theme/spacing';
 import { fonts } from '../../theme/fonts';
+import { spacing } from '../../theme/spacing';
 
 // ========================================
 // SERVIÇO DE API DO CHATBOT
 // ========================================
 class ChatBotService {
   // URL da sua API - ALTERE AQUI quando tiver o microserviço pronto
-  static API_URLCHAT = null; // null = desabilitado (modo offline)
+  static API_URLCHAT = process.env.EXPO_PUBLIC_API_URLCHAT || null;
   // Quando tiver o microserviço: static API_URLCHAT = 'https://sua-api.com/api/chatbot';
   
   // Flag para habilitar/desabilitar chamada à API
-  static API_HABILITADA = false; // true quando o microserviço estiver pronto
+  static API_HABILITADA = true; // true quando o microserviço estiver pronto
 
   /**
    * Envia mensagem para a API e retorna resposta
@@ -47,12 +45,12 @@ class ChatBotService {
     // 🌐 MODO ONLINE: Quando o microserviço estiver disponível
     try {
       // Busca o token do AsyncStorage
-      const token = await AsyncStorage.getItem('token');
+      // const token = await AsyncStorage.getItem('token');
       
-      if (!token) {
-        console.warn('⚠️ Token não encontrado, usando modo offline');
-        return this.obterRespostaLocal(mensagem, tipoUsuario);
-      }
+      // if (!token) {
+      //   console.warn('⚠️ Token não encontrado, usando modo offline');
+      //   return this.obterRespostaLocal(mensagem, tipoUsuario);
+      // }
 
       console.log('🌐 Enviando mensagem para API do chatbot...');
       
@@ -60,12 +58,12 @@ class ChatBotService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`, // Token de autenticação
+          //'Authorization': `${token}`, // Token de autenticação
         },
         body: JSON.stringify({
-          mensagem: mensagem,
+          message: mensagem,
           tipoUsuario: tipoUsuario,
-          usuarioId: usuarioId,
+          userId: usuarioId,
           timestamp: new Date().toISOString(),
         }),
       });
@@ -77,7 +75,7 @@ class ChatBotService {
       const data = await response.json();
       
       // Espera que a API retorne: { resposta: "texto da resposta" }
-      return data.resposta || 'Desculpe, não consegui processar sua mensagem.';
+      return data.reply || 'Desculpe, não consegui processar sua mensagem.';
       
     } catch (error) {
       console.error('❌ Erro ao comunicar com API do chatbot:', error);

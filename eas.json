@@ -1,21 +1,22 @@
 {
   "cli": {
-    "version": ">= 16.13.0",
-    "appVersionSource": "remote"
+    "version": ">= 10.0.0"
   },
   "build": {
-    "development": {
-      "developmentClient": true,
-      "distribution": "internal"
-    },
-    "preview": {
-      "distribution": "internal"
-    },
     "production": {
-      "autoIncrement": true
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://ecovoucher.duckdns.org:7001/api"
+      },
+      "android": {
+        "gradleCommand": ":app:assembleRelease",
+        "applicationArchivePath": "android/app/build/outputs/apk/release/app-release.apk"
+      }
+    },
+    "debug-apk": {
+      "android": {
+        "gradleCommand": ":app:assembleDebug",
+        "applicationArchivePath": "android/app/build/outputs/apk/debug/app-debug.apk"
+      }
     }
-  },
-  "submit": {
-    "production": {}
   }
 }
