@@ -91,44 +91,36 @@ export default function PrivateLayout() {
     }
   }, [isReady, carregando, usuario, rota]);
 
-  // ⬇️ MOSTRAR OU NÃO O ONBOARDING
-  useEffect(() => {
-    if (!isReady || carregando || !usuario) return;
+ // chave do usuário já tratado nesta sessão (pra não abrir 200x)
+// ⬇️ MOSTRAR OU NÃO O ONBOARDING
+useEffect(() => {
+  if (!isReady || carregando) return;
 
-    // Regras de exibição:
-    // - Admin não vê onboarding
-    if (isAdmin) {
-      setShowOnboarding(false);
-      return;
-    }
+  // sem usuário → sem onboarding
+  if (!usuario) {
+    setShowOnboarding(false);
+    return;
+  }
 
-    // - PF em primeiro acesso ainda está na etapa obrigatória "pegada":
-    //   não mostramos onboarding em cima da tela da pegada
-    if (usuario?.tipo === 'pf' && usuario?.primeiroAcesso) {
-      // se o usuário está em primeiro acesso, ele é mandado pra /pegada
-      // queremos que o onboarding apareça SÓ depois disso
-      // então aqui: não abre
-      setShowOnboarding(false);
-      return;
-    }
+  // Admin não vê onboarding
+  if (isAdmin) {
+    setShowOnboarding(false);
+    return;
+  }
 
-    // - Se chegou aqui: pode mostrar onboarding
-    //   FORÇADO: sempre que logar / acessar área privada
-    setShowOnboarding(true);
+  // 👉 SE NÃO QUISER ESSA REGRA, pode APAGAR esse bloco:
+  // PF em primeiro acesso ainda na pegada obrigatória não vê
+  if (usuario?.tipo === 'pf' && usuario?.primeiroAcesso) {
+    setShowOnboarding(false);
+    return;
+  }
+  // 👆 até aqui
 
-    // Quando você quiser "só na primeira vez", troca o bloco acima por algo tipo:
-    //
-    // async function check() {
-    //   const chave = usuario.tipo === 'pj' ? '@onboardingVistoPJ' : '@onboardingVistoPF';
-    //   const jaViu = await AsyncStorage.getItem(chave);
-    //   if (!jaViu) {
-    //     setShowOnboarding(true);
-    //   } else {
-    //     setShowOnboarding(false);
-    //   }
-    // }
-    // check();
-  }, [isReady, carregando, usuario, isAdmin]);
+  // chegou aqui? usuário logado, não admin → mostra onboarding
+  setShowOnboarding(true);
+}, [isReady, carregando, usuario, isAdmin]);
+
+
 
   // Enquanto hidrata, mostra splash
   if (!isReady || carregando) {

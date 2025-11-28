@@ -1,5 +1,4 @@
-// components/OnboardingCarousel.js
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -9,12 +8,10 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   Platform,
-  Linking, // <-- novo para abrir o vídeo
+  Linking,
 } from 'react-native';
 import Carousel from 'react-native-reanimated-carousel';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Entypo, FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/colors';
@@ -22,16 +19,16 @@ import { spacing } from '../theme/spacing';
 import { fonts } from '../theme/fonts';
 
 // Imagens usadas nos cards da Home
-const imgLogo        = require('../assets/imagensEco/ecoVoucherIcon.png');
-const imgHistorico   = require('../assets/imagensEco/historicoIcon.png');
-const imgCatalogoPF  = require('../assets/imagensEco/catalogoIcon.png');
-const imgColeta      = require('../assets/imagensEco/pontoColetaIcon.png');
-const imgGerar       = require('../assets/imagensEco/gerarVoucherIcon.png');
-const imgValidar     = require('../assets/imagensEco/validarVoucherIcon.png');
-const imgContato     = require('../assets/imagensEco/faleConoscoIcon.png');
+const imgLogo       = require('../assets/imagensEco/ecoVoucherIcon.png');
+const imgHistorico  = require('../assets/imagensEco/historicoIcon.png');
+const imgCatalogoPF = require('../assets/imagensEco/catalogoIcon.png');
+const imgColeta     = require('../assets/imagensEco/pontoColetaIcon.png');
+const imgGerar      = require('../assets/imagensEco/gerarVoucherIcon.png');
+const imgValidar    = require('../assets/imagensEco/validarVoucherIcon.png');
+const imgContato    = require('../assets/imagensEco/faleConoscoIcon.png');
 
 // podemos usar o próprio logo como thumb de vídeo por enquanto
-const imgThumbVideo  = imgLogo;
+const imgThumbVideo = imgLogo;
 
 /**
  * Mini-componente para o preview do vídeo institucional.
@@ -83,10 +80,20 @@ export default function OnboardingCarousel({ visible, onClose, tipo = 'pf' }) {
   const cardWidth = Math.min(width * 0.9, 380);
 
   const { usuario } = useAuth();
-  const router = useRouter();
 
   const carouselRef = useRef(null);
   const [index, setIndex] = useState(0);
+
+  // sempre que o modal abrir de novo, volta pro primeiro slide
+  useEffect(() => {
+    if (visible) {
+      setIndex(0);
+      // pequena proteção pra quando o carrossel já estiver montado
+      requestAnimationFrame(() => {
+        carouselRef.current?.scrollTo?.({ index: 0, animated: false });
+      });
+    }
+  }, [visible]);
 
   // Helper para capitalizar nome da PF/PJ
   const nomeFormatado = (usuario?.nome || usuario?.nomeEmpresa || '')
@@ -105,7 +112,11 @@ export default function OnboardingCarousel({ visible, onClose, tipo = 'pf' }) {
         <Text style={styles.footerItemTxt}>Buscar</Text>
       </View>
       <View style={styles.footerItem}>
-        <FontAwesome name={usuario ? 'sign-out' : 'user'} size={20} color={colors.cinza} />
+        <FontAwesome
+          name={usuario ? 'sign-out' : 'user'}
+          size={20}
+          color={colors.cinza}
+        />
         <Text style={styles.footerItemTxt}>{usuario ? 'Logout' : 'Login'}</Text>
       </View>
       <View style={styles.footerItem}>
@@ -214,7 +225,7 @@ export default function OnboardingCarousel({ visible, onClose, tipo = 'pf' }) {
     </View>
   );
 
-  // Slides PF na ordem combinada
+  // Slides PF
   const slidesPF = useMemo(
     () => [
       {
@@ -227,8 +238,8 @@ export default function OnboardingCarousel({ visible, onClose, tipo = 'pf' }) {
             <VideoPreview url="https://youtu.be/uur_Qz6eobs" />
 
             <Text style={styles.descMenor}>
-              Você também pode ver essa apresentação depois em
-              {' '}“Conheça o Eco Voucher”, dentro do Menu.
+              Você também pode ver essa apresentação depois em “Conheça o Eco
+              Voucher”, dentro do Menu.
             </Text>
           </View>
         ),
@@ -278,8 +289,8 @@ export default function OnboardingCarousel({ visible, onClose, tipo = 'pf' }) {
             <VideoPreview url="https://youtu.be/SEU_VIDEO_AQUI" />
 
             <Text style={styles.descMenor}>
-              A apresentação completa está sempre em
-              {' '}“Conheça o Eco Voucher” no Menu.
+              A apresentação completa está sempre em “Conheça o Eco Voucher” no
+              Menu.
             </Text>
           </View>
         ),
@@ -304,7 +315,11 @@ export default function OnboardingCarousel({ visible, onClose, tipo = 'pf' }) {
               <Text style={styles.footerItemTxt}>Validar</Text>
             </View>
             <View style={styles.footerItem}>
-              <Entypo name="dots-three-horizontal" size={20} color={colors.cinza} />
+              <Entypo
+                name="dots-three-horizontal"
+                size={20}
+                color={colors.cinza}
+              />
               <Text style={styles.footerItemTxt}>Menu</Text>
             </View>
           </View>
@@ -319,11 +334,19 @@ export default function OnboardingCarousel({ visible, onClose, tipo = 'pf' }) {
           <View style={styles.menuCard}>
             <Text style={styles.menuTitulo}>MENU</Text>
             <View style={styles.menuLinha}>
-              <MaterialCommunityIcons name="recycle" size={20} color={colors.verde} />
+              <MaterialCommunityIcons
+                name="recycle"
+                size={20}
+                color={colors.verde}
+              />
               <Text style={styles.menuLinhaTxt}>Conheça o Eco Voucher</Text>
             </View>
             <View style={styles.menuLinha}>
-              <MaterialCommunityIcons name="account" size={20} color={colors.verde} />
+              <MaterialCommunityIcons
+                name="account"
+                size={20}
+                color={colors.verde}
+              />
               <Text style={styles.menuLinhaTxt}>Seu Perfil</Text>
             </View>
           </View>
@@ -397,43 +420,28 @@ export default function OnboardingCarousel({ visible, onClose, tipo = 'pf' }) {
 
   const data = tipo === 'pj' ? slidesPJ : slidesPF;
 
-  async function finalizarOnboarding(acaoPrimaria) {
-    // salva flag de "já vi" (você pode ligar isso depois se quiser usar só 1x)
-    try {
-      await AsyncStorage.setItem(
-        tipo === 'pj' ? '@onboardingVistoPJ' : '@onboardingVistoPF',
-        'true'
-      );
-    } catch (e) {
-      console.log('erro ao salvar onboarding visto', e);
-    }
+  const passosTxt = `${index + 1}/${data.length}`;
 
-    // dispara navegação inicial se quiser garantir landing
-    if (acaoPrimaria === 'homePF') {
-      router.replace('/home');
-    } else if (acaoPrimaria === 'homePJ') {
-      router.replace('/home'); // ajuste aqui se PJ tiver rota própria
-    }
-
+  function finalizarOnboarding() {
+    // se quiser forçar cair sempre na Home ao fechar, pode descomentar:
+    // router.replace('/home');
     onClose?.();
   }
 
   const next = () => {
     if (index >= data.length - 1) {
       // último slide -> finalizar
-      return finalizarOnboarding(tipo === 'pj' ? 'homePJ' : 'homePF');
+      return finalizarOnboarding();
     }
     carouselRef.current?.next?.();
   };
-
-  const passosTxt = `${index + 1}/${data.length}`;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={[styles.card, { width: cardWidth }]}>
           {/* botão "pular" */}
-          <TouchableOpacity style={styles.skip} onPress={() => finalizarOnboarding()}>
+          <TouchableOpacity style={styles.skip} onPress={finalizarOnboarding}>
             <Text style={styles.skipTxt}>Pular</Text>
           </TouchableOpacity>
 

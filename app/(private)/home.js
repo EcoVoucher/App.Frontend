@@ -41,13 +41,6 @@ export default function Home() {
   // ✓ detectar retorno do app ao primeiro plano
   const appState = useRef(AppState.currentState);
 
-  const abrirWhatsApp = async () => {
-    const url = 'https://wa.me/5515996893760?text=Olá!%20Quero%20saber%20mais%20sobre%20o%20EcoVoucher.';
-    const canOpen = await Linking.canOpenURL(url);
-    if (canOpen) Linking.openURL(url);
-    else Alert.alert('Erro', 'Não foi possível abrir o WhatsApp.');
-  };
-
   const mensagens = [
     { texto: '🌱 Acompanhe sua pegada ecológica.' },
     { texto: '📍 Encontre pontos de coleta próximos de você.' },

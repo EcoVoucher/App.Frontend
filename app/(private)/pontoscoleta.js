@@ -42,25 +42,36 @@ export default function BuscarPontosColeta() {
   };
 
   const abrirNoMapa = (endereco) => {
-    const enderecoFormatado = encodeURIComponent(endereco);
-    const url = Platform.select({
-      ios: `maps://app?q=${enderecoFormatado}`,
-      android: `geo:0,0?q=${enderecoFormatado}`,
-    });
-    
-    // Fallback para Google Maps web se o app nativo não abrir
-    const urlWeb = `https://www.google.com/maps/search/?api=1&query=${enderecoFormatado}`;
-    
-    Linking.canOpenURL(url).then(supported => {
+  const enderecoFormatado = encodeURIComponent(endereco);
+  const urlWeb = `https://www.google.com/maps/search/?api=1&query=${enderecoFormatado}`;
+
+  // 🌐 Comportamento específico para WEB
+  if (Platform.OS === 'web') {
+    // Abre em nova aba/janela, fora do roteador do app
+    window.open(urlWeb, '_blank');
+    return;
+  }
+
+  // 📱 iOS / Android
+  const urlNativa =
+    Platform.OS === 'ios'
+      ? `maps://app?q=${enderecoFormatado}`
+      : `geo:0,0?q=${enderecoFormatado}`;
+
+  Linking.canOpenURL(urlNativa)
+    .then((supported) => {
       if (supported) {
-        Linking.openURL(url);
+        return Linking.openURL(urlNativa);
       } else {
-        Linking.openURL(urlWeb);
+        // Fallback para Google Maps via navegador
+        return Linking.openURL(urlWeb);
       }
-    }).catch(() => {
+    })
+    .catch(() => {
+      // Se der qualquer erro, tenta o Maps Web
       Linking.openURL(urlWeb);
     });
-  };
+};
 
   const handleBuscar = async () => {
     const erros = validarCamposObrigatorios({ cep }, ['cep']);
