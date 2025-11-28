@@ -12,8 +12,6 @@ import { useRouter, Slot, usePathname } from 'expo-router';
 import { useModalCarrinho } from '../context/ModalCarrinhoContext';
 import { colors } from '../theme/colors';
 import { spacing } from '../theme/spacing';
-
-// ⬇️ IMPORTAMOS O ONBOARDING
 import OnboardingCarousel from '../components/OnboardingCarousel';
 
 export default function PrivateLayout() {
@@ -22,8 +20,8 @@ export default function PrivateLayout() {
   const pathname = usePathname();
   const [isReady, setIsReady] = useState(false);
 
-  // ⬇️ CONTROLE DO ONBOARDING (modal)
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const onboardingShownRef = useRef(false);  // ✅ mostrou onboarding nesta sessão?
 
   const { abrirResumo } = useModalCarrinho();
   const { selecionados } = useCarrinho();
@@ -37,20 +35,20 @@ export default function PrivateLayout() {
   const exibindoResultado = estaNaPegada && usuario?.primeiroAcesso && !rota.includes('/home');
   const esconderRodape = rota.includes('/pegada') && (usuario?.primeiroAcesso || exibindoResultado);
 
-  // ===== go seguro: evita replace para a mesma rota e limpa timer no unmount =====
+  // ===== navegação segura =====
   const timerRef = useRef(null);
   const go = (path) => {
     const alvo = (path || '').toLowerCase();
-    if (alvo === rota) return;                     // já está na rota alvo
+    if (alvo === rota) return;
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       try { router.replace(path); } catch {}
     }, 0);
   };
-  useEffect(() => () => {                          // cleanup ao desmontar
+  useEffect(() => () => {
     if (timerRef.current) clearTimeout(timerRef.current);
   }, []);
-  // =============================================================================
+  // ============================
 
   useEffect(() => { setIsReady(true); }, []);
 
@@ -89,47 +87,41 @@ export default function PrivateLayout() {
         go('/home');
       }
     }
-  }, [isReady, carregando, usuario, rota]);
+  }, [isReady, carregando, usuario, rota, isAdmin]);
 
- // chave do usuário já tratado nesta sessão (pra não abrir 200x)
-// ⬇️ MOSTRAR OU NÃO O ONBOARDING
-useEffect(() => {
-  if (!isReady || carregando) return;
+  // ✅ ONBOARDING – 1x POR LOGIN, NUNCA NA PEGADA
+  useEffect(() => {
+    if (!isReady || carregando) return;
 
-  // sem usuário → sem onboarding
-  if (!usuario) {
-    setShowOnboarding(false);
-    return;
-  }
+    // se deslogou: reseta flag e esconde
+    if (!usuario) {
+      onboardingShownRef.current = false;
+      setShowOnboarding(false);
+      return;
+    }
 
-  // Admin não vê onboarding
-  if (isAdmin) {
-    setShowOnboarding(false);
-    return;
-  }
+    // Admin nunca vê
+    if (isAdmin) {
+      onboardingShownRef.current = true;
+      setShowOnboarding(false);
+      return;
+    }
 
-  // Sempre que estiver na tela da Pegada → nunca mostrar
-  if (rota.includes('/pegada')) {
-    setShowOnboarding(false);
-    return;
-  }
+    // nunca mostrar em qualquer rota de Pegada
+    if (rota.includes('/pegada')) {
+      setShowOnboarding(false);
+      return;
+    }
 
-  // PF no primeiro acesso ainda não terminou o questionário → NÃO mostrar ainda
-  if (usuario.tipo === 'pf' && usuario.primeiroAcesso) {
-    setShowOnboarding(false);
-    return;
-  }
+    // já mostramos nesta sessão? então não abre de novo
+    if (onboardingShownRef.current) {
+      return;
+    }
 
-  // Só mostrar quando estiver na HOME
-  if (rota.includes('/home')) {
+    // aqui: usuário logado, não admin, fora da Pegada → mostra onboarding
+    onboardingShownRef.current = true;
     setShowOnboarding(true);
-    return;
-  }
-
-  // Em QUALQUER outra rota → NÃO mostrar
-  setShowOnboarding(false);
-
-}, [isReady, carregando, usuario, isAdmin, rota]);
+  }, [isReady, carregando, usuario, isAdmin, rota]);
 
   // Enquanto hidrata, mostra splash
   if (!isReady || carregando) {
@@ -141,7 +133,6 @@ useEffect(() => {
     );
   }
 
-  // Se já detectou ausência de usuário, evita “flash” até o replace acontecer
   if (!usuario) return null;
 
   return (
@@ -177,7 +168,7 @@ useEffect(() => {
           </View>
         )}
 
-        {/* ⬇️ ONBOARDING: FICA POR ÚLTIMO PRA FICAR POR CIMA DE TUDO */}
+        {/* ONBOARDING por cima de tudo */}
         <OnboardingCarousel
           visible={showOnboarding}
           tipo={usuario?.tipo === 'pj' ? 'pj' : 'pf'}
@@ -189,28 +180,35 @@ useEffect(() => {
 }
 
 const styles = StyleSheet.create({
-
   safe: { flex: 1, backgroundColor: colors.fundo },
-
   container: { flex: 1, backgroundColor: colors.fundo, paddingTop: spacing.lg },
-
   conteudoWrapper: { flex: 1 },
-
   conteudo: { flexGrow: 1, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 48 },
-
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-
   botaoCarrinho: {
-    position: 'absolute', bottom: Platform.OS === 'web' ? 100 : 110, right: 20,
-    backgroundColor: colors.verde, padding: 16, borderRadius: 50, elevation: 6,
-    shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 }, zIndex: 9999,
+    position: 'absolute',
+    bottom: Platform.OS === 'web' ? 100 : 110,
+    right: 20,
+    backgroundColor: colors.verde,
+    padding: 16,
+    borderRadius: 50,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    zIndex: 9999,
   },
-  
   badge: {
-    position: 'absolute', top: 4, right: 4, backgroundColor: colors.vermelho,
-    borderRadius: 12, paddingHorizontal: 6, paddingVertical: 2,
-    justifyContent: 'center', alignItems: 'center',
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: colors.vermelho,
+    borderRadius: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   badgeTexto: { color: colors.branco, fontSize: 12, fontWeight: 'bold' },
   rodape: {},
