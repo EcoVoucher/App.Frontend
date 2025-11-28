@@ -108,19 +108,28 @@ useEffect(() => {
     return;
   }
 
-  // 👉 SE NÃO QUISER ESSA REGRA, pode APAGAR esse bloco:
-  // PF em primeiro acesso ainda na pegada obrigatória não vê
-  if (usuario?.tipo === 'pf' && usuario?.primeiroAcesso) {
+  // Sempre que estiver na tela da Pegada → nunca mostrar
+  if (rota.includes('/pegada')) {
     setShowOnboarding(false);
     return;
   }
-  // 👆 até aqui
 
-  // chegou aqui? usuário logado, não admin → mostra onboarding
-  setShowOnboarding(true);
-}, [isReady, carregando, usuario, isAdmin]);
+  // PF no primeiro acesso ainda não terminou o questionário → NÃO mostrar ainda
+  if (usuario.tipo === 'pf' && usuario.primeiroAcesso) {
+    setShowOnboarding(false);
+    return;
+  }
 
+  // Só mostrar quando estiver na HOME
+  if (rota.includes('/home')) {
+    setShowOnboarding(true);
+    return;
+  }
 
+  // Em QUALQUER outra rota → NÃO mostrar
+  setShowOnboarding(false);
+
+}, [isReady, carregando, usuario, isAdmin, rota]);
 
   // Enquanto hidrata, mostra splash
   if (!isReady || carregando) {
